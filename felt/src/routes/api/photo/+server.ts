@@ -10,5 +10,5 @@ export const GET: RequestHandler = async ({ url, setHeaders }) => {
 	const uri = await photoUri(name);
 	if (!uri) error(404, 'Photo unavailable.');
 	setHeaders({ 'Cache-Control': 'public, max-age=3600' });
-	redirect(302, uri);
+	redirect(302, uri, { external: true });
 };
