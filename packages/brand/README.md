@@ -1,6 +1,6 @@
 # Explorin brand kit
 
-Generated from `marketing-images/logo-monocular.png` (spyglass traced to vector with potrace) and a wordmark set in Avenir Next Heavy, converted to outlines. Every SVG is self-contained; PNG filenames end in their pixel width.
+Generated from `source/logo-monocular.png` (spyglass traced to vector with potrace) and a wordmark set in Avenir Next Heavy, converted to outlines. Every SVG is self-contained; PNG filenames end in their pixel width.
 
 | Asset | Use |
 |---|---|

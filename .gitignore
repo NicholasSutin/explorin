@@ -1,4 +1,7 @@
 .DS_Store
 .claude/worktrees
+# stray vite cache
+.vite/
 # launch-video render output (local only)
+media/brag/
 brag-output/

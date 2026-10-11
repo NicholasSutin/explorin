@@ -19,7 +19,7 @@ export const mapsEnabled = () => Boolean(GOOGLE_MAPS_API_KEY);
 export type MapStyle = 'paper' | 'ink' | 'cloud';
 export const MAP_STYLES: MapStyle[] = ['paper', 'ink', 'cloud'];
 
-/* Brand palette from marketing-images/brand/README.md */
+/* Brand palette from packages/brand/README.md */
 const INK = '0x203d32';
 const CREAM = '0xf8f6ef';
 const MOSS = '0xe5ebdf';

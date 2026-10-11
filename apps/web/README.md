@@ -3,7 +3,7 @@
 # Felt
 
 Hyper-personalized NYC experiences, recommended with evidence from how similar people felt there.
-Built at the AI Engineer NYC Hackathon, October 11, 2026. Scope lives in [`../pre-build/PLAN.md`](../pre-build/PLAN.md).
+Built at the AI Engineer NYC Hackathon, October 11, 2026. Scope lives in [`../../docs/pre-build/PLAN.md`](../../docs/pre-build/PLAN.md).
 
 **Gemini** does the seeing (photo profiler), reasoning (intent, composer, reflection analysis), Maps grounding, and embeddings.
 [https://console.cloud.google.com/billing]
