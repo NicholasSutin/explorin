@@ -9,7 +9,11 @@
 	// Photos live in R2. Create once: npx wrangler r2 bucket create felt-photos
 	"r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "felt-photos" }],
 	// Non-secret vars. Secrets (GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY) go in: npx wrangler secret put <NAME>
-	"vars": { "DEMO_CACHE": "true", "NIMBLE_BASE_URL": "https://sdk.nimbleway.com", "NIMBLE_WEBAPI_URL": "https://api.webit.live/api/v1" }
+	"vars": {
+		"DEMO_CACHE": "true",
+		"NIMBLE_BASE_URL": "https://sdk.nimbleway.com",
+		"NIMBLE_WEBAPI_URL": "https://api.webit.live/api/v1"
+	}
 	// Optional: Hyperdrive in front of Postgres for connection pooling at the edge.
 	// "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id>" }]
 }

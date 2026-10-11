@@ -1,24 +1,30 @@
 {
-  "id": "nick",
-  "name": "Nick",
-  "traits": {
-    "activities": [{ "name": "running", "confidence": 0.9, "evidence": "Strava: 3 runs/week along the East River" }],
-    "scenery": ["waterfront", "skyline", "bridges"],
-    "pace": "active",
-    "social": "solo",
-    "time_of_day": ["sunrise", "evening"],
-    "values": ["routine", "nostalgia", "family"],
-    "avoid": ["crowds"],
-    "summary": "One warm paragraph, second person, describing who this person is outdoors."
-  },
-  "reflections": [
-    {
-      "place": "Gantry Plaza State Park",
-      "text": "Full first-person note about how it felt (2 to 4 sentences).",
-      "quote": "One quotable sentence in their own words, under 30 words.",
-      "emotions": ["awe", "belonging"],
-      "themes": ["sunrise", "skyline"],
-      "new_place": null
-    }
-  ]
+	"id": "nick",
+	"name": "Nick",
+	"traits": {
+		"activities": [
+			{
+				"name": "running",
+				"confidence": 0.9,
+				"evidence": "Strava: 3 runs/week along the East River"
+			}
+		],
+		"scenery": ["waterfront", "skyline", "bridges"],
+		"pace": "active",
+		"social": "solo",
+		"time_of_day": ["sunrise", "evening"],
+		"values": ["routine", "nostalgia", "family"],
+		"avoid": ["crowds"],
+		"summary": "One warm paragraph, second person, describing who this person is outdoors."
+	},
+	"reflections": [
+		{
+			"place": "Gantry Plaza State Park",
+			"text": "Full first-person note about how it felt (2 to 4 sentences).",
+			"quote": "One quotable sentence in their own words, under 30 words.",
+			"emotions": ["awe", "belonging"],
+			"themes": ["sunrise", "skyline"],
+			"new_place": null
+		}
+	]
 }
