@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
 	let {
 		files = $bindable<File[]>([]),
 		max = 5,
@@ -8,7 +9,8 @@
 
 	function onChange(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
-		const picked = Array.from(input.files ?? []).filter((f) => f.type.startsWith('image/'));
+		// HEIC from an Android/Chrome gallery often arrives with an empty MIME type.
+		const picked = Array.from(input.files ?? []).filter(isAcceptedPhoto);
 		files = [...files, ...picked].slice(0, max);
 		input.value = '';
 	}
@@ -39,7 +41,7 @@
 			<span class="mt-1 text-xs">{capture ? 'Take photo' : 'Add photos'}</span>
 			<input
 				type="file"
-				accept="image/*"
+				accept={PHOTO_ACCEPT}
 				multiple={!capture}
 				capture={capture ? 'environment' : undefined}
 				class="sr-only"

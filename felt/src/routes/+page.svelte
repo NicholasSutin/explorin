@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { toBlob } from 'html-to-image';
 	import { HISTORY_KEY, type Experience, type Adventure } from '#lib/adventure';
+	import { decodePhoto, isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
 	import './explorin.css';
 	type Recognition = {
 		lang: string;
@@ -161,10 +162,10 @@
 		window.scrollTo(0, 0);
 	}
 	async function photoData(file: File): Promise<string> {
-		if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
-			throw new Error('Choose JPG, PNG, or WebP photos. Convert HEIC photos before uploading.');
+		if (!isAcceptedPhoto(file)) throw new Error('Choose JPG, PNG, WebP, or HEIC photos.');
 		if (file.size > 15 * 1024 * 1024) throw new Error('Each photo must be smaller than 15 MB.');
-		const bitmap = await createImageBitmap(file);
+		// Decodes HEIC in a worker when the browser cannot read it natively.
+		const bitmap = await decodePhoto(file);
 		const scale = Math.min(1, 1200 / Math.max(bitmap.width, bitmap.height));
 		const canvas = document.createElement('canvas');
 		canvas.width = Math.round(bitmap.width * scale);
@@ -514,12 +515,12 @@
 				<label class="upload-zone" for="photos"
 					><span>+</span><strong
 						>{busy ? 'Preparing your photos…' : 'Add your adventure photos'}</strong
-					><small>JPG, PNG, WebP · up to 15 MB each</small></label
+					><small>JPG, PNG, WebP, HEIC · up to 15 MB each</small></label
 				><input
 					class="sr-only"
 					id="photos"
 					type="file"
-					accept="image/jpeg,image/png,image/webp"
+					accept={PHOTO_ACCEPT}
 					multiple
 					onchange={upload}
 					disabled={busy || photos.length >= 4}

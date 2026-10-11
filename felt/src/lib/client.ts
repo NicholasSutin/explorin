@@ -1,4 +1,5 @@
 /** Browser-side helpers: API calls and EXIF-stripping image re-encode. */
+import { decodePhoto } from './heic';
 import type { Profile, RecommendResponse, ReflectionAnalysis } from './types';
 
 export async function api<T>(
@@ -26,17 +27,21 @@ export async function api<T>(
 	return res.json() as Promise<T>;
 }
 
-/** Re-encode through a canvas: drops EXIF (including GPS) and shrinks large photos. */
+/**
+ * Re-encode through a canvas: drops EXIF (including GPS), shrinks large photos, and turns HEIC
+ * into JPEG so the server and the AI only ever see one format. Throws if the file is not an image
+ * this browser can open.
+ */
 export async function stripAndResize(file: File, maxEdge = 1600): Promise<File> {
-	const bmp = await createImageBitmap(file).catch(() => null);
-	if (!bmp) return file;
+	const bmp = await decodePhoto(file);
 	const scale = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));
 	const canvas = document.createElement('canvas');
 	canvas.width = Math.round(bmp.width * scale);
 	canvas.height = Math.round(bmp.height * scale);
 	canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+	bmp.close();
 	const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
-	if (!blob) return file;
+	if (!blob) throw new Error(`Could not process ${file.name}.`);
 	return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
 }
 

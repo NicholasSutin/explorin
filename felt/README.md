@@ -56,4 +56,4 @@ Quotes are only ever pulled from the database by ID; the model never writes quot
 
 ## Disclosure
 
-Code written during the event with AI-assisted coding (Claude Code). No sign-in; anonymous cookie session. Photo EXIF (including GPS) is stripped client side before upload.
+Code written during the event with AI-assisted coding (Claude Code). No sign-in; anonymous cookie session. Photo EXIF (including GPS) is stripped client side before upload. HEIC/HEIF photos are accepted everywhere: Safari decodes them natively, other browsers fall back to a libheif WASM decoder in a Web Worker (`src/lib/heic/`).

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 
 test('mobile demo: discovery, reflection, photos, scrapbook, export and persisted history', async ({
@@ -35,13 +36,11 @@ test('mobile demo: discovery, reflection, photos, scrapbook, export and persiste
 		ctx.fill();
 		return c.toDataURL('image/png').split(',')[1];
 	});
-	await page
-		.locator('#photos')
-		.setInputFiles({
-			name: 'memory.png',
-			mimeType: 'image/png',
-			buffer: Buffer.from(image, 'base64')
-		});
+	await page.locator('#photos').setInputFiles({
+		name: 'memory.png',
+		mimeType: 'image/png',
+		buffer: Buffer.from(image, 'base64')
+	});
 	await page.getByRole('checkbox', { name: /Let this story/ }).check();
 	await page.getByRole('button', { name: /Create my scrapbook/ }).click();
 	await expect(page.getByRole('heading', { name: 'Your little keepsake.' })).toBeVisible();
@@ -77,4 +76,43 @@ test('server validation and honest credential-free fallback', async ({ request }
 	const book = await scrapbook.json();
 	expect(typeof book.aiGenerated).toBe('boolean');
 	expect(book.title.length).toBeGreaterThan(0);
+});
+
+test('HEIC photos decode through the libheif worker fallback', async ({ page }) => {
+	const errors: string[] = [];
+	page.on('pageerror', (e) => errors.push(e.message));
+	await page.goto('/');
+	await page.getByRole('button', { name: 'Try the NYC demo' }).click();
+	await page
+		.getByRole('button', { name: /Start Adventure/ })
+		.first()
+		.click();
+	await page.getByRole('button', { name: /Finish Adventure/ }).click();
+	// Chromium cannot read HEIC natively, so this exercises the worker + WASM path end to end.
+	// An empty mimeType mirrors what Android/Chrome hands over for gallery HEICs.
+	await page.locator('#photos').setInputFiles({
+		name: 'iphone-photo.heic',
+		mimeType: '',
+		buffer: readFileSync(new URL('./fixtures/sample.heic', import.meta.url))
+	});
+	const preview = page.locator('.photo-previews img');
+	await expect(preview).toHaveCount(1, { timeout: 20000 });
+	await expect(preview).toHaveAttribute('src', /^data:image\/jpeg/);
+	// Orange over blue in the fixture: check the decoded pixels are not blank.
+	const colours = await preview.evaluate((img: HTMLImageElement) => {
+		const c = document.createElement('canvas');
+		c.width = img.naturalWidth;
+		c.height = img.naturalHeight;
+		const ctx = c.getContext('2d')!;
+		ctx.drawImage(img, 0, 0);
+		const top = ctx.getImageData(8, 8, 1, 1).data;
+		const bottom = ctx.getImageData(8, c.height - 8, 1, 1).data;
+		return { w: c.width, h: c.height, top: [...top].slice(0, 3), bottom: [...bottom].slice(0, 3) };
+	});
+	expect(colours.w).toBe(64);
+	expect(colours.h).toBe(48);
+	expect(colours.top[0]).toBeGreaterThan(colours.top[2]); // warm on top
+	expect(colours.bottom[2]).toBeGreaterThan(colours.bottom[0]); // cool below
+	await expect(page.locator('.error, [role=alert]')).toHaveCount(0);
+	expect(errors).toEqual([]);
 });
