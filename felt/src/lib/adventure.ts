@@ -6,6 +6,10 @@ export interface ExperiencePhoto {
 	attribution: string;
 	attributionUrl?: string;
 }
+export interface LatLng {
+	lat: number;
+	lng: number;
+}
 export interface PlaceReview {
 	text: string;
 	rating: number | null;
@@ -24,6 +28,10 @@ export interface Experience {
 	/** Free-text query used to look the place up in Google Places (defaults to title + location). */
 	placeQuery?: string;
 	photo?: ExperiencePhoto;
+	/** Place coordinates from Google Places; drives /api/map thumbnails and directions links. */
+	coords?: LatLng;
+	/** Google Maps page for the place (no API key needed to open). */
+	mapsUrl?: string;
 	/** Google rating 1-5 and total count, when known. */
 	rating?: number;
 	reviewCount?: number;

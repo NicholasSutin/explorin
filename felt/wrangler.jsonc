@@ -8,7 +8,7 @@
 	"observability": { "enabled": true },
 	// Photos live in R2. Create once: npx wrangler r2 bucket create felt-photos
 	"r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "felt-photos" }],
-	// Non-secret vars. Secrets (GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY) go in: npx wrangler secret put <NAME>
+	// Non-secret vars. Secrets (GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY, optional GOOGLE_MAPS_MAP_ID) go in: npx wrangler secret put <NAME>
 	"vars": {
 		"DEMO_CACHE": "true",
 		"NIMBLE_BASE_URL": "https://sdk.nimbleway.com",

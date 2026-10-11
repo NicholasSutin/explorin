@@ -3,6 +3,7 @@
 	import { toBlob } from 'html-to-image';
 	import { HISTORY_KEY, type Experience, type Adventure } from '#lib/adventure';
 	import { decodePhoto, isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
+	import PlaceMap from '#lib/components/PlaceMap.svelte';
 	import './explorin.css';
 	type Recognition = {
 		lang: string;
@@ -38,6 +39,37 @@
 	let recognition: Recognition | undefined;
 	let speechSupported = $state(false);
 	let listening = $state(false);
+	let now = $state(Date.now());
+	/** Marketing photos with the film filter each one wears. Alt text is decorative-free on purpose. */
+	const postcards = [
+		{
+			src: '/marketing/high-line-fall.webp',
+			film: 'film-warm',
+			note: 'the high line, late october'
+		},
+		{ src: '/marketing/brooklyn-bridge.webp', film: 'film-moss', note: 'dumbo, golden hour' },
+		{ src: '/marketing/the-met-inside.webp', film: 'film-fade', note: 'the met, a quiet wing' },
+		{ src: '/marketing/people-running.webp', film: 'film-sun', note: 'williamsburg bridge, 7am' },
+		{ src: '/marketing/friends-night.webp', film: 'film-mono', note: 'flatbush, after the run' },
+		{ src: '/marketing/hiker.webp', film: 'film-warm', note: 'a trail, any trail' },
+		{ src: '/marketing/met-outside.webp', film: 'film-fade', note: 'museum steps' },
+		{ src: '/marketing/hudson-yards-nyc.webp', film: 'film-moss', note: 'hudson yards' },
+		{ src: '/marketing/nyc-highline-ugc.webp', film: 'film-sun', note: 'someone\u2019s high line' },
+		{ src: '/marketing/run-selfie.webp', film: 'film-mono', note: 'proof we went' }
+	];
+	const directions = (e: Experience) =>
+		e.coords
+			? `https://www.google.com/maps/dir/?api=1&destination=${e.coords.lat.toFixed(6)},${e.coords.lng.toFixed(6)}${e.photo ? `&destination_place_id=${encodeURIComponent(e.photo.placeId)}` : ''}`
+			: e.mapsUrl || e.url;
+	const elapsed = (from: string) => {
+		const m = Math.max(0, Math.round((now - new Date(from).getTime()) / 60000));
+		return m < 1
+			? 'just started'
+			: m < 60
+				? `${m} min in`
+				: `${Math.floor(m / 60)} h ${m % 60} min in`;
+	};
+	const pinned = $derived(history.filter((a) => a.experience.coords).slice(0, 9));
 	const topics = [
 		'Nature',
 		'Art & culture',
@@ -96,7 +128,11 @@
 				listening = false;
 			};
 		}
-		return () => recognition?.stop();
+		const tick = setInterval(() => (now = Date.now()), 30000);
+		return () => {
+			recognition?.stop();
+			clearInterval(tick);
+		};
 	});
 	async function api<T>(path: string, body: unknown): Promise<T> {
 		const res = await fetch(path, {
@@ -302,12 +338,15 @@
 	><title>Explorin · Find your next little adventure</title><meta
 		name="description"
 		content="Discover experiences that feel like you. Capture the moments, and turn them into a personal adventure scrapbook."
+	/><meta property="og:title" content="Explorin · Find your next little adventure" /><meta
+		property="og:image"
+		content="/brand/og-card-green-1200.png"
 	/></svelte:head
 >
 <div class="explorin">
 	<header class="exp-header">
 		<a class="brand" href="/" aria-label="Explorin home"
-			><span class="brand-icon">&#10035;</span> explorin<span class="brand-dot">.</span></a
+			><img class="brand-lockup" src="/brand/lockup-horizontal-ink.svg" alt="explorin." /></a
 		>
 		<nav aria-label="Main navigation">
 			<button
@@ -326,21 +365,39 @@
 		{#if status}<div class="message success" role="status">{status}</div>{/if}
 		{#if view === 'discover'}
 			<section class="hero">
-				<div class="eyebrow">LESS SCROLLING. MORE STORIES.</div>
-				<h1>Your next adventure<br />is closer than <em>you think.</em></h1>
-				<p>
-					A quiet corner. A new favorite. A day that feels like you.<br class="desktop-break" /> Tell
-					us what you're craving, and let curiosity do the rest.
-				</p>
-				<div class="hero-art" aria-hidden="true">
-					<div class="sun"></div>
-					<div class="orbit"></div>
-					<span class="art-star">&#10023;</span>
-					<div class="hill hill-back"></div>
-					<div class="hill hill-front"></div>
-					<span class="art-caption">take the scenic route &#10035;</span>
+				<div class="hero-copy">
+					<div class="eyebrow">LESS SCROLLING. MORE STORIES.</div>
+					<h1>Your next adventure<br />is closer than <em>you think.</em></h1>
+					<p>
+						A quiet corner. A new favorite. A day that feels like you.<br class="desktop-break" /> Tell
+						us what you're craving, and let curiosity do the rest.
+					</p>
+					<div class="hero-ctas">
+						<a class="primary" href="#prompt">Tell us your kind of day &#8600;</a><button
+							type="button"
+							class="text-button"
+							disabled={busy || !mounted}
+							onclick={() => discover(true)}>Try the NYC demo</button
+						>
+					</div>
+				</div>
+				<div class="hero-stack" aria-hidden="true">
+					{#each postcards.slice(0, 3) as card, i}<figure class="polaroid p{i + 1}">
+							<div class="film {card.film}"><img src={card.src} alt="" loading="eager" /></div>
+							<figcaption>{card.note}</figcaption>
+						</figure>{/each}
+					<img class="hero-mark" src="/brand/mark-orange.svg" alt="" />
+					<span class="hero-caption">take the scenic route &#10035;</span>
 				</div>
 			</section>
+			<div class="filmstrip" aria-hidden="true">
+				<div class="filmstrip-track">
+					{#each [...postcards, ...postcards] as card}<figure class="frame">
+							<div class="film {card.film}"><img src={card.src} alt="" loading="lazy" /></div>
+							<figcaption>{card.note}</figcaption>
+						</figure>{/each}
+				</div>
+			</div>
 			<section class="discovery-panel">
 				<div class="panel-heading">
 					<span class="step-badge">01</span>
@@ -389,12 +446,7 @@
 					<div class="discover-actions">
 						<button class="primary" disabled={busy}
 							>{busy ? 'Finding your kind of adventure…' : 'Find my adventure \u2197'}</button
-						><button
-							type="button"
-							class="text-button"
-							disabled={busy || !mounted}
-							onclick={() => discover(true)}>Try the NYC demo</button
-						>
+						><span class="hint">or scroll up for the NYC demo</span>
 					</div>
 				</form>
 			</section>
@@ -427,7 +479,14 @@
 												>{:else}{experience.photo.attribution}{/if}</em
 										>{:else}<span>{['\u2197', '\u2600', '\u2733'][i % 3]}</span>{/if}<small
 										>{experience.category}</small
-									>
+									>{#if experience.coords}<a
+											class="map-inset"
+											href={directions(experience)}
+											target="_blank"
+											rel="noopener noreferrer"
+											aria-label={`Directions to ${experience.location}`}
+											><PlaceMap coords={experience.coords} zoom={15} w={180} h={130} alt="" /></a
+										>{/if}
 								</div>
 								<div class="card-body">
 									<p class="place">{experience.location}</p>
@@ -453,41 +512,53 @@
 												</blockquote>{/if}
 										</div>{/if}
 									<div class="fit"><span>&#8599;</span> {experience.reason}</div>
-									<a href={experience.url} target="_blank" rel="noopener noreferrer"
-										>Check the source &#8599;</a
-									><button class="primary" onclick={() => start(experience)}
+									<div class="card-links">
+										<a href={experience.url} target="_blank" rel="noopener noreferrer"
+											>Check the source &#8599;</a
+										>{#if experience.coords || experience.mapsUrl}<a
+												href={directions(experience)}
+												target="_blank"
+												rel="noopener noreferrer">Directions &#8599;</a
+											>{/if}
+									</div>
+									<button class="primary" onclick={() => start(experience)}
 										>Start Adventure &#8594;</button
 									>
 								</div>
 							</article>{/each}
 					</div>
 				</section>{:else if !busy}<div class="how-it-works">
-					<div>
-						<span>01 / DISCOVER</span>
-						<p>Find a little possibility.</p>
-					</div>
-					<div>
-						<span>02 / EXPERIENCE</span>
-						<p>Be there. Take it all in.</p>
-					</div>
-					<div>
-						<span>03 / REMEMBER</span>
-						<p>Keep more than a photo.</p>
-					</div>
+					{#each [{ n: '01 / DISCOVER', t: 'Find a little possibility.', c: postcards[0] }, { n: '02 / EXPERIENCE', t: 'Be there. Take it all in.', c: postcards[3] }, { n: '03 / REMEMBER', t: 'Keep more than a photo.', c: postcards[2] }] as step}<div
+							class="step-tile"
+						>
+							<div class="film {step.c.film}"><img src={step.c.src} alt="" loading="lazy" /></div>
+							<span>{step.n}</span>
+							<p>{step.t}</p>
+						</div>{/each}
 				</div>{/if}
 		{:else if view === 'active' && selected}
 			<section class="journey narrow">
 				<p class="eyebrow">02 / LIVE YOUR STORY</p>
 				<h1>You're on an adventure.</h1>
 				<p class="subtitle">No perfect itinerary. Just a little curiosity.</p>
-				<div class="selected-place">
-					<span>&#8599;</span>
-					<div>
+				<div class="selected-place" class:has-map={selected.coords}>
+					{#if selected.coords}<div class="place-banner">
+							<PlaceMap coords={selected.coords} zoom={15} w={640} h={300} style="ink" alt="" />
+							<span class="here-chip"><i></i> You're here &middot; {elapsed(startedAt)}</span>
+						</div>{:else}<span class="place-glyph">&#8599;</span>{/if}
+					<div class="place-meta">
 						<h2>{selected.title}</h2>
 						<p>{selected.location}</p>
-						<a href={selected.url} target="_blank" rel="noopener noreferrer"
-							>Experience details & directions &#8599;</a
-						>
+						<div class="card-links">
+							<a href={selected.url} target="_blank" rel="noopener noreferrer"
+								>Experience details &#8599;</a
+							>{#if selected.coords || selected.mapsUrl}<a
+									class="secondary small"
+									href={directions(selected)}
+									target="_blank"
+									rel="noopener noreferrer">Directions &#8599;</a
+								>{/if}
+						</div>
 					</div>
 				</div>
 				<h2>How does this moment feel?</h2>
@@ -602,7 +673,12 @@
 						>
 					</div>
 					<h2>{scrapbook.title}</h2>
-					<p class="scrapbook-location">&#8599; {scrapbook.experience.location}</p>
+					<div class="scrapbook-place">
+						<p class="scrapbook-location">&#8599; {scrapbook.experience.location}</p>
+						{#if scrapbook.experience.coords}<div class="map-stamp">
+								<PlaceMap coords={scrapbook.experience.coords} zoom={14} w={160} h={160} alt="" />
+							</div>{/if}
+					</div>
 					<div class="scrapbook-photos" class:single={scrapbook.photos.length === 1}>
 						{#each scrapbook.photos as photo, i}<figure>
 								<img src={photo} alt={`A moment from your adventure, photo ${i + 1}`} />
@@ -644,6 +720,19 @@
 				<p class="eyebrow">YOUR PERSONAL COLLECTION</p>
 				<h1>Good days.<br /><em>Kept close.</em></h1>
 				<p>Stories saved on this browser, ready to revisit. Up to 12 recent adventures.</p>
+				{#if pinned.length}<div class="history-map">
+						<PlaceMap
+							pins={pinned.map((a) => a.experience.coords!)}
+							numbered
+							trail={pinned.length > 1}
+							w={640}
+							h={320}
+							alt="Map of your saved adventures"
+						/>
+						<ol>
+							{#each pinned as a, i}<li><b>{i + 1}</b> {a.experience.location}</li>{/each}
+						</ol>
+					</div>{/if}
 				{#if history.length}<div class="history-grid">
 						{#each history as adventure}<article class="history-card">
 								<button
@@ -676,8 +765,9 @@
 		{/if}
 	</div>
 	<footer class="exp-footer">
-		<span>explorin. <span class="muted">a little more out there.</span></span><span
-			>Made for curious people &#10035;</span
-		>
+		<span
+			><img class="footer-mark" src="/brand/mark-ink.svg" alt="" /> explorin.
+			<span class="muted">a little more out there.</span></span
+		><span>Made for curious people &#10035;</span>
 	</footer>
 </div>

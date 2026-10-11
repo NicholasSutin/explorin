@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href="/icon.svg" />
+	<link rel="icon" href="/brand/favicon.svg" />
 </svelte:head>
 
 {#if page.url.pathname === '/'}

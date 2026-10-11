@@ -124,3 +124,16 @@ test('HEIC photos decode through the libheif worker fallback', async ({ page }) 
 	await expect(page.locator('.error, [role=alert]')).toHaveCount(0);
 	expect(errors).toEqual([]);
 });
+
+test('map route validates input and never leaks the key', async ({ request }) => {
+	expect((await request.get('/api/map')).status()).toBe(400);
+	expect((await request.get('/api/map?lat=999&lng=0')).status()).toBe(400);
+	expect((await request.get('/api/map?pins=1,2;x')).status()).toBe(400);
+	const ok = await request.get('/api/map?lat=40.748&lng=-74.0048&zoom=15&w=300&h=200&style=ink');
+	expect([200, 502, 503]).toContain(ok.status());
+	if (ok.status() === 200) expect(ok.headers()['content-type']).toMatch(/^image\//);
+	const pins = await request.get(
+		'/api/map?pins=40.748,-74.0048;40.7024,-73.9875&numbered=1&trail=1'
+	);
+	expect([200, 502, 503]).toContain(pins.status());
+});

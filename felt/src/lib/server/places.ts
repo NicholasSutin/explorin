@@ -1,6 +1,7 @@
 /**
- * Google Places API (New) wrapper: one Text Search per place to find its ID and first photo,
- * then one Place Photo media call to turn a photo name into a Google-hosted image URL.
+ * Google Places API (New) wrapper: one Text Search per place to find its ID, first photo,
+ * coordinates and Maps link, then one Place Photo media call to turn a photo name into a
+ * Google-hosted image URL. Static map images are served by src/lib/server/maps.ts.
  *
  * Billing (Oct 2026): Text Search with `places.photos` in the field mask is the Pro SKU
  * ($32 / 1k after 5k free per month). Photo media is "Place Details Photos" ($7 / 1k after
@@ -11,7 +12,7 @@
  * Reviews fall back to Nimble's google_maps_reviews when Places is off but Nimble Web API is on.
  */
 import { GOOGLE_MAPS_API_KEY } from '$app/env/private';
-import type { ExperiencePhoto, PlaceReview } from '#lib/adventure';
+import type { ExperiencePhoto, LatLng, PlaceReview } from '#lib/adventure';
 import { mapsReviews, nimbleMapsEnabled } from '#lib/server/nimble';
 
 export const placesEnabled = () => Boolean(GOOGLE_MAPS_API_KEY);
@@ -20,9 +21,16 @@ const PHOTO_NAME = /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/;
 export const validPhotoName = (name: string) => PHOTO_NAME.test(name);
 
 const DAY = 24 * 60 * 60 * 1000;
-const placeCache = new Map<string, { at: number; value: ExperiencePhoto | null }>();
+const placeCache = new Map<string, { at: number; value: PlaceLookup | null }>();
 const uriCache = new Map<string, { at: number; value: string }>();
 const reviewCache = new Map<string, { at: number; value: PlaceReviews | null }>();
+
+export interface PlaceLookup {
+	placeId: string;
+	photo?: ExperiencePhoto;
+	coords?: LatLng;
+	mapsUrl?: string;
+}
 
 export interface PlaceReviews {
 	rating?: number;
@@ -51,26 +59,32 @@ async function get<T>(
 interface TextSearchResponse {
 	places?: {
 		id: string;
+		location?: { latitude?: number; longitude?: number };
+		googleMapsUri?: string;
 		photos?: { name: string; authorAttributions?: { displayName?: string; uri?: string }[] }[];
 	}[];
 }
 
-/** Find a place's first photo by free-text query, e.g. "The High Line, New York City". */
-export async function findPlacePhoto(query: string): Promise<ExperiencePhoto | null> {
+/**
+ * Find a place by free-text query, e.g. "The High Line, New York City": ID, first photo,
+ * coordinates and Google Maps link. `location` and `googleMapsUri` are Essentials fields, so
+ * they add nothing to the Pro SKU that `places.photos` already triggers.
+ */
+export async function findPlace(query: string): Promise<PlaceLookup | null> {
 	if (!GOOGLE_MAPS_API_KEY || !query.trim()) return null;
 	const key = query.trim().toLowerCase();
 	const hit = placeCache.get(key);
 	if (hit && Date.now() - hit.at < DAY) return hit.value;
 	const ctrl = new AbortController();
 	const t = setTimeout(() => ctrl.abort(), 8000);
-	let value: ExperiencePhoto | null = null;
+	let value: PlaceLookup | null = null;
 	try {
 		const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
-				'X-Goog-FieldMask': 'places.id,places.photos'
+				'X-Goog-FieldMask': 'places.id,places.photos,places.location,places.googleMapsUri'
 			},
 			body: JSON.stringify({ textQuery: query, pageSize: 1 }),
 			signal: ctrl.signal
@@ -78,15 +92,32 @@ export async function findPlacePhoto(query: string): Promise<ExperiencePhoto | n
 		if (res.ok) {
 			const data = (await res.json()) as TextSearchResponse;
 			const place = data.places?.[0];
-			const photo = place?.photos?.[0];
-			if (place && photo && validPhotoName(photo.name)) {
-				const author = photo.authorAttributions?.[0];
-				value = {
-					name: photo.name,
-					placeId: place.id,
-					attribution: author?.displayName || 'Google Maps contributor',
-					attributionUrl: author?.uri && /^https:\/\//.test(author.uri) ? author.uri : undefined
-				};
+			if (place && /^[A-Za-z0-9_-]+$/.test(place.id)) {
+				value = { placeId: place.id };
+				const photo = place.photos?.[0];
+				if (photo && validPhotoName(photo.name)) {
+					const author = photo.authorAttributions?.[0];
+					value.photo = {
+						name: photo.name,
+						placeId: place.id,
+						attribution: author?.displayName || 'Google Maps contributor',
+						attributionUrl: author?.uri && /^https:\/\//.test(author.uri) ? author.uri : undefined
+					};
+				}
+				const lat = place.location?.latitude;
+				const lng = place.location?.longitude;
+				if (
+					typeof lat === 'number' &&
+					typeof lng === 'number' &&
+					Math.abs(lat) <= 90 &&
+					Math.abs(lng) <= 180
+				)
+					value.coords = { lat, lng };
+				if (
+					place.googleMapsUri &&
+					/^https:\/\/(www\.google\.com\/maps|maps\.google\.com\/)/.test(place.googleMapsUri)
+				)
+					value.mapsUrl = place.googleMapsUri;
 			}
 		}
 	} catch {
@@ -96,6 +127,11 @@ export async function findPlacePhoto(query: string): Promise<ExperiencePhoto | n
 	}
 	placeCache.set(key, { at: Date.now(), value });
 	return value;
+}
+
+/** Back-compat: just the first photo of a place. */
+export async function findPlacePhoto(query: string): Promise<ExperiencePhoto | null> {
+	return (await findPlace(query))?.photo ?? null;
 }
 
 /** Resolve a photo resource name to a Google-hosted image URL (lh3.googleusercontent.com). */
@@ -162,6 +198,8 @@ async function nimbleFallbackReviews(query: string): Promise<PlaceReviews | null
 
 type Enrichable = {
 	photo?: ExperiencePhoto;
+	coords?: LatLng;
+	mapsUrl?: string;
 	placeQuery?: string;
 	location: string;
 	title: string;
@@ -171,7 +209,10 @@ type Enrichable = {
 	reviewSource?: 'google-places' | 'nimble';
 };
 
-/** Attach photo, rating and reviews to each experience. Places first, Nimble reviews as fallback. */
+/**
+ * Attach photo, coordinates, Maps link, rating and reviews to each experience.
+ * Places first, Nimble reviews as fallback. Never throws; items pass through untouched on failure.
+ */
 export async function enrichPlaces<T extends Enrichable>(items: T[]): Promise<T[]> {
 	if (!placesEnabled() && !nimbleMapsEnabled()) return items;
 	return Promise.all(
@@ -179,11 +220,16 @@ export async function enrichPlaces<T extends Enrichable>(items: T[]): Promise<T[
 			const query = item.placeQuery || `${item.title} ${item.location}`;
 			let out: T = item;
 			if (placesEnabled()) {
-				const photo = item.photo ?? (await findPlacePhoto(query));
-				if (photo) {
-					out = { ...out, photo };
+				const place = await findPlace(query);
+				if (place) {
+					out = {
+						...out,
+						photo: out.photo ?? place.photo,
+						coords: out.coords ?? place.coords,
+						mapsUrl: out.mapsUrl ?? place.mapsUrl
+					};
 					if (!item.reviews) {
-						const r = await placeReviews(photo.placeId);
+						const r = await placeReviews(place.placeId);
 						if (r)
 							out = {
 								...out,
@@ -200,20 +246,6 @@ export async function enrichPlaces<T extends Enrichable>(items: T[]): Promise<T[
 				if (r) out = { ...out, reviews: r.reviews, reviewSource: 'nimble' };
 			}
 			return out;
-		})
-	);
-}
-
-/** Attach photos to experiences in parallel; leaves the list untouched when Places is off. */
-export async function withPhotos<
-	T extends { photo?: ExperiencePhoto; placeQuery?: string; location: string; title: string }
->(items: T[]): Promise<T[]> {
-	if (!placesEnabled()) return items;
-	return Promise.all(
-		items.map(async (item) => {
-			if (item.photo) return item;
-			const photo = await findPlacePhoto(item.placeQuery || `${item.title} ${item.location}`);
-			return photo ? { ...item, photo } : item;
 		})
 	);
 }

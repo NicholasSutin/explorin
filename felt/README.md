@@ -33,7 +33,7 @@ npx wrangler r2 bucket create felt-photos
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put NIMBLE_API_KEY
-npx wrangler secret put GOOGLE_MAPS_API_KEY   # optional: real place photos on cards
+npx wrangler secret put GOOGLE_MAPS_API_KEY   # optional: place photos, reviews and stylized static maps
 cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run preview`
 npm run deploy
 ```
