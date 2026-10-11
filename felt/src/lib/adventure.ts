@@ -52,6 +52,17 @@ export interface Adventure {
 	aiGenerated: boolean;
 }
 export const HISTORY_KEY = 'explorin.history.v1';
+/** One stage of the discovery pipeline, streamed from /api/discover so the UI can show the work. */
+export interface DiscoveryStep {
+	id: 'search' | 'ai' | 'places' | 'curated';
+	label: string;
+	state: 'running' | 'done' | 'skipped' | 'failed';
+	/** One line of what happened, e.g. "8 pages read". */
+	detail?: string;
+	/** Short list of what the stage produced: page titles, place names. */
+	items?: string[];
+	ms?: number;
+}
 export const demoExperiences: Experience[] = [
 	{
 		id: 'high-line',

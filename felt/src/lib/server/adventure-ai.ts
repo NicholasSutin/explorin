@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { GEMINI_API_KEY } from '$app/env/private';
 export async function adventureAI<T>(prompt: string): Promise<T | null> {
 	if (!GEMINI_API_KEY) return null;
@@ -7,7 +7,12 @@ export async function adventureAI<T>(prompt: string): Promise<T | null> {
 		const result = await ai.models.generateContent({
 			model: 'gemini-3.8-flash',
 			contents: prompt,
-			config: { responseMimeType: 'application/json', httpOptions: { timeout: 18000 } }
+			config: {
+				responseMimeType: 'application/json',
+				httpOptions: { timeout: 18000 },
+				// Extraction and short composition, not a reasoning task: keep it quick for the demo.
+				thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+			}
 		});
 		return JSON.parse(result.text || 'null') as T;
 	} catch {

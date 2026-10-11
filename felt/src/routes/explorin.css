@@ -1495,3 +1495,232 @@
 		animation: none;
 	}
 }
+
+/* ---------- demo: starters, pipeline panel, quick notes, sample photos ---------- */
+.starters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-top: 18px;
+}
+.starters > span {
+	font-size: 11px;
+	color: #8a9587;
+	margin-right: 4px;
+}
+.starters button {
+	border: 1px solid #c9d3bf;
+	background: #fffdf7;
+	border-radius: 24px;
+	padding: 8px 14px;
+	font-size: 12px;
+	color: var(--green);
+	text-align: left;
+}
+.starters button:hover:not(:disabled) {
+	background: #e7eedf;
+	border-color: #91aa7c;
+}
+.pipeline {
+	margin: 26px 0 0;
+	padding: 20px 22px;
+	border-radius: 16px;
+	background: #fffdf6;
+	border: 1px solid #dfe2d5;
+	scroll-margin-top: 20px;
+}
+.pipeline.live {
+	border-color: #b9c9aa;
+	box-shadow: 0 0 0 4px #e7eedf;
+}
+.pipeline-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 14px;
+}
+.pipeline-clock {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	font-variant-numeric: tabular-nums;
+	font-size: 12px;
+	color: #5c755c;
+}
+.pipeline-clock .spinner {
+	width: 14px;
+	height: 14px;
+}
+.pipeline ol {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+}
+.step {
+	display: grid;
+	grid-template-columns: 18px 1fr auto;
+	gap: 12px;
+	padding: 10px 0;
+	position: relative;
+	animation: step-in 0.3s ease-out;
+}
+.step + .step:before {
+	content: '';
+	position: absolute;
+	left: 8px;
+	top: -14px;
+	height: 24px;
+	border-left: 1px dashed #c4ceba;
+}
+.step-dot {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid #c4ceba;
+	background: white;
+	margin-top: 3px;
+	display: inline-block;
+	position: relative;
+	z-index: 1;
+}
+.step.running .step-dot {
+	border-color: var(--orange);
+	animation: step-pulse 1s ease-in-out infinite;
+}
+.step.done .step-dot,
+.step-dot.done {
+	border-color: var(--green);
+	background: var(--green);
+	box-shadow: inset 0 0 0 3px white;
+}
+.step.failed .step-dot {
+	border-color: var(--orange);
+	background: #fae6d9;
+}
+.step.skipped {
+	opacity: 0.6;
+}
+.step-body {
+	min-width: 0;
+}
+.step-body strong {
+	display: block;
+	font-size: 14px;
+	line-height: 1.4;
+}
+.step.running .step-body strong {
+	color: var(--orange);
+}
+.step-body p {
+	margin: 2px 0 0;
+	font-size: 12px;
+	color: #687766;
+}
+.step-body ul {
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.step-body ul li {
+	font-size: 11px;
+	background: #f0f3e8;
+	border-radius: 20px;
+	padding: 3px 10px;
+	color: #3f4a3b;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	animation: step-in 0.3s ease-out;
+}
+.step.done .step-body ul li {
+	background: #e7eedf;
+}
+.step-ms {
+	font-size: 11px;
+	color: #8a9587;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	padding-top: 3px;
+}
+.step.running .step-ms {
+	color: var(--orange);
+}
+.quick-notes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 0 0 20px;
+}
+.quick-notes > span {
+	font-size: 11px;
+	color: #8a9587;
+	width: 100%;
+}
+.quick-notes button {
+	border: 1px dashed #b9c9aa;
+	background: transparent;
+	border-radius: 24px;
+	padding: 7px 13px;
+	font-size: 12px;
+	color: #557052;
+}
+.quick-notes button:hover:not(:disabled) {
+	background: #e7eedf;
+	border-style: solid;
+}
+.quick-notes button:disabled {
+	cursor: default;
+	text-decoration: line-through;
+}
+.sample-photos {
+	margin: 12px 0 4px;
+	font-weight: 500;
+}
+.story-meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.story-meta .step-dot {
+	width: 12px;
+	height: 12px;
+	margin: 0;
+	box-shadow: inset 0 0 0 2px white;
+}
+@keyframes step-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+@keyframes step-pulse {
+	50% {
+		box-shadow: 0 0 0 5px #d9673833;
+	}
+}
+@media (max-width: 620px) {
+	.starters button {
+		width: 100%;
+	}
+	.step-ms {
+		font-size: 10px;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.step,
+	.step-body ul li {
+		animation: none;
+	}
+	.step.running .step-dot {
+		animation: none;
+	}
+}

@@ -12,7 +12,7 @@ test('mobile demo: discovery, reflection, photos, scrapbook, export and persiste
 		true
 	);
 	await page.screenshot({ path: 'test-results/mobile-discovery.png', fullPage: true });
-	await page.getByRole('button', { name: 'Try the NYC demo' }).click();
+	await page.getByRole('button', { name: 'Curated NYC picks' }).click();
 	await expect(page.getByText(/Demo collection/)).toBeVisible();
 	await page
 		.getByRole('button', { name: /Start Adventure/ })
@@ -90,7 +90,7 @@ test('HEIC photos decode through the libheif worker fallback', async ({ page }) 
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
 	await page.goto('/');
-	await page.getByRole('button', { name: 'Try the NYC demo' }).click();
+	await page.getByRole('button', { name: 'Curated NYC picks' }).click();
 	await page
 		.getByRole('button', { name: /Start Adventure/ })
 		.first()
@@ -136,4 +136,21 @@ test('map route validates input and never leaks the key', async ({ request }) =>
 		'/api/map?pins=40.748,-74.0048;40.7024,-73.9875&numbered=1&trail=1'
 	);
 	expect([200, 502, 503]).toContain(pins.status());
+});
+
+test('discovery streams pipeline steps as NDJSON when asked to', async ({ request }) => {
+	const res = await request.post('/api/discover', {
+		headers: { Accept: 'application/x-ndjson' },
+		data: { prompt: 'A curious afternoon', location: 'New York City', interests: [], demo: true }
+	});
+	expect(res.ok()).toBe(true);
+	expect(res.headers()['content-type']).toContain('application/x-ndjson');
+	const events = (await res.text())
+		.split('\n')
+		.filter(Boolean)
+		.map((line) => JSON.parse(line) as { type: string; step?: { id: string; state: string } });
+	expect(events[0]).toMatchObject({ type: 'step', step: { id: 'curated', state: 'done' } });
+	expect(events.at(-1)?.type).toBe('result');
+	// The curated path still reports whether Places enrichment ran, skipped or failed.
+	expect(events.some((e) => e.step?.id === 'places' && e.step.state !== 'running')).toBe(true);
 });

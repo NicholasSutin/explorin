@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { toBlob } from 'html-to-image';
-	import { HISTORY_KEY, type Experience, type Adventure } from '#lib/adventure';
+	import { HISTORY_KEY, type Experience, type Adventure, type DiscoveryStep } from '#lib/adventure';
 	import { decodePhoto, isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
 	import PlaceMap from '#lib/components/PlaceMap.svelte';
 	import './explorin.css';
@@ -40,6 +40,32 @@
 	let speechSupported = $state(false);
 	let listening = $state(false);
 	let now = $state(Date.now());
+	/** Pipeline stages streamed from /api/discover, newest state per stage. */
+	let steps = $state<DiscoveryStep[]>([]);
+	let pipelineMs = $state(0);
+	let pipelineElement = $state<HTMLElement>();
+	/** How the scrapbook story was written: model and wall time, from /api/scrapbook. */
+	let storyMeta = $state<{ model?: string; ms: number; notes: number } | null>(null);
+	let writing = $state(0);
+	/** One-tap prompts for the live pipeline. Each one is phrased the way a person would actually ask. */
+	const starters = [
+		'A rainy afternoon with art and really good coffee',
+		'Sunrise run with a skyline view, then breakfast',
+		'A slow Sunday in Brooklyn, hidden gems only'
+	];
+	/** One-tap reflections, so the story step can be shown without typing. */
+	const quickNotes = [
+		'The light was doing something unreal.',
+		'Got a little lost and didn\u2019t mind at all.',
+		'Quieter than I expected. I needed that.',
+		'Found a bench and just watched people for a while.'
+	];
+	/** Three marketing photos that stand in for a camera roll during a demo. */
+	const samplePhotos = [
+		'/marketing/high-line-fall.webp',
+		'/marketing/nyc-highline-ugc.webp',
+		'/marketing/run-selfie.webp'
+	];
 	/** Marketing photos with the film filter each one wears. Alt text is decorative-free on purpose. */
 	const postcards = [
 		{
@@ -145,28 +171,109 @@
 		if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
 		return data as T;
 	}
+	/** POST and read newline-delimited JSON events as they arrive. */
+	async function streamApi(
+		path: string,
+		body: unknown,
+		onEvent: (event: Record<string, unknown>) => void
+	): Promise<void> {
+		const res = await fetch(path, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(60000)
+		});
+		if (!res.ok || !res.body) {
+			const data = (await res.json().catch(() => ({}))) as { error?: string };
+			throw new Error(data.error || 'Something went wrong. Please try again.');
+		}
+		const reader = res.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = '';
+		for (;;) {
+			const { value, done } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value, { stream: true });
+			let i: number;
+			while ((i = buffer.indexOf('\n')) >= 0) {
+				const line = buffer.slice(0, i).trim();
+				buffer = buffer.slice(i + 1);
+				if (line) onEvent(JSON.parse(line));
+			}
+		}
+		if (buffer.trim()) onEvent(JSON.parse(buffer));
+	}
 	async function discover(demo = false) {
 		busy = true;
 		error = '';
 		notice = '';
 		experiences = [];
+		steps = [];
+		pipelineMs = 0;
+		const started = Date.now();
+		const ticker = setInterval(() => (pipelineMs = Date.now() - started), 100);
+		await tick();
+		pipelineElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		try {
-			const data = await api<{ experiences: Experience[]; notice: string }>('/api/discover', {
-				prompt: demo ? 'A curious afternoon' : prompt,
-				location,
-				interests,
-				demo,
-				insights: useInsights
-					? history
-							.filter((a) => a.shareInsights)
-							.slice(0, 5)
-							.map((a) => a.summary.slice(0, 500))
-					: []
-			});
-			experiences = data.experiences;
-			notice = data.notice;
+			await streamApi(
+				'/api/discover',
+				{
+					prompt: demo ? 'A curious afternoon' : prompt,
+					location,
+					interests,
+					demo,
+					insights: useInsights
+						? history
+								.filter((a) => a.shareInsights)
+								.slice(0, 5)
+								.map((a) => a.summary.slice(0, 500))
+						: []
+				},
+				(event) => {
+					if (event.type === 'step') {
+						const step = event.step as DiscoveryStep;
+						steps = steps.some((s) => s.id === step.id)
+							? steps.map((s) => (s.id === step.id ? step : s))
+							: [...steps, step];
+					} else if (event.type === 'result') {
+						const result = event.result as { experiences: Experience[]; notice: string };
+						experiences = result.experiences;
+						notice = result.notice;
+					} else if (event.type === 'error') throw new Error(String(event.error));
+				}
+			);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Discovery failed. Please try again.';
+		} finally {
+			clearInterval(ticker);
+			pipelineMs = Date.now() - started;
+			busy = false;
+		}
+	}
+	function tryStarter(text: string) {
+		prompt = text;
+		discover();
+	}
+	function quickNote(text: string) {
+		if (reflections.length < 30 && !reflections.includes(text))
+			reflections = [...reflections, text];
+	}
+	async function useSamplePhotos() {
+		busy = true;
+		error = '';
+		try {
+			const files = await Promise.all(
+				samplePhotos.slice(0, 4 - photos.length).map(async (src) => {
+					const res = await fetch(src);
+					if (!res.ok) throw new Error('Sample photos are unavailable right now.');
+					return new File([await res.blob()], src.split('/').pop() || 'sample.webp', {
+						type: 'image/webp'
+					});
+				})
+			);
+			photos = [...photos, ...(await Promise.all(files.map(photoData)))];
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Could not load the sample photos.';
 		} finally {
 			busy = false;
 		}
@@ -253,11 +360,18 @@
 		busy = true;
 		error = '';
 		status = '';
+		storyMeta = null;
+		const started = Date.now();
+		const ticker = setInterval(() => (writing = Date.now() - started), 100);
 		try {
-			const data = await api<{ title: string; summary: string; aiGenerated: boolean }>(
-				'/api/scrapbook',
-				{ title: selected.title, location: selected.location, reflections }
-			);
+			const data = await api<{
+				title: string;
+				summary: string;
+				aiGenerated: boolean;
+				model?: string;
+				ms: number;
+			}>('/api/scrapbook', { title: selected.title, location: selected.location, reflections });
+			storyMeta = { model: data.model, ms: Date.now() - started, notes: reflections.length };
 			scrapbook = {
 				id: crypto.randomUUID(),
 				experience: selected,
@@ -279,6 +393,8 @@
 					? e.message
 					: 'Could not create your scrapbook. Your photos and reflections are still here; please retry.';
 		} finally {
+			clearInterval(ticker);
+			writing = 0;
 			busy = false;
 		}
 	}
@@ -377,8 +493,16 @@
 							type="button"
 							class="text-button"
 							disabled={busy || !mounted}
-							onclick={() => discover(true)}>Try the NYC demo</button
+							onclick={() => discover(true)}>Curated NYC picks</button
 						>
+					</div>
+					<div class="starters" aria-label="Try one of these">
+						<span>or try one, live:</span>
+						{#each starters as text}<button
+								type="button"
+								disabled={busy || !mounted}
+								onclick={() => tryStarter(text)}>{text} &#8599;</button
+							>{/each}
 					</div>
 				</div>
 				<div class="hero-stack" aria-hidden="true">
@@ -446,13 +570,47 @@
 					<div class="discover-actions">
 						<button class="primary" disabled={busy}
 							>{busy ? 'Finding your kind of adventure…' : 'Find my adventure \u2197'}</button
-						><span class="hint">or scroll up for the NYC demo</span>
+						><span class="hint">live search, about ten seconds</span>
 					</div>
 				</form>
 			</section>
-			{#if busy}<div class="loading" role="status">
-					<span class="spinner"></span>Following your curiosity. This may take a few moments.
-				</div>{/if}
+			{#if steps.length || busy}<aside
+					class="pipeline"
+					class:live={busy}
+					bind:this={pipelineElement}
+					role="status"
+					aria-live="polite"
+				>
+					<div class="pipeline-head">
+						<span class="eyebrow">UNDER THE HOOD</span>
+						<span class="pipeline-clock"
+							>{#if busy}<span class="spinner"></span>{/if}{(pipelineMs / 1000).toFixed(1)} s</span
+						>
+					</div>
+					<ol>
+						{#each steps as step (step.id)}<li class="step {step.state}">
+								<span class="step-dot"></span>
+								<div class="step-body">
+									<strong>{step.label}</strong>
+									{#if step.detail}<p>{step.detail}</p>{/if}
+									{#if step.items?.length}<ul>
+											{#each step.items as item}<li>{item}</li>{/each}
+										</ul>{/if}
+								</div>
+								<span class="step-ms"
+									>{step.state === 'running'
+										? 'working'
+										: step.ms != null && step.ms > 0
+											? `${(step.ms / 1000).toFixed(1)} s`
+											: ''}</span
+								>
+							</li>{/each}
+						{#if busy && !steps.length}<li class="step running">
+								<span class="step-dot"></span>
+								<div class="step-body"><strong>Connecting</strong></div>
+							</li>{/if}
+					</ol>
+				</aside>{/if}
 			{#if experiences.length}<section class="results">
 					<div class="section-heading">
 						<div>
@@ -592,6 +750,14 @@
 					>
 				</div>
 				{#if listening}<p role="status">Listening… your words will appear above.</p>{/if}
+				<div class="quick-notes">
+					<span>or tap a quick note</span>
+					{#each quickNotes as text}<button
+							type="button"
+							disabled={reflections.includes(text) || reflections.length >= 30}
+							onclick={() => quickNote(text)}>+ {text}</button
+						>{/each}
+				</div>
 				<div class="reflection-list">
 					{#each reflections as text, i}<div>
 							<span>Moment {String(i + 1).padStart(2, '0')}</span>
@@ -627,6 +793,12 @@
 					onchange={upload}
 					disabled={busy || photos.length >= 4}
 				/>
+				{#if photos.length < 4}<button
+						type="button"
+						class="secondary wide sample-photos"
+						disabled={busy}
+						onclick={useSamplePhotos}>Use sample photos instead</button
+					>{/if}
 				<div class="photo-previews">
 					{#each photos as photo, i}<div>
 							<img src={photo} alt={`Adventure photo ${i + 1}`} /><button
@@ -648,7 +820,11 @@
 					kept on this device.
 				</p>
 				<button class="primary wide" disabled={busy || photos.length < 1} onclick={generate}
-					>{busy ? 'Putting your story together…' : 'Create my scrapbook \u2197'}</button
+					>{writing
+						? `Gemini is writing your story\u2026 ${(writing / 1000).toFixed(1)} s`
+						: busy
+							? 'Preparing\u2026'
+							: 'Create my scrapbook \u2197'}</button
 				><button class="text-button" disabled={busy} onclick={() => (view = 'active')}
 					>&#8592; Back to reflections</button
 				>
@@ -695,11 +871,18 @@
 						>
 					</div>
 				</article>
-				<p class="footnote">
-					{scrapbook.aiGenerated
-						? 'Written with AI from your reflections.'
-						: 'AI unavailable — this keepsake uses your own words and adventure details.'}
-					{saved ? 'Saved on this device.' : ''}
+				<p class="footnote story-meta">
+					{#if scrapbook.aiGenerated}<span class="step-dot done"></span><span
+							>Written by {storyMeta?.model ?? 'Gemini'} from {storyMeta?.notes ??
+								scrapbook.reflections.length}
+							{(storyMeta?.notes ?? scrapbook.reflections.length) === 1
+								? 'note'
+								: 'notes'}{storyMeta ? ` in ${(storyMeta.ms / 1000).toFixed(1)} s` : ''}. Photos
+							stayed on this device.</span
+						>{:else}<span
+							>AI unavailable — this keepsake uses your own words and adventure details.</span
+						>{/if}
+					{#if saved}<span>Saved on this device.</span>{/if}
 				</p>
 				<div class="export-actions">
 					<button class="primary" disabled={busy} onclick={() => exportScrapbook()}
