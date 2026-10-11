@@ -1724,3 +1724,91 @@
 		animation: none;
 	}
 }
+
+.about {
+	margin-top: 20px;
+	border-top: 1px solid #e7e8df;
+	padding-top: 6px;
+}
+.about summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	list-style: none;
+}
+.about summary::-webkit-details-marker {
+	display: none;
+}
+.about summary .field-label {
+	margin: 10px 0;
+}
+.about-state {
+	font-size: 12px;
+	color: #285c47;
+	white-space: nowrap;
+}
+.about-text {
+	min-height: 84px;
+}
+.about-chips {
+	margin-top: 10px;
+}
+.about-files {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-top: 10px;
+}
+.file-button {
+	font-size: 12px;
+	color: #285c47;
+	border: 1px dashed #91aa7c;
+	border-radius: 24px;
+	padding: 7px 12px;
+	cursor: pointer;
+}
+.file-button span {
+	color: #919988;
+	margin-left: 4px;
+}
+.file-button input {
+	display: none;
+}
+.file-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	background: #e7eedf;
+	color: #355e3e;
+	border-radius: 24px;
+	padding: 6px 10px;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+.file-chip button {
+	border: 0;
+	background: transparent;
+	color: #d96738;
+	font-size: 14px;
+	padding: 0 2px;
+	cursor: pointer;
+}
+.about-error {
+	font-size: 12px;
+	color: #d96738;
+	margin: 8px 0 0;
+}
+.personalized {
+	display: inline-block;
+	margin-left: 8px;
+	font-style: normal;
+	font-size: 10px;
+	color: #d96738;
+	border: 1px solid #d96738;
+	border-radius: 24px;
+	padding: 1px 7px;
+}

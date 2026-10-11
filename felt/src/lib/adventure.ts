@@ -25,6 +25,8 @@ export interface Experience {
 	url: string;
 	category: string;
 	reason: string;
+	/** True when `reason` was rewritten by Gemini from the user's About you context. */
+	personalized?: boolean;
 	/** Free-text query used to look the place up in Google Places (defaults to title + location). */
 	placeQuery?: string;
 	photo?: ExperiencePhoto;

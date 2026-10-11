@@ -47,6 +47,62 @@
 	/** How the scrapbook story was written: model and wall time, from /api/scrapbook. */
 	let storyMeta = $state<{ model?: string; ms: number; notes: number } | null>(null);
 	let writing = $state(0);
+	/** Free-text context about the person, persisted locally so personalization survives a reload. */
+	const ABOUT_KEY = 'explorin.about.v1';
+	let about = $state('');
+	let aboutOpen = $state(false);
+	let aboutFiles = $state<{ name: string; text: string }[]>([]);
+	let aboutError = $state('');
+	/** One-tap personas that show personalization without typing. */
+	const aboutExamples = [
+		'Solo, introvert, loves architecture',
+		'Parent with a 6-year-old, needs stroller-friendly',
+		'Runner, early riser, coffee snob'
+	];
+	/** Textarea plus any attached notes, trimmed to what the API accepts. */
+	const aboutContext = $derived(
+		[about.trim(), ...aboutFiles.map((f) => `${f.name}:\n${f.text.trim()}`)]
+			.filter(Boolean)
+			.join('\n\n')
+			.slice(0, 2000)
+	);
+	function saveAbout(text: string) {
+		about = text;
+		aboutOpen = true;
+		try {
+			localStorage.setItem(ABOUT_KEY, text);
+		} catch {
+			/* storage unavailable: still works for this session */
+		}
+	}
+	async function addAboutFiles(list: FileList | null) {
+		aboutError = '';
+		if (!list) return;
+		const next = [...aboutFiles];
+		for (const file of Array.from(list)) {
+			if (next.length >= 3) {
+				aboutError = 'Up to three notes at a time.';
+				break;
+			}
+			if (!/\.(txt|md|json)$/i.test(file.name)) {
+				aboutError = `${file.name}: only .txt, .md or .json notes.`;
+				continue;
+			}
+			if (file.size > 200 * 1024) {
+				aboutError = `${file.name} is over 200 KB.`;
+				continue;
+			}
+			if (next.some((f) => f.name === file.name)) continue;
+			const text = await new Promise<string>((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = () => resolve(String(reader.result ?? ''));
+				reader.onerror = () => reject(reader.error);
+				reader.readAsText(file);
+			}).catch(() => '');
+			if (text.trim()) next.push({ name: file.name, text: text.slice(0, 2000) });
+		}
+		aboutFiles = next;
+	}
 	/** One-tap prompts for the live pipeline. Each one is phrased the way a person would actually ask. */
 	const starters = [
 		'A rainy afternoon with art and really good coffee',
@@ -106,6 +162,15 @@
 	];
 	onMount(() => {
 		mounted = true;
+		try {
+			const storedAbout = localStorage.getItem(ABOUT_KEY);
+			if (storedAbout) {
+				about = storedAbout.slice(0, 1200);
+				aboutOpen = true;
+			}
+		} catch {
+			/* storage unavailable */
+		}
 		try {
 			const stored: unknown = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 			if (Array.isArray(stored))
@@ -221,6 +286,7 @@
 					prompt: demo ? 'A curious afternoon' : prompt,
 					location,
 					interests,
+					about: aboutContext,
 					demo,
 					insights: useInsights
 						? history
@@ -563,6 +629,50 @@
 										: [...interests, topic])}>{topic}</button
 							>{/each}
 					</div>
+					<details class="about" bind:open={aboutOpen}>
+						<summary>
+							<span class="field-label">About you <span>optional, makes it personal</span></span>
+							<span class="about-state">{aboutContext ? 'Added \u2713' : 'Add context \u002b'}</span
+							>
+						</summary>
+						<label for="about" class="sr-only">Tell us about yourself</label><textarea
+							id="about"
+							class="about-text"
+							maxlength="1200"
+							value={about}
+							oninput={(e) => saveAbout(e.currentTarget.value)}
+							placeholder="I\u2019m visiting with my partner, we love quiet mornings, old bookstores, and we walk everywhere\u2026"
+						></textarea>
+						<div class="chips about-chips">
+							{#each aboutExamples as example}<button
+									type="button"
+									class:chosen={about === example}
+									onclick={() => saveAbout(example)}>{example}</button
+								>{/each}
+						</div>
+						<div class="about-files">
+							<label class="file-button"
+								><input
+									type="file"
+									accept=".txt,.md,.json,text/plain,text/markdown,application/json"
+									multiple
+									onchange={(e) => {
+										addAboutFiles(e.currentTarget.files);
+										e.currentTarget.value = '';
+									}}
+								/>Attach notes <span>.txt .md .json</span></label
+							>
+							{#each aboutFiles as file (file.name)}<span class="file-chip"
+									>{file.name}<button
+										type="button"
+										aria-label={`Remove ${file.name}`}
+										onclick={() => (aboutFiles = aboutFiles.filter((f) => f.name !== file.name))}
+										>&times;</button
+									></span
+								>{/each}
+						</div>
+						{#if aboutError}<p class="about-error" role="alert">{aboutError}</p>{/if}
+					</details>
 					{#if history.some((a) => a.shareInsights)}<label class="checkbox"
 							><input type="checkbox" bind:checked={useInsights} /> Personalize with insights I chose
 							to share from past adventures</label
@@ -669,7 +779,12 @@
 													>
 												</blockquote>{/if}
 										</div>{/if}
-									<div class="fit"><span>&#8599;</span> {experience.reason}</div>
+									<div class="fit">
+										<span>&#8599;</span>
+										{experience.reason}{#if experience.personalized}<em class="personalized"
+												>Personalized for you</em
+											>{/if}
+									</div>
 									<div class="card-links">
 										<a href={experience.url} target="_blank" rel="noopener noreferrer"
 											>Check the source &#8599;</a
