@@ -44,7 +44,7 @@ export async function embed(text: string, kind: 'query' | 'doc'): Promise<number
 	return values;
 }
 
-/** Load an image (R2 key `/photos/...`, data URL, or http URL) as an inlineData part. */
+/** Load an image (storage key `/photos/...` or data URL, the only forms the app produces) as an inlineData part. */
 export async function imagePart(url: string): Promise<Part> {
 	if (url.startsWith('data:')) {
 		const m = url.match(/^data:([^;]+);base64,(.*)$/);
@@ -58,11 +58,7 @@ export async function imagePart(url: string): Promise<Part> {
 			inlineData: { mimeType: photo.contentType, data: Buffer.from(photo.body).toString('base64') }
 		};
 	}
-	const res = await fetch(url);
-	if (!res.ok) throw new Error(`Image fetch failed: ${res.status}`);
-	const mimeType = res.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
-	const data = Buffer.from(await res.arrayBuffer()).toString('base64');
-	return { inlineData: { mimeType, data } };
+	throw new Error('Unsupported photo URL');
 }
 
 /**

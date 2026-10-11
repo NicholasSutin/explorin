@@ -1,5 +1,6 @@
 .DS_Store
 .claude/worktrees
+node_modules/
 # stray vite cache
 .vite/
 # launch-video render output (local only)

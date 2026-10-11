@@ -73,7 +73,8 @@ export async function findPlace(query: string): Promise<PlaceLookup | null> {
 			body: JSON.stringify({ textQuery: query, pageSize: 1 })
 		}
 	);
-	const place = data?.places?.[0];
+	if (!data) return null; // request failed: do not remember that for a day
+	const place = data.places?.[0];
 	if (!place || !PLACE_ID.test(place.id)) return placeCache.set(key, null);
 	const value: PlaceLookup = { placeId: place.id };
 	const photo = place.photos?.[0];
@@ -139,22 +140,20 @@ export async function placeReviews(placeId: string): Promise<PlaceReviews | null
 			headers: headers('rating,userRatingCount,reviews')
 		}
 	);
-	const value: PlaceReviews | null = data
-		? {
-				rating: typeof data.rating === 'number' ? data.rating : undefined,
-				reviewCount: typeof data.userRatingCount === 'number' ? data.userRatingCount : undefined,
-				reviews: (data.reviews ?? [])
-					.map((r) => ({
-						text: (r.text?.text ?? '').trim().slice(0, 600),
-						rating: typeof r.rating === 'number' ? r.rating : null,
-						author: r.authorAttribution?.displayName || undefined,
-						when: r.relativePublishTimeDescription || undefined
-					}))
-					.filter((r) => r.text.length > 20)
-					.slice(0, 5)
-			}
-		: null;
-	return reviewCache.set(placeId, value);
+	if (!data) return null; // request failed: do not remember that for a day
+	return reviewCache.set(placeId, {
+		rating: typeof data.rating === 'number' ? data.rating : undefined,
+		reviewCount: typeof data.userRatingCount === 'number' ? data.userRatingCount : undefined,
+		reviews: (data.reviews ?? [])
+			.map((r) => ({
+				text: (r.text?.text ?? '').trim().slice(0, 600),
+				rating: typeof r.rating === 'number' ? r.rating : null,
+				author: r.authorAttribution?.displayName || undefined,
+				when: r.relativePublishTimeDescription || undefined
+			}))
+			.filter((r) => r.text.length > 20)
+			.slice(0, 5)
+	});
 }
 
 type Enrichable = Pick<

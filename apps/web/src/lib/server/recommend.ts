@@ -104,13 +104,12 @@ export async function recommend(
 	//    UNION places from evidence UNION Maps-grounded places (upserted). One query brings the cached live
 	//    context along, so step 6 needs no second read.
 	const evidencePlaceIds = [...new Set(evidence.map((e) => e.place_id))];
-	const [rows, groundedRows] = await Promise.all([
-		sql<CandidateRow[]>`
-			SELECT id, google_place_id, name, tags, notes, maps_url, live, live_at FROM places
-			WHERE kind IS NOT NULL ${evidencePlaceIds.length ? sql`OR id IN ${sql(evidencePlaceIds)}` : sql``}
-			ORDER BY name`,
-		Promise.all(grounded.map((g) => upsertGroundedPlace(g)))
-	]);
+	const groundedRows = [];
+	for (const g of grounded) groundedRows.push(await upsertGroundedPlace(g)); // sequential: two picks can share a name
+	const rows = await sql<CandidateRow[]>`
+		SELECT id, google_place_id, name, tags, notes, maps_url, live, live_at FROM places
+		WHERE kind IS NOT NULL ${evidencePlaceIds.length ? sql`OR id IN ${sql(evidencePlaceIds)}` : sql``}
+		ORDER BY name`;
 	const candidates = new Map<string, CandidateRow>();
 	for (const p of rows) candidates.set(p.id, p);
 	for (const p of groundedRows)

@@ -7,7 +7,11 @@ export const GET: RequestHandler = async ({ params }) => {
 	return new Response(photo.body, {
 		headers: {
 			'Content-Type': photo.contentType,
-			'Cache-Control': 'public, max-age=31536000, immutable'
+			'Cache-Control': 'public, max-age=31536000, immutable',
+			// Uploaded bytes are never scripts on this origin, whatever their declared type.
+			'X-Content-Type-Options': 'nosniff',
+			'Content-Security-Policy': 'sandbox',
+			'Content-Disposition': 'inline'
 		}
 	});
 };

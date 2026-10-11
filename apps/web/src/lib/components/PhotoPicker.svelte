@@ -17,9 +17,9 @@
 				urls.delete(f);
 			}
 		previews = files.map((f) => urls.get(f)!);
-		return () => {
-			if (!files.length) for (const url of urls.values()) URL.revokeObjectURL(url);
-		};
+	});
+	$effect(() => () => {
+		for (const url of urls.values()) URL.revokeObjectURL(url);
 	});
 	let converting = $state(0);
 	let error = $state('');

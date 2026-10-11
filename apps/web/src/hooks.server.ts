@@ -1,8 +1,11 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const handle: Handle = async ({ event, resolve }) => {
 	let uid = event.cookies.get('uid');
-	if (!uid) {
+	// The uid is a storage path segment and a uuid column, so anything malformed is replaced.
+	if (!uid || !UUID.test(uid)) {
 		uid = crypto.randomUUID();
 		event.cookies.set('uid', uid, {
 			path: '/',

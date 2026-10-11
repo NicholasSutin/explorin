@@ -1,0 +1,11 @@
+{
+	"name": "@explorin/marketing",
+	"private": true,
+	"version": "0.0.1",
+	"description": "Explorin public landing page: static HTML and CSS, brand assets synced from packages/brand.",
+	"scripts": {
+		"sync-brand": "rm -rf public/brand && mkdir -p public/brand && cp ../../packages/brand/svg/lockup-horizontal-ink.svg ../../packages/brand/svg/lockup-horizontal-cream.svg ../../packages/brand/svg/favicon.svg ../../packages/brand/svg/pattern-tile.svg ../../packages/brand/svg/mark-orange.svg ../../packages/brand/png/og-card-green-1200.png ../../packages/brand/png/app-icon-green-180.png public/brand/",
+		"build": "npm run sync-brand",
+		"dev": "npm run sync-brand && python3 -m http.server 4321 --directory public"
+	}
+}

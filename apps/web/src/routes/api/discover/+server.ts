@@ -22,20 +22,23 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	if (request.headers.get('accept')?.includes('application/x-ndjson')) {
 		const encoder = new TextEncoder();
+		let closed = false;
 		const stream = new ReadableStream<Uint8Array>({
 			async start(controller) {
-				const send = (event: DiscoveryEvent) =>
-					controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
+				const send = (event: DiscoveryEvent) => {
+					if (!closed) controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
+				};
 				try {
 					await runDiscovery(input, send);
 				} catch (e) {
-					send({
-						type: 'error',
-						status: 500,
-						error: e instanceof Error ? e.message : 'Discovery failed. Please try again.'
-					});
+					console.error('[POST /api/discover]', e);
+					send({ type: 'error', status: 500, error: 'Discovery failed. Please try again.' });
 				}
-				controller.close();
+				if (!closed) controller.close();
+				closed = true;
+			},
+			cancel() {
+				closed = true; // the viewer left; later events are dropped instead of throwing
 			}
 		});
 		return new Response(stream, {

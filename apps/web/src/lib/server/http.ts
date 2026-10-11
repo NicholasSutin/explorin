@@ -4,7 +4,7 @@
  * `error()` so every route answers `{ message }` on bad input.
  */
 import { error } from '@sveltejs/kit';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 export const DAY = 24 * 60 * 60 * 1000;
 
@@ -48,12 +48,20 @@ export function ttlCache<V>(ttlMs: number, max = 1000) {
 			return hit.value;
 		},
 		set(key: string, value: V): V {
-			if (store.size >= max) store.delete(store.keys().next().value!);
+			if (!store.has(key) && store.size >= max) store.delete(store.keys().next().value!);
 			store.set(key, { at: Date.now(), value });
 			return value;
 		}
 	};
 }
+
+/** A photo reference the app itself produced: a storage key or an inline data URL. Never a remote URL. */
+export const photoUrl = z
+	.string()
+	.max(12 * 1024 * 1024)
+	.regex(
+		/^(\/photos\/[A-Za-z0-9-]+\/[A-Za-z0-9-]+\.(jpg|png|webp)|data:image\/(jpeg|png|webp);base64,)/
+	);
 
 /** Parse and validate a JSON request body, or fail the request with 400 and a readable message. */
 export async function parseBody<T>(

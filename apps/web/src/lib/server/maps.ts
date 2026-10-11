@@ -21,7 +21,6 @@ export const MAP_STYLES: MapStyle[] = ['paper', 'ink', 'cloud'];
 /* Brand palette from packages/brand/README.md */
 const INK = '0x203d32';
 const CREAM = '0xf8f6ef';
-const MOSS = '0xe5ebdf';
 const ORANGE = '0xd96738';
 
 /** Warm field-notes look: cream paper, moss parks, muted water, quiet labels. */

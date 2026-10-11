@@ -1,12 +1,13 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
+import { photoUrl } from '#lib/server/http';
 import { parseBody } from '#lib/server/http';
 import { buildProfile } from '#lib/server/profile';
 import { getProfile } from '#lib/server/db';
 
 const Body = z.object({
 	name: z.string().trim().min(1).max(40),
-	photoUrls: z.array(z.string().min(1)).min(1).max(5),
+	photoUrls: z.array(photoUrl).min(1).max(5),
 	bio: z.string().trim().max(200).optional()
 });
 

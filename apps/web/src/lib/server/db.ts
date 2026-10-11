@@ -50,7 +50,11 @@ export async function upsertGroundedPlace(p: {
 			await sql`UPDATE places SET google_place_id = ${p.placeId}, maps_url = COALESCE(maps_url, ${p.uri}) WHERE id = ${existing[0].id}`;
 		return existing[0];
 	}
+	// Another request (or the background Maps enrichment) may insert the same name first: merge instead of failing.
 	const rows = await sql<Place[]>`
-		INSERT INTO places (google_place_id, name, maps_url, tags) VALUES (${p.placeId}, ${p.title}, ${p.uri}, '{}') RETURNING *`;
+		INSERT INTO places (google_place_id, name, maps_url, tags) VALUES (${p.placeId}, ${p.title}, ${p.uri}, '{}')
+		ON CONFLICT (name) DO UPDATE SET google_place_id = COALESCE(places.google_place_id, EXCLUDED.google_place_id),
+		                                 maps_url = COALESCE(places.maps_url, EXCLUDED.maps_url)
+		RETURNING *`;
 	return rows[0];
 }

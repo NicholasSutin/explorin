@@ -14,7 +14,8 @@ export async function putPhoto(uid: string, file: File): Promise<string> {
 		const b64 = Buffer.from(await file.arrayBuffer()).toString('base64');
 		return `data:${file.type};base64,${b64}`;
 	}
-	const key = `${uid}/${crypto.randomUUID()}.${file.type.split('/')[1] || 'jpg'}`;
+	const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[file.type] ?? 'jpg';
+	const key = `${uid}/${crypto.randomUUID()}.${ext}`;
 	await b.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type } });
 	return `/photos/${key}`;
 }

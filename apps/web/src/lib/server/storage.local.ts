@@ -7,11 +7,17 @@ import { join, resolve, sep } from 'node:path';
 
 const ROOT = resolve(process.cwd(), '.photos');
 
+const EXT: Record<string, string> = {
+	'image/jpeg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp'
+};
+
 export async function putPhoto(uid: string, file: File): Promise<string> {
-	const ext = file.type.split('/')[1] || 'jpg';
-	const key = `${uid}/${crypto.randomUUID()}.${ext}`;
-	const path = join(ROOT, key);
-	await mkdir(join(ROOT, uid), { recursive: true });
+	const key = `${uid}/${crypto.randomUUID()}.${EXT[file.type] ?? 'jpg'}`;
+	const path = resolve(ROOT, key);
+	if (!path.startsWith(ROOT + sep)) throw new Error('Bad photo key');
+	await mkdir(resolve(ROOT, uid), { recursive: true });
 	await writeFile(path, Buffer.from(await file.arrayBuffer()));
 	return `/photos/${key}`;
 }

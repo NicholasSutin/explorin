@@ -70,7 +70,7 @@ export type Review = PlaceReview;
 
 const reviewCache = ttlCache<{ place: string; reviews: Review[] }>(DAY);
 
-/** Google Maps reviews for a place query (Web API). Empty on failure or when not configured; cached for a day either way. */
+/** Google Maps reviews for a place query (Web API). Empty on failure or when not configured; results (including "no such place") are cached for a day. */
 export async function mapsReviews(query: string): Promise<{ place: string; reviews: Review[] }> {
 	if (!nimbleMapsEnabled()) return { place: query, reviews: [] };
 	const key = query.trim().toLowerCase();
@@ -97,7 +97,7 @@ export async function mapsReviews(query: string): Promise<{ place: string; revie
 		});
 	} catch (e) {
 		console.warn('mapsReviews failed', (e as Error).message);
-		return reviewCache.set(key, { place: query, reviews: [] });
+		return { place: query, reviews: [] }; // not cached: the next request may succeed
 	}
 }
 
