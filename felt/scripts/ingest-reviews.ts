@@ -61,7 +61,7 @@ async function mapsReviews(place: string): Promise<string[]> {
 		.slice(0, 20);
 }
 
-async function pageReviews(url: string): Promise<string[]> {
+async function pageReviews(url: string, place: string): Promise<string[]> {
 	const data = await nimbleSdk('/v2/extract', {
 		url,
 		render: 'auto',
@@ -73,7 +73,7 @@ async function pageReviews(url: string): Promise<string[]> {
 	const text: string = data?.data?.markdown || htmlToText(data?.data?.html ?? '');
 	if (text.length < 500) return [];
 	const out = await generateJson<{ reviews: { text: string }[] }>(
-		`PAGE TEXT:\n${text.slice(0, 60000)}`,
+		`PLACE: ${place}\nPAGE TEXT:\n${text.slice(0, 60000)}`,
 		EXTRACT_REVIEWS_SCHEMA,
 		EXTRACT_REVIEWS_SYSTEM
 	);
@@ -93,7 +93,7 @@ async function store(placeId: string, source: Source, reviews: string[]) {
 		INGEST_SYSTEM
 	);
 	let n = 0;
-	for (const e of excerpts.slice(0, 3)) {
+	for (const e of excerpts.filter((x) => x.quote.trim().split(/\s+/).length >= 7).slice(0, 3)) {
 		const dup =
 			await sql`SELECT 1 FROM reflections WHERE place_id = ${placeId} AND quote = ${e.quote}`;
 		if (dup.length) continue;
@@ -125,7 +125,7 @@ for (const p of places) {
 				? 'yelp_review'
 				: 'public_review';
 		jobs.push(
-			pageReviews(url)
+			pageReviews(url, p.name)
 				.then((r) => store(p.id, source, r))
 				.then((n) => {
 					total += n;

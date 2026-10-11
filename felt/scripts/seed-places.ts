@@ -1,6 +1,7 @@
 import { sql } from './_shared';
 
-// Tags must be honest. review_urls: optional Yelp / Tripadvisor pages scraped by ingest-reviews.ts via Nimble.
+// Tags must be honest. review_urls: Tripadvisor pages scraped by ingest-reviews.ts via Nimble Extract.
+// Yelp pages returned empty markdown through Nimble on 2026-10-11 (bot-blocked), so none are listed.
 const places = [
 	{
 		name: 'Gantry Plaza State Park',
@@ -10,8 +11,7 @@ const places = [
 		tags: ['water_view', 'esb_view', 'skyline', 'sunrise'],
 		notes: 'East River, Long Island City; direct Midtown and Empire State view',
 		review_urls: [
-			'https://www.tripadvisor.com/Attraction_Review-g60763-d1986201-Reviews-Gantry_Plaza_State_Park-New_York_City_New_York.html',
-			'https://www.yelp.com/biz/gantry-plaza-state-park-long-island-city'
+			'https://www.tripadvisor.com/Attraction_Review-g60763-d1986201-Reviews-Gantry_Plaza_State_Park-New_York_City_New_York.html'
 		]
 	},
 	{
@@ -21,7 +21,7 @@ const places = [
 		lng: -73.9598,
 		tags: ['water_view', 'esb_view', 'skyline'],
 		notes: 'East River; Empire State and Chrysler views',
-		review_urls: ['https://www.yelp.com/biz/hunters-point-south-park-long-island-city']
+		review_urls: []
 	},
 	{
 		name: 'Central Park Reservoir',
@@ -42,8 +42,7 @@ const places = [
 		tags: ['water_view', 'skyline', 'harbor'],
 		notes: 'Pier 1 to Pier 6; Lower Manhattan skyline, not Empire State',
 		review_urls: [
-			'https://www.tripadvisor.com/Attraction_Review-g60827-d2294597-Reviews-Brooklyn_Bridge_Park-Brooklyn_New_York.html',
-			'https://www.yelp.com/biz/brooklyn-bridge-park-brooklyn'
+			'https://www.tripadvisor.com/Attraction_Review-g60827-d2294597-Reviews-Brooklyn_Bridge_Park-Brooklyn_New_York.html'
 		]
 	},
 	{
@@ -64,7 +63,7 @@ const places = [
 		lng: -73.9679,
 		tags: ['water_view', 'skyline'],
 		notes: 'East River, Williamsburg',
-		review_urls: ['https://www.yelp.com/biz/domino-park-brooklyn']
+		review_urls: []
 	},
 	{
 		name: 'Roosevelt Island',
@@ -130,8 +129,7 @@ const places = [
 		tags: ['skyline', 'lively'],
 		notes: 'Elevated; peeks of Empire State',
 		review_urls: [
-			'https://www.tripadvisor.com/Attraction_Review-g60763-d1385465-Reviews-The_High_Line-New_York_City_New_York.html',
-			'https://www.yelp.com/biz/the-high-line-new-york'
+			'https://www.tripadvisor.com/Attraction_Review-g60763-d1385465-Reviews-The_High_Line-New_York_City_New_York.html'
 		]
 	},
 	{
@@ -142,8 +140,7 @@ const places = [
 		tags: ['water_view', 'sunset'],
 		notes: 'Hudson',
 		review_urls: [
-			'https://www.tripadvisor.com/Attraction_Review-g60763-d23462185-Reviews-Little_Island-New_York_City_New_York.html',
-			'https://www.yelp.com/biz/little-island-new-york'
+			'https://www.tripadvisor.com/Attraction_Review-g60763-d23462185-Reviews-Little_Island-New_York_City_New_York.html'
 		]
 	},
 	{

@@ -33,6 +33,10 @@ export const variables = defineEnvVars({
 		schema: (v) => v || 'https://api.webit.live/api/v1',
 		description: 'Nimble Web API base'
 	},
+	LONGTAIL: {
+		schema: (v) => v === 'true',
+		description: 'Enable the slow long-tail web-search fallback (off for the demo)'
+	},
 	DEMO_CACHE: {
 		schema: (v) => v !== 'false',
 		description: 'Cache the scripted demo prompt response'

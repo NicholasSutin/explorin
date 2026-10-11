@@ -23,8 +23,12 @@ CREATE TABLE IF NOT EXISTS places (
   tags text[] DEFAULT '{}',       -- water_view, esb_view, atlantic, sunrise, quiet ...
   notes text,
   maps_url text,
-  review_urls text[] DEFAULT '{}' -- optional Yelp / Tripadvisor pages for ingest
+  review_urls text[] DEFAULT '{}', -- optional Tripadvisor pages for ingest
+  live jsonb,                     -- cached Nimble live info (rating, status, ...)
+  live_at timestamptz
 );
+ALTER TABLE places ADD COLUMN IF NOT EXISTS live jsonb;
+ALTER TABLE places ADD COLUMN IF NOT EXISTS live_at timestamptz;
 
 CREATE TABLE IF NOT EXISTS experiences (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -55,3 +59,9 @@ CREATE TABLE IF NOT EXISTS reflections (
 
 CREATE INDEX IF NOT EXISTS reflections_place_idx ON reflections(place_id);
 CREATE INDEX IF NOT EXISTS experiences_user_idx ON experiences(user_id);
+
+CREATE TABLE IF NOT EXISTS response_cache (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL,
+  created_at timestamptz DEFAULT now()
+);

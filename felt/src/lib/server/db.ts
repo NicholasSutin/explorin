@@ -47,10 +47,15 @@ export async function upsertGroundedPlace(p: {
 	title: string;
 	uri: string;
 }): Promise<Place> {
+	const existing = await sql<
+		Place[]
+	>`SELECT * FROM places WHERE google_place_id = ${p.placeId} OR name = ${p.title} LIMIT 1`;
+	if (existing[0]) {
+		if (!existing[0].google_place_id)
+			await sql`UPDATE places SET google_place_id = ${p.placeId}, maps_url = COALESCE(maps_url, ${p.uri}) WHERE id = ${existing[0].id}`;
+		return existing[0];
+	}
 	const rows = await sql<Place[]>`
-		INSERT INTO places (google_place_id, name, maps_url, tags)
-		VALUES (${p.placeId}, ${p.title}, ${p.uri}, '{}')
-		ON CONFLICT (google_place_id) DO UPDATE SET maps_url = COALESCE(places.maps_url, EXCLUDED.maps_url)
-		RETURNING *`;
+		INSERT INTO places (google_place_id, name, maps_url, tags) VALUES (${p.placeId}, ${p.title}, ${p.uri}, '{}') RETURNING *`;
 	return rows[0];
 }

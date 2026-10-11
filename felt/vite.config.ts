@@ -19,6 +19,10 @@ const storage = fileURLToPath(
 
 export default defineConfig({
 	resolve: { alias: { '#storage': storage } },
+	// Listen on all interfaces so the dev server is reachable on the LAN.
+	// `.devtunnels.ms` allows VS Code port-forwarding tunnels (Vite blocks unknown Host headers).
+	server: { host: true, allowedHosts: ['.devtunnels.ms'] },
+	preview: { host: true },
 	plugins: [
 		tailwindcss(),
 		sveltekit({

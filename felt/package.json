@@ -21,7 +21,9 @@
 		"deploy": "DEPLOY_TARGET=cloudflare vite build && wrangler deploy",
 		"cf:types": "wrangler types",
 		"build:cf": "DEPLOY_TARGET=cloudflare vite build",
-		"preview:cf": "DEPLOY_TARGET=cloudflare vite build && wrangler dev"
+		"preview:cf": "DEPLOY_TARGET=cloudflare vite build && wrangler dev",
+		"gemini:smoke": "node --env-file=.env --import tsx scripts/gemini-smoke.ts",
+		"db:seed-persona": "node --env-file=.env --import tsx scripts/seed-persona.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-cloudflare": "^8.0.0",

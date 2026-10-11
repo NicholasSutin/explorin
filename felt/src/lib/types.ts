@@ -71,6 +71,7 @@ export interface Card {
 	experience_id: string;
 	place_id: string;
 	place_name: string;
+	google_place_id: string | null;
 	maps_url: string | null;
 	title: string;
 	plan: string;
@@ -103,6 +104,8 @@ export function sourceLabel(s: Source): string {
 			return 'From Yelp reviews';
 		case 'public_review':
 			return 'From public reviews';
+		case 'seed':
+			return 'From seed notes';
 		default:
 			return 'From public reviews';
 	}

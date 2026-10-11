@@ -6,7 +6,7 @@
  *  - SDK API  https://sdk.nimbleway.com      Bearer <API key>   (Settings > API Keys)        -> /v2/search, /v2/extract
  *  - Web API  https://api.webit.live/api/v1  Basic base64(user:secret) (Client credentials) -> google_maps_reviews (legacy, optional)
  * Only the SDK key is needed for the demo. Every function degrades to null/[] instead of throwing.
- * Response field names for the Maps engines are best-effort: confirm with `npm run nimble:smoke`.
+ * Verified against live responses on 2026-10-11 with `npm run nimble:smoke`.
  */
 import {
 	NIMBLE_API_KEY,
@@ -102,26 +102,53 @@ export async function mapsReviews(query: string): Promise<{ place: string; revie
 	}
 }
 
-/** Live place context: rating, hours, busyness. Uses the SDK `google_maps_search` template (Bearer key). Null on any failure. */
-export async function mapsPlace(
-	query: string,
-	timeoutMs = 4000
-): Promise<{ hours?: string; busyness?: string; rating?: number } | null> {
+/**
+ * Live place context from the SDK `google_maps_search` template (Bearer key, parse: true).
+ * Verified fields (2026-10-11): title, place_id, rating ("4.8 stars"), number_of_reviews, review_summary, business_status,
+ * place_url, latitude, longitude, business_category, place_information, highlights. Null on any failure.
+ */
+export interface LivePlace {
+	rating?: number;
+	reviews?: number;
+	status?: string;
+	hours?: string;
+	highlights?: string;
+	description?: string;
+	google_place_id?: string;
+	maps_url?: string;
+}
+export async function mapsPlace(query: string, timeoutMs = 4000): Promise<LivePlace | null> {
 	if (!nimbleSdkEnabled()) return null;
 	try {
 		const data = await sdk(
 			'/v2/extract/templates/run',
-			{ template: 'google_maps_search', params: { query } },
+			{ template: 'google_maps_search', params: { query }, parse: true },
 			timeoutMs
 		);
-		const ents = data?.data?.parsing?.entities ?? data?.data?.parsing ?? {};
-		const p = (ents.SearchResult ?? ents.Place ?? [])[0] ?? {};
-		const out: { hours?: string; busyness?: string; rating?: number } = {};
-		const hours = p.open_hours ?? p.hours ?? p.opening_hours ?? p.working_hours ?? p.open_state;
+		const p = data?.data?.parsing?.entities?.SearchResult?.[0];
+		if (!p) return null;
+		const out: LivePlace = {};
+		const rating = parseFloat(String(p.rating ?? p.review_summary?.overall_rating ?? ''));
+		if (!Number.isNaN(rating)) out.rating = rating;
+		const n = parseInt(
+			String(p.number_of_reviews ?? p.review_summary?.review_count ?? '').replace(/\D/g, ''),
+			10
+		);
+		if (!Number.isNaN(n)) out.reviews = n;
+		if (p.business_status) out.status = String(p.business_status);
+		const info = p.place_information;
+		const hours = info?.hours ?? info?.open_hours ?? info?.opening_hours ?? p.hours ?? p.open_hours;
 		if (hours) out.hours = typeof hours === 'string' ? hours : JSON.stringify(hours).slice(0, 300);
-		const busy = p.popular_times ?? p.busyness ?? p.live_busyness;
-		if (busy) out.busyness = typeof busy === 'string' ? busy : JSON.stringify(busy).slice(0, 300);
-		if (p.rating != null) out.rating = Number(p.rating);
+		if (Array.isArray(p.highlights) && p.highlights.length)
+			out.highlights = p.highlights
+				.map((h: any) => (typeof h === 'string' ? h : (h?.display_name ?? h?.description ?? '')))
+				.filter(Boolean)
+				.slice(0, 5)
+				.join(', ');
+		if (Array.isArray(p.business_description) && p.business_description.length)
+			out.description = String(p.business_description[0]).slice(0, 160);
+		if (p.place_id) out.google_place_id = String(p.place_id);
+		if (p.place_url) out.maps_url = String(p.place_url);
 		return Object.keys(out).length ? out : null;
 	} catch {
 		return null;

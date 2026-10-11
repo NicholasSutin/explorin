@@ -37,6 +37,13 @@ npm run deploy
 
 Optional: put [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) in front of Postgres and read `platform.env.HYPERDRIVE.connectionString`.
 
+## Demo shortcuts
+
+- **Preset profiles:** the onboarding screen has "Demo: start from a preset profile" chips (Maya, Sam, Lee) so a second phone skips photo onboarding.
+- **Personal seed persona:** give an AI agent the prompt in [`data/personas/PROMPT.md`](data/personas/PROMPT.md), save its JSON to `data/personas/<id>.json` (gitignored), then `npm run db:seed-persona -- data/personas/<id>.json`. The persona appears as a chip and their reflections become "From someone like you" evidence.
+- **Cached demo prompt:** the scripted prompt ("a run with views of the water and the Empire State Building") is cached per user for 2 hours in the `response_cache` table. Run it once before presenting.
+- **Seed evidence:** `npm run db:seed-reflections` loads 29 curated quotes labeled "From seed notes". Live Google data (rating, open status) is cached in `places.live` and refreshed in the background.
+
 ## How it works
 
 1. Photos + bio -> Gemini profiler -> traits with evidence -> embedded summary

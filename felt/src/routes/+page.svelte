@@ -5,13 +5,14 @@
 	import PhotoPicker from '#lib/components/PhotoPicker.svelte';
 	import BottomBar from '#lib/components/BottomBar.svelte';
 	import Loader from '#lib/components/Loader.svelte';
-	import { createProfile, getProfile, uploadPhotos } from '#lib/client';
+	import { api, createProfile, getProfile, uploadPhotos } from '#lib/client';
 
 	let name = $state('');
 	let bio = $state('');
 	let files = $state<File[]>([]);
 	let busy = $state(false);
 	let err = $state('');
+	let personas = $state<{ id: string; name: string; label: string }[]>([]);
 	let ready = $derived(name.trim().length > 0 && files.length >= 1 && !busy);
 
 	onMount(async () => {
@@ -20,8 +21,24 @@
 		} catch {
 			/* no DB yet; stay */
 		}
+		try {
+			personas = (await api<{ personas: typeof personas }>('/api/demo/persona')).personas;
+		} catch {
+			/* ignore */
+		}
 	});
 
+	async function usePersona(id: string) {
+		busy = true;
+		err = '';
+		try {
+			await api('/api/demo/persona', { method: 'POST', json: { persona: id } });
+			goto('/profile');
+		} catch (e: any) {
+			err = e.message ?? 'Something went wrong';
+			busy = false;
+		}
+	}
 	async function submit() {
 		if (!ready) return;
 		busy = true;
@@ -89,6 +106,20 @@
 			</label>
 			{#if err}<p class="text-sm text-red-600">{err}</p>{/if}
 		</form>
+		<details class="mt-8 text-sm text-neutral-500">
+			<summary class="cursor-pointer">Demo: start from a preset profile</summary>
+			<div class="mt-2 flex flex-wrap gap-2">
+				{#each personas as p (p.id)}
+					<button
+						type="button"
+						onclick={() => usePersona(p.id)}
+						class="rounded-full bg-white px-3 py-2 ring-1 ring-neutral-200"
+					>
+						{p.name}, {p.label}
+					</button>
+				{/each}
+			</div>
+		</details>
 	</div>
 	<BottomBar>
 		<button

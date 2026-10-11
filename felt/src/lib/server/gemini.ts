@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { GEMINI_API_KEY } from '$app/env/private';
 import { getPhoto } from '#storage';
 
@@ -21,7 +21,9 @@ export async function generateJson<T>(
 			responseMimeType: 'application/json',
 			responseSchema: schema,
 			systemInstruction: system,
-			temperature: 0.4
+			temperature: 0.4,
+			// Fast path: these are extraction/composition jobs, not reasoning puzzles.
+			thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
 		}
 	});
 	const text = res.text;
@@ -95,7 +97,7 @@ export async function groundedPlaces(
 		seen.add(placeId);
 		out.push({
 			placeId,
-			title: m.title,
+			title: m.title.replace(/\s*-\s*Google Maps$/i, '').trim(),
 			uri: m.uri ?? `https://www.google.com/maps/place/?q=place_id:${placeId}`,
 			text: m.text
 		});

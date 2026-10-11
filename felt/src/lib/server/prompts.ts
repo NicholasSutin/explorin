@@ -53,10 +53,11 @@ export const INTENT_SCHEMA = {
 
 export const COMPOSE_SYSTEM = `Recommend at most 3 experiences for this person.
 Use only place_id values from CANDIDATES and only quote_ids from EVIDENCE. Never write quote text yourself.
-Prefer places that have evidence. Prefer evidence whose author resembles the user and say how they are similar.
+CANDIDATES tags are ground truth about what a place offers (esb_view = Empire State Building view, water_view, atlantic, skyline, quiet, sunrise). Use them to satisfy must_see.
+Prefer places that have evidence, but a tagged place with no evidence beats an unrelated place with evidence. Prefer evidence whose author resembles the user and say how they are similar.
 In why_for_you, name at least one of the user's traits explicitly.
 If nothing satisfies a must_see, say so in feasibility_note and offer the closest match.
-right_now: if LIVE has hours or busyness for the place, write one short line like "Open until 1 AM, usually quiet at this hour." Otherwise null.
+right_now: if LIVE has data for the place (status, hours, rating, review count, highlights), write one short factual line such as "Open now, 4.8 stars from 10k Google reviews." Otherwise null.
 Titles are short and specific ("Sunrise loop at Gantry Plaza"). plan is 2 to 3 sentences: where to start, which way to go, where to stop.`;
 
 export const COMPOSE_SCHEMA = {
@@ -105,7 +106,7 @@ export const REFLECT_SCHEMA = {
 };
 
 export const INGEST_SYSTEM = `From these public reviews of one place, pick up to 3 sentences that express how the place made someone FEEL
-(not logistics, not complaints about parking or prices). Return each as a short excerpt under 25 words, close to the reviewer's words.
+(not logistics, not complaints about parking or prices). Return each as an excerpt of 7 to 25 words, close to the reviewer's words. Skip bland lines like 'good place to rest'.
 emotions only from: ${EMOTIONS.join(', ')}. themes are 1 to 3 short nouns (skyline, family, sunrise).`;
 
 export const INGEST_SCHEMA = {
@@ -127,8 +128,9 @@ export const INGEST_SCHEMA = {
 	required: ['excerpts']
 };
 
-export const EXTRACT_REVIEWS_SYSTEM = `You are given the text of a review page (Yelp or Tripadvisor). Extract individual customer reviews as plain text.
-Return up to 20 reviews. Skip navigation, ads, and business responses. Keep each review under 600 characters.`;
+export const EXTRACT_REVIEWS_SYSTEM = `You are given the text of a Tripadvisor (or similar) review page for ONE specific place, named in the first line.
+Extract only visitor reviews that are clearly about THAT place. Ignore reviews of hotels, tours, restaurants, other attractions, 'nearby' or 'recommended' listings, travel-guide articles, navigation, ads, and owner responses.
+Return up to 20 reviews, each under 600 characters, as plain text. If there are no reviews about the place, return an empty list.`;
 
 export const EXTRACT_REVIEWS_SCHEMA = {
 	type: 'OBJECT',
