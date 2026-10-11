@@ -32,3 +32,6 @@ worker-configuration.d.ts
 
 # personal seed data (never commit; repo is public)
 data/personas/*.json
+
+/test-results
+/playwright-report

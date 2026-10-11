@@ -1,0 +1,48 @@
+# Explorin.app MVP
+
+Mobile-first adventure discovery and personal scrapbooks, built with SvelteKit 3 and TypeScript. The existing Felt database/profile experience is retained at `/onboarding`, `/ask`, `/profile`, `/go/*`, and `/reflect/*`.
+
+## Quick start
+
+Requires Node.js 22.12+ (Node 24 recommended).
+
+```sh
+cd felt
+npm ci
+npm run dev
+```
+
+Open the local URL, then press **Try the NYC demo**. No keys or database are needed for this complete demo: choose a real curated NYC experience, start, type reflections, finish, add 1-4 photos, create the scrapbook, download PNG, and revisit My memories after reload.
+
+For live discovery, copy `.env.example` to `.env` and set:
+
+- `NIMBLE_API_KEY`: Nimble SDK Bearer API key; required for live search. Server-only POST `/v2/search` using the existing integration. Optional `NIMBLE_BASE_URL` defaults to `https://sdk.nimbleway.com`. Contract: https://docs.nimbleway.com/nimble-sdk/web-tools/search
+- `GEMINI_API_KEY`: Google AI Studio API key; required for AI ranking and emotional scrapbook writing. New MVP uses `gemini-2.5-flash` with an 18-second timeout.
+- `DATABASE_URL`: only needed for the retained Felt profile/recommendation routes and database scripts, not the new MVP.
+- `NIMBLE_USERNAME` / `NIMBLE_SECRET`: optional legacy Maps integration; not needed for the new MVP.
+
+Never expose keys using public environment variables. For Cloudflare, use Wrangler secrets as described in `README.md`.
+
+## Behavior and limits
+
+- Natural-language prompt, city, and optional interests drive Nimble search. AI ranks supplied result IDs and writes a personalized explanation; it cannot fabricate new candidate URLs.
+- Search errors show an actionable message; curated demo results are always explicitly labeled. Without Gemini, live search matches remain usable and scrapbooks use the traveler's written words with a visible fallback label.
+- Browser speech recognition has typed fallback. Voice requires a compatible browser, microphone permission, and usually HTTPS or localhost; recognition may use the browser vendor's service. Speech transcripts can be reviewed before saving. Actual microphone capture requires manual testing.
+- Photos accept JPG, PNG, or WebP, maximum 15 MB each. They are decoded and redrawn to remove metadata, resized to 1200 pixels, and stored as JPEG data URLs on the device. HEIC must be converted first. Photo pixels are not sent to the AI service; scrapbook generation uses written reflections and place details.
+- Written reflections are sent server-side to Gemini when configured. Future personalization sends only summaries explicitly opted into, and only when the discovery opt-in checkbox is selected. Insights are not published or pooled across users.
+- History stores up to 12 recent adventures in this browser's local storage. Photo storage can exhaust the browser quota; the UI retains the current scrapbook for download, offers retry, and allows deleting old history. History does not sync across devices. Refreshing during an unfinished adventure loses that session.
+- Export uses `html-to-image`. Share uses Web Share file support when available and otherwise downloads the PNG. Actual native share sheet requires manual device testing.
+- Search results are source-backed suggestions, sometimes articles or lists; check source links for availability, directions, prices, and hours. This MVP does not geocode, book, or verify individual venues in every search result.
+- No authentication, payments, cloud history, or public sharing backend was added.
+
+## Verification
+
+```sh
+npm run check       # SvelteKit sync, generated Cloudflare types, Svelte/TypeScript checks
+npm run build       # adapter-node production build
+npm run test:e2e    # Chrome browser test; install Chrome or change channel in config
+```
+
+Playwright covers the full mobile demo, reflections, photo processing, consent, scrapbook generation fallback, PNG download, history reload, no horizontal overflow, and API validation/error handling. Screenshots and exported PNG are under ignored `test-results/`.
+
+The live Nimble/Gemini integration requires real keys to smoke-test; credential-free tests verify the honest error and fallback paths. The original database functionality still needs its Postgres setup. Production deployment is separate from this repository change.

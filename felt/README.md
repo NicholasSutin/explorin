@@ -1,3 +1,5 @@
+**Explorin MVP:** The new discovery-to-scrapbook experience is at `/`. See [MVP setup and verification](MVP.md) for the credential-free demo and live API configuration. Original Felt onboarding is retained at `/onboarding`.
+
 # Felt
 
 Hyper-personalized NYC experiences, recommended with evidence from how similar people felt there.

@@ -23,9 +23,11 @@
 		"build:cf": "DEPLOY_TARGET=cloudflare vite build",
 		"preview:cf": "DEPLOY_TARGET=cloudflare vite build && wrangler dev",
 		"gemini:smoke": "node --env-file=.env --import tsx scripts/gemini-smoke.ts",
-		"db:seed-persona": "node --env-file=.env --import tsx scripts/seed-persona.ts"
+		"db:seed-persona": "node --env-file=.env --import tsx scripts/seed-persona.ts",
+		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.64.0",
 		"@sveltejs/adapter-cloudflare": "^8.0.0",
 		"@sveltejs/adapter-node": "^6.0.0",
 		"@sveltejs/kit": "^3.0.0",
@@ -48,6 +50,7 @@
 	},
 	"dependencies": {
 		"@google/genai": "^2.28.0",
+		"html-to-image": "^1.11.13",
 		"postgres": "^3.4.9",
 		"zod": "^4.6.6"
 	}
