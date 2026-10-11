@@ -35,3 +35,6 @@ data/personas/*.json
 
 /test-results
 /playwright-report
+
+# launch-video asset pack (generated locally, never committed)
+brag-assets/
