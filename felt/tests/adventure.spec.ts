@@ -43,7 +43,10 @@ test('mobile demo: discovery, reflection, photos, scrapbook, export and persiste
 	});
 	await page.getByRole('checkbox', { name: /Let this story/ }).check();
 	await page.getByRole('button', { name: /Create my scrapbook/ }).click();
-	await expect(page.getByRole('heading', { name: 'Your little keepsake.' })).toBeVisible();
+	// Real Gemini generation runs when GEMINI_API_KEY is set (18 s server timeout); fallback is instant.
+	await expect(page.getByRole('heading', { name: 'Your little keepsake.' })).toBeVisible({
+		timeout: 25000
+	});
 	await expect(page.getByRole('status')).toContainText('Saved');
 	await page.screenshot({ path: 'test-results/mobile-scrapbook.png', fullPage: true });
 	const downloadPromise = page.waitForEvent('download');
