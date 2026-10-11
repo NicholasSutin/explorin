@@ -433,6 +433,25 @@
 									<p class="place">{experience.location}</p>
 									<h3>{experience.title}</h3>
 									<p>{experience.description}</p>
+									{#if experience.rating || experience.reviews?.length}<div class="reviews">
+											{#if experience.rating}<span class="rating"
+													>&#9733; {experience.rating.toFixed(1)}{#if experience.reviewCount}
+														&middot; {experience.reviewCount.toLocaleString()} reviews{/if}</span
+												>{/if}
+											{#if experience.reviews?.[0]}<blockquote>
+													&ldquo;{experience.reviews[0].text.length > 160
+														? experience.reviews[0].text.slice(0, 157).trimEnd() + '\u2026'
+														: experience.reviews[0].text}&rdquo;
+													<cite
+														>{experience.reviews[0].author ??
+															'Visitor'}{#if experience.reviews[0].when}
+															&middot; {experience.reviews[0].when}{/if}
+														&middot; {experience.reviewSource === 'nimble'
+															? 'via Nimble'
+															: 'Google'}</cite
+													>
+												</blockquote>{/if}
+										</div>{/if}
 									<div class="fit"><span>&#8599;</span> {experience.reason}</div>
 									<a href={experience.url} target="_blank" rel="noopener noreferrer"
 										>Check the source &#8599;</a

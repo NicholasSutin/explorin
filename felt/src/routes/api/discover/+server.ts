@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { webSearch } from '#lib/server/nimble';
 import { adventureAI, safeUrl } from '#lib/server/adventure-ai';
 import { demoExperiences, type Experience } from '#lib/adventure';
-import { withPhotos } from '#lib/server/places';
+import { enrichPlaces } from '#lib/server/places';
 import type { RequestHandler } from './$types';
 const input = z.object({
 	prompt: z.string().trim().min(3).max(800),
@@ -27,7 +27,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const { prompt, location, interests, insights, demo } = body.data;
 	if (demo)
 		return json({
-			experiences: await withPhotos(demoExperiences),
+			experiences: await enrichPlaces(demoExperiences),
 			mode: 'demo',
 			ai: false,
 			notice: 'Demo collection · real NYC places, curated examples rather than live search.'
@@ -76,7 +76,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		? [...new Map(selected.map((e) => [e.id, e])).values()]
 		: experiences.slice(0, 4);
 	return json({
-		experiences: await withPhotos(chosen),
+		experiences: await enrichPlaces(chosen),
 		mode: 'live',
 		ai: selected.length > 0,
 		notice: selected.length

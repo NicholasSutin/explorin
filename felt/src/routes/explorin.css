@@ -445,6 +445,33 @@
 .art-2:after {
 	background: #a7bec0;
 }
+.reviews {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 2px 0 4px;
+}
+.reviews .rating {
+	font-size: 13px;
+	font-weight: 600;
+	color: #8a5a22;
+}
+.reviews blockquote {
+	margin: 0;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: #f4f1e6;
+	font-size: 13px;
+	line-height: 1.45;
+	color: #3f4a3b;
+}
+.reviews cite {
+	display: block;
+	margin-top: 5px;
+	font-size: 11px;
+	font-style: normal;
+	color: #7b857a;
+}
 .card-body {
 	padding: 22px;
 	display: flex;

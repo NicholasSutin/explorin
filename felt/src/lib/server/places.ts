@@ -4,11 +4,15 @@
  *
  * Billing (Oct 2026): Text Search with `places.photos` in the field mask is the Pro SKU
  * ($32 / 1k after 5k free per month). Photo media is "Place Details Photos" ($7 / 1k after
- * 1k free per month). Both results are cached in memory so a running server pays once per
- * place, not once per page view. Every function degrades to null instead of throwing.
+ * 1k free per month). Place Details with `reviews` is Enterprise + Atmosphere ($25 / 1k after
+ * 1k free per month) and returns at most 5 reviews in Google's relevance order; there is no
+ * sort parameter in the New API. All results are cached in memory so a running server pays
+ * once per place, not once per page view. Every function degrades to null instead of throwing.
+ * Reviews fall back to Nimble's google_maps_reviews when Places is off but Nimble Web API is on.
  */
 import { GOOGLE_MAPS_API_KEY } from '$app/env/private';
-import type { ExperiencePhoto } from '#lib/adventure';
+import type { ExperiencePhoto, PlaceReview } from '#lib/adventure';
+import { mapsReviews, nimbleMapsEnabled } from '#lib/server/nimble';
 
 export const placesEnabled = () => Boolean(GOOGLE_MAPS_API_KEY);
 
@@ -18,13 +22,24 @@ export const validPhotoName = (name: string) => PHOTO_NAME.test(name);
 const DAY = 24 * 60 * 60 * 1000;
 const placeCache = new Map<string, { at: number; value: ExperiencePhoto | null }>();
 const uriCache = new Map<string, { at: number; value: string }>();
+const reviewCache = new Map<string, { at: number; value: PlaceReviews | null }>();
 
-async function get<T>(url: string, timeoutMs = 8000): Promise<T | null> {
+export interface PlaceReviews {
+	rating?: number;
+	reviewCount?: number;
+	reviews: PlaceReview[];
+}
+
+async function get<T>(
+	url: string,
+	timeoutMs = 8000,
+	headers: Record<string, string> = {}
+): Promise<T | null> {
 	if (!GOOGLE_MAPS_API_KEY) return null;
 	const ctrl = new AbortController();
 	const t = setTimeout(() => ctrl.abort(), timeoutMs);
 	try {
-		const res = await fetch(url, { signal: ctrl.signal });
+		const res = await fetch(url, { signal: ctrl.signal, headers });
 		return res.ok ? ((await res.json()) as T) : null;
 	} catch {
 		return null;
@@ -96,6 +111,97 @@ export async function photoUri(name: string, maxWidthPx = 900): Promise<string |
 	if (!uri || !/^https:\/\/[a-z0-9.-]+\.googleusercontent\.com\//.test(uri)) return null;
 	uriCache.set(key, { at: Date.now(), value: uri });
 	return uri;
+}
+
+interface DetailsResponse {
+	rating?: number;
+	userRatingCount?: number;
+	reviews?: {
+		rating?: number;
+		text?: { text?: string };
+		relativePublishTimeDescription?: string;
+		authorAttribution?: { displayName?: string };
+	}[];
+}
+
+/** Up to 5 most-relevant Google reviews plus rating for a place ID. Enterprise + Atmosphere SKU. */
+export async function placeReviews(placeId: string): Promise<PlaceReviews | null> {
+	if (!GOOGLE_MAPS_API_KEY || !/^[A-Za-z0-9_-]+$/.test(placeId)) return null;
+	const hit = reviewCache.get(placeId);
+	if (hit && Date.now() - hit.at < DAY) return hit.value;
+	const data = await get<DetailsResponse>(
+		`https://places.googleapis.com/v1/places/${placeId}`,
+		8000,
+		{ 'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY, 'X-Goog-FieldMask': 'rating,userRatingCount,reviews' }
+	);
+	const value: PlaceReviews | null = data
+		? {
+				rating: typeof data.rating === 'number' ? data.rating : undefined,
+				reviewCount: typeof data.userRatingCount === 'number' ? data.userRatingCount : undefined,
+				reviews: (data.reviews ?? [])
+					.map((r) => ({
+						text: (r.text?.text ?? '').trim().slice(0, 600),
+						rating: typeof r.rating === 'number' ? r.rating : null,
+						author: r.authorAttribution?.displayName || undefined,
+						when: r.relativePublishTimeDescription || undefined
+					}))
+					.filter((r) => r.text.length > 20)
+					.slice(0, 5)
+			}
+		: null;
+	reviewCache.set(placeId, { at: Date.now(), value });
+	return value;
+}
+
+/** Reviews via Nimble's Google Maps Web API when Places is not configured. */
+async function nimbleFallbackReviews(query: string): Promise<PlaceReviews | null> {
+	if (!nimbleMapsEnabled()) return null;
+	const { reviews } = await mapsReviews(query);
+	return reviews.length ? { reviews: reviews.slice(0, 5) } : null;
+}
+
+type Enrichable = {
+	photo?: ExperiencePhoto;
+	placeQuery?: string;
+	location: string;
+	title: string;
+	reviews?: PlaceReview[];
+	rating?: number;
+	reviewCount?: number;
+	reviewSource?: 'google-places' | 'nimble';
+};
+
+/** Attach photo, rating and reviews to each experience. Places first, Nimble reviews as fallback. */
+export async function enrichPlaces<T extends Enrichable>(items: T[]): Promise<T[]> {
+	if (!placesEnabled() && !nimbleMapsEnabled()) return items;
+	return Promise.all(
+		items.map(async (item) => {
+			const query = item.placeQuery || `${item.title} ${item.location}`;
+			let out: T = item;
+			if (placesEnabled()) {
+				const photo = item.photo ?? (await findPlacePhoto(query));
+				if (photo) {
+					out = { ...out, photo };
+					if (!item.reviews) {
+						const r = await placeReviews(photo.placeId);
+						if (r)
+							out = {
+								...out,
+								rating: r.rating,
+								reviewCount: r.reviewCount,
+								reviews: r.reviews,
+								reviewSource: 'google-places'
+							};
+					}
+				}
+			}
+			if (!out.reviews?.length) {
+				const r = await nimbleFallbackReviews(query);
+				if (r) out = { ...out, reviews: r.reviews, reviewSource: 'nimble' };
+			}
+			return out;
+		})
+	);
 }
 
 /** Attach photos to experiences in parallel; leaves the list untouched when Places is off. */

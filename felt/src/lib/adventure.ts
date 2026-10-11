@@ -6,6 +6,13 @@ export interface ExperiencePhoto {
 	attribution: string;
 	attributionUrl?: string;
 }
+export interface PlaceReview {
+	text: string;
+	rating: number | null;
+	author?: string;
+	/** e.g. "2 months ago" */
+	when?: string;
+}
 export interface Experience {
 	id: string;
 	title: string;
@@ -17,6 +24,12 @@ export interface Experience {
 	/** Free-text query used to look the place up in Google Places (defaults to title + location). */
 	placeQuery?: string;
 	photo?: ExperiencePhoto;
+	/** Google rating 1-5 and total count, when known. */
+	rating?: number;
+	reviewCount?: number;
+	/** Up to 5 reviews, Google "most relevant" order (Places) or Nimble Maps fallback. */
+	reviews?: PlaceReview[];
+	reviewSource?: 'google-places' | 'nimble';
 }
 export interface Adventure {
 	id: string;
