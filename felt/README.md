@@ -33,6 +33,7 @@ npx wrangler r2 bucket create felt-photos
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put NIMBLE_API_KEY
+npx wrangler secret put GOOGLE_MAPS_API_KEY   # optional: real place photos on cards
 cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run preview`
 npm run deploy
 ```
@@ -56,4 +57,4 @@ Quotes are only ever pulled from the database by ID; the model never writes quot
 
 ## Disclosure
 
-Code written during the event with AI-assisted coding (Claude Code). No sign-in; anonymous cookie session. Photo EXIF (including GPS) is stripped client side before upload.
+Code written during the event with AI-assisted coding (Claude Code). No sign-in; anonymous cookie session. Photo EXIF (including GPS) is stripped client side before upload. HEIC/HEIF photos are accepted everywhere: Safari decodes them natively, other browsers fall back to a libheif WASM decoder in a Web Worker (`src/lib/heic/`).

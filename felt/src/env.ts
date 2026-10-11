@@ -7,6 +7,11 @@ export const variables = defineEnvVars({
 		schema: (v) => v || '',
 		description: 'Google AI Studio key (billed tier for Maps grounding)'
 	},
+	GOOGLE_MAPS_API_KEY: {
+		schema: optional,
+		description:
+			'Google Cloud key with Places API (New) enabled; powers place photos on experience cards (optional)'
+	},
 	DATABASE_URL: { schema: (v) => v || '', description: 'Postgres with pgvector' },
 	NIMBLE_API_KEY: {
 		schema: optional,

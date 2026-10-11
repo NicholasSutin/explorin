@@ -1,3 +1,11 @@
+export interface ExperiencePhoto {
+	/** Places API photo resource name: places/{placeId}/photos/{ref}. Resolved by /api/photo. */
+	name: string;
+	placeId: string;
+	/** Required by Google's attribution policy; shown next to the image. */
+	attribution: string;
+	attributionUrl?: string;
+}
 export interface Experience {
 	id: string;
 	title: string;
@@ -6,6 +14,9 @@ export interface Experience {
 	url: string;
 	category: string;
 	reason: string;
+	/** Free-text query used to look the place up in Google Places (defaults to title + location). */
+	placeQuery?: string;
+	photo?: ExperiencePhoto;
 }
 export interface Adventure {
 	id: string;
@@ -27,6 +38,7 @@ export const demoExperiences: Experience[] = [
 		location: 'The High Line · New York City',
 		description:
 			'Follow an elevated garden through the city. Pause for public art, unexpected views, and a moment to yourself.',
+		placeQuery: 'The High Line, New York, NY',
 		url: 'https://www.thehighline.org/',
 		category: 'Nature & art',
 		reason: 'An easygoing mix of green space, creativity, and wandering.'
@@ -37,6 +49,7 @@ export const demoExperiences: Experience[] = [
 		location: 'Brooklyn Bridge Park · New York City',
 		description:
 			'Wander the waterfront paths and find a skyline spot for a slow afternoon. Bring a camera and leave room for a detour.',
+		placeQuery: 'Brooklyn Bridge Park, Brooklyn, NY',
 		url: 'https://www.brooklynbridgepark.org/',
 		category: 'Outdoors',
 		reason: 'Open skies and a fresh perspective, without leaving the city.'
@@ -47,6 +60,7 @@ export const demoExperiences: Experience[] = [
 		location: 'The Metropolitan Museum of Art · New York City',
 		description:
 			'Pick one gallery that catches your eye and let curiosity lead. Check the official site for admission and opening hours.',
+		placeQuery: 'The Metropolitan Museum of Art, New York, NY',
 		url: 'https://www.metmuseum.org/',
 		category: 'Culture',
 		reason: 'A thoughtful escape for a curious, creative afternoon.'
