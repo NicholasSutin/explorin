@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { toBlob } from 'html-to-image';
-	import { HISTORY_KEY, type Experience, type Adventure, type DiscoveryStep } from '#lib/adventure';
-	import { decodePhoto, isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
+	import {
+		directionsUrl,
+		HISTORY_KEY,
+		type Experience,
+		type Adventure,
+		type DiscoveryStep
+	} from '#lib/adventure';
+	import { api, errorMessage, photoDataUrl } from '#lib/client';
+	import { isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
 	import PlaceMap from '#lib/components/PlaceMap.svelte';
 	import './explorin.css';
 	type Recognition = {
@@ -32,9 +39,10 @@
 	let photos = $state<string[]>([]);
 	let history = $state<Adventure[]>([]);
 	let scrapbook = $state<Adventure | null>(null);
+	/** The open scrapbook is in device history. */
+	const saved = $derived(!!scrapbook && history.some((a) => a.id === scrapbook!.id));
 	let shareInsights = $state(false);
 	let useInsights = $state(false);
-	let saved = $state(false);
 	let scrapbookElement = $state<HTMLElement>();
 	let recognition: Recognition | undefined;
 	let speechSupported = $state(false);
@@ -45,7 +53,7 @@
 	let pipelineMs = $state(0);
 	let pipelineElement = $state<HTMLElement>();
 	/** How the scrapbook story was written: model and wall time, from /api/scrapbook. */
-	let storyMeta = $state<{ model?: string; ms: number; notes: number } | null>(null);
+	let storyMeta = $state<{ model?: string; ms: number } | null>(null);
 	let writing = $state(0);
 	/** Free-text context about the person, persisted locally so personalization survives a reload. */
 	const ABOUT_KEY = 'explorin.about.v1';
@@ -140,9 +148,16 @@
 		{ src: '/marketing/run-selfie.webp', film: 'film-mono', note: 'proof we went' }
 	];
 	const directions = (e: Experience) =>
-		e.coords
-			? `https://www.google.com/maps/dir/?api=1&destination=${e.coords.lat.toFixed(6)},${e.coords.lng.toFixed(6)}${e.photo ? `&destination_place_id=${encodeURIComponent(e.photo.placeId)}` : ''}`
-			: e.mapsUrl || e.url;
+		e.coords ? directionsUrl(e.coords, e.photo?.placeId) : e.mapsUrl || e.url;
+	/** Update `set` with the time since now every 100 ms; returns the stop function. */
+	function elapsedTicker(set: (ms: number) => void) {
+		const started = Date.now();
+		const id = setInterval(() => set(Date.now() - started), 100);
+		return () => {
+			clearInterval(id);
+			set(Date.now() - started);
+		};
+	}
 	const elapsed = (from: string) => {
 		const m = Math.max(0, Math.round((now - new Date(from).getTime()) / 60000));
 		return m < 1
@@ -192,15 +207,11 @@
 		} catch {
 			error = 'Your saved history could not be read. You can still create a new adventure.';
 		}
-		const ctor =
-			(
-				window as unknown as {
-					SpeechRecognition?: new () => Recognition;
-					webkitSpeechRecognition?: new () => Recognition;
-				}
-			).SpeechRecognition ||
-			(window as unknown as { webkitSpeechRecognition?: new () => Recognition })
-				.webkitSpeechRecognition;
+		const w = window as unknown as {
+			SpeechRecognition?: new () => Recognition;
+			webkitSpeechRecognition?: new () => Recognition;
+		};
+		const ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
 		speechSupported = Boolean(ctor);
 		if (ctor) {
 			recognition = new ctor();
@@ -225,17 +236,6 @@
 			clearInterval(tick);
 		};
 	});
-	async function api<T>(path: string, body: unknown): Promise<T> {
-		const res = await fetch(path, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(45000)
-		});
-		const data = (await res.json()) as { error?: string };
-		if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
-		return data as T;
-	}
 	/** POST and read newline-delimited JSON events as they arrive. */
 	async function streamApi(
 		path: string,
@@ -248,10 +248,7 @@
 			body: JSON.stringify(body),
 			signal: AbortSignal.timeout(60000)
 		});
-		if (!res.ok || !res.body) {
-			const data = (await res.json().catch(() => ({}))) as { error?: string };
-			throw new Error(data.error || 'Something went wrong. Please try again.');
-		}
+		if (!res.ok || !res.body) throw new Error(await errorMessage(res));
 		const reader = res.body.getReader();
 		const decoder = new TextDecoder();
 		let buffer = '';
@@ -275,8 +272,7 @@
 		experiences = [];
 		steps = [];
 		pipelineMs = 0;
-		const started = Date.now();
-		const ticker = setInterval(() => (pipelineMs = Date.now() - started), 100);
+		const stopTicker = elapsedTicker((ms) => (pipelineMs = ms));
 		await tick();
 		pipelineElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		try {
@@ -311,8 +307,7 @@
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Discovery failed. Please try again.';
 		} finally {
-			clearInterval(ticker);
-			pipelineMs = Date.now() - started;
+			stopTicker();
 			busy = false;
 		}
 	}
@@ -324,26 +319,33 @@
 		if (reflections.length < 30 && !reflections.includes(text))
 			reflections = [...reflections, text];
 	}
-	async function useSamplePhotos() {
+	/** Re-encode and append photos; `load` produces the files (picker or sample fetch). */
+	async function addPhotos(load: () => Promise<File[]>, failure: string) {
 		busy = true;
 		error = '';
 		try {
-			const files = await Promise.all(
-				samplePhotos.slice(0, 4 - photos.length).map(async (src) => {
-					const res = await fetch(src);
-					if (!res.ok) throw new Error('Sample photos are unavailable right now.');
-					return new File([await res.blob()], src.split('/').pop() || 'sample.webp', {
-						type: 'image/webp'
-					});
-				})
-			);
+			const files = await load();
 			photos = [...photos, ...(await Promise.all(files.map(photoData)))];
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Could not load the sample photos.';
+			error = e instanceof Error ? e.message : failure;
 		} finally {
 			busy = false;
 		}
 	}
+	const useSamplePhotos = () =>
+		addPhotos(
+			() =>
+				Promise.all(
+					samplePhotos.slice(0, 4 - photos.length).map(async (src) => {
+						const res = await fetch(src);
+						if (!res.ok) throw new Error('Sample photos are unavailable right now.');
+						return new File([await res.blob()], src.split('/').pop() || 'sample.webp', {
+							type: 'image/webp'
+						});
+					})
+				),
+			'Could not load the sample photos.'
+		);
 	function start(experience: Experience) {
 		selected = experience;
 		startedAt = new Date().toISOString();
@@ -351,7 +353,6 @@
 		reflection = '';
 		photos = [];
 		shareInsights = false;
-		saved = false;
 		error = '';
 		status = '';
 		view = 'active';
@@ -370,53 +371,29 @@
 		error = '';
 		window.scrollTo(0, 0);
 	}
-	async function photoData(file: File): Promise<string> {
+	function photoData(file: File): Promise<string> {
 		if (!isAcceptedPhoto(file)) throw new Error('Choose JPG, PNG, WebP, or HEIC photos.');
 		if (file.size > 15 * 1024 * 1024) throw new Error('Each photo must be smaller than 15 MB.');
-		// Decodes HEIC in a worker when the browser cannot read it natively.
-		const bitmap = await decodePhoto(file);
-		const scale = Math.min(1, 1200 / Math.max(bitmap.width, bitmap.height));
-		const canvas = document.createElement('canvas');
-		canvas.width = Math.round(bitmap.width * scale);
-		canvas.height = Math.round(bitmap.height * scale);
-		const context = canvas.getContext('2d');
-		if (!context) {
-			bitmap.close();
-			throw new Error('Your browser could not process this photo.');
-		}
-		context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-		bitmap.close();
-		return canvas.toDataURL('image/jpeg', 0.72);
+		// Decodes HEIC in a worker when the browser cannot read it natively; strips EXIF on the way.
+		return photoDataUrl(file);
 	}
 	async function upload(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const files = Array.from(input.files || []);
-		error = '';
+		input.value = '';
 		if (files.length + photos.length > 4) {
 			error = 'Choose up to four photos in total.';
-			input.value = '';
 			return;
 		}
-		busy = true;
-		try {
-			const converted = await Promise.all(files.map(photoData));
-			photos = [...photos, ...converted];
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Could not process the photos.';
-		} finally {
-			busy = false;
-			input.value = '';
-		}
+		await addPhotos(async () => files, 'Could not process the photos.');
 	}
 	function saveAdventure(adventure: Adventure) {
 		const next = [adventure, ...history.filter((a) => a.id !== adventure.id)].slice(0, 12);
 		try {
 			localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
 			history = next;
-			saved = true;
 			status = 'Saved to your history on this device.';
 		} catch {
-			saved = false;
 			error =
 				'Device storage is full or unavailable. Download your scrapbook now, or remove an older adventure and retry saving.';
 		}
@@ -427,8 +404,7 @@
 		error = '';
 		status = '';
 		storyMeta = null;
-		const started = Date.now();
-		const ticker = setInterval(() => (writing = Date.now() - started), 100);
+		const stopTicker = elapsedTicker((ms) => (writing = ms));
 		try {
 			const data = await api<{
 				title: string;
@@ -436,8 +412,12 @@
 				aiGenerated: boolean;
 				model?: string;
 				ms: number;
-			}>('/api/scrapbook', { title: selected.title, location: selected.location, reflections });
-			storyMeta = { model: data.model, ms: Date.now() - started, notes: reflections.length };
+			}>('/api/scrapbook', {
+				method: 'POST',
+				json: { title: selected.title, location: selected.location, reflections },
+				timeoutMs: 45000
+			});
+			storyMeta = { model: data.model, ms: data.ms };
 			scrapbook = {
 				id: crypto.randomUUID(),
 				experience: selected,
@@ -459,7 +439,7 @@
 					? e.message
 					: 'Could not create your scrapbook. Your photos and reflections are still here; please retry.';
 		} finally {
-			clearInterval(ticker);
+			stopTicker();
 			writing = 0;
 			busy = false;
 		}
@@ -988,12 +968,10 @@
 				</article>
 				<p class="footnote story-meta">
 					{#if scrapbook.aiGenerated}<span class="step-dot done"></span><span
-							>Written by {storyMeta?.model ?? 'Gemini'} from {storyMeta?.notes ??
-								scrapbook.reflections.length}
-							{(storyMeta?.notes ?? scrapbook.reflections.length) === 1
-								? 'note'
-								: 'notes'}{storyMeta ? ` in ${(storyMeta.ms / 1000).toFixed(1)} s` : ''}. Photos
-							stayed on this device.</span
+							>Written by {storyMeta?.model ?? 'Gemini'} from {scrapbook.reflections.length}
+							{scrapbook.reflections.length === 1 ? 'note' : 'notes'}{storyMeta
+								? ` in ${(storyMeta.ms / 1000).toFixed(1)} s`
+								: ''}. Photos stayed on this device.</span
 						>{:else}<span
 							>AI unavailable — this keepsake uses your own words and adventure details.</span
 						>{/if}
@@ -1037,7 +1015,6 @@
 									class="history-open"
 									onclick={() => {
 										scrapbook = adventure;
-										saved = true;
 										view = 'scrapbook';
 									}}
 									><img src={adventure.photos[0]} alt={adventure.title} />

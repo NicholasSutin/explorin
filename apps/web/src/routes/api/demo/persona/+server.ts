@@ -8,8 +8,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const { persona } = (await request.json().catch(() => ({}))) as { persona?: string };
 	const p = (await loadPersonas()).find((x) => x.id === persona);
 	if (!p) error(400, 'Unknown persona');
-	await ensureUser(locals.uid, p.name);
-	await upsertProfile(locals.uid, p.traits, await embed(p.traits.summary, 'doc'));
+	const [embedding] = await Promise.all([
+		embed(p.traits.summary, 'doc'),
+		ensureUser(locals.uid, p.name)
+	]);
+	await upsertProfile(locals.uid, p.traits, embedding);
 	return json({ profile: await getProfile(locals.uid) });
 };
 

@@ -18,11 +18,15 @@ export async function getProfile(uid: string): Promise<Profile | null> {
 	return rows[0] ?? null;
 }
 
-export async function getProfileEmbedding(uid: string): Promise<number[] | null> {
-	const rows = await sql<{ embedding: string | null }[]>`
-		SELECT embedding::text AS embedding FROM profiles WHERE user_id = ${uid}`;
-	const t = rows[0]?.embedding;
-	return t ? JSON.parse(t) : null;
+export type ProfileWithEmbedding = Profile & { embedding: number[] | null };
+
+/** Profile plus its vector in one round trip, for the paths that need both. */
+export async function getProfileWithEmbedding(uid: string): Promise<ProfileWithEmbedding | null> {
+	const rows = await sql<(Profile & { embedding: string | null })[]>`
+		SELECT p.user_id, u.name, p.traits, p.summary, p.updated_at, p.embedding::text AS embedding
+		FROM profiles p JOIN users u ON u.id = p.user_id WHERE p.user_id = ${uid}`;
+	const row = rows[0];
+	return row ? { ...row, embedding: row.embedding ? JSON.parse(row.embedding) : null } : null;
 }
 
 export async function upsertProfile(uid: string, traits: Traits, embedding: number[]) {
@@ -30,15 +34,6 @@ export async function upsertProfile(uid: string, traits: Traits, embedding: numb
 	          VALUES (${uid}, ${sql.json(traits as never)}, ${traits.summary}, ${vec(embedding)}::vector, now())
 	          ON CONFLICT (user_id) DO UPDATE SET traits = EXCLUDED.traits, summary = EXCLUDED.summary,
 	            embedding = EXCLUDED.embedding, updated_at = now()`;
-}
-
-export async function listPlaces(): Promise<Place[]> {
-	return sql<Place[]>`SELECT * FROM places ORDER BY name`;
-}
-
-export async function getPlace(id: string): Promise<Place | null> {
-	const rows = await sql<Place[]>`SELECT * FROM places WHERE id = ${id}`;
-	return rows[0] ?? null;
 }
 
 /** Upsert a Maps-grounded place by google_place_id. Returns the row. */

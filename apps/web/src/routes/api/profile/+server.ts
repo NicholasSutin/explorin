@@ -1,5 +1,6 @@
-import { json, error, type RequestHandler } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
+import { parseBody } from '#lib/server/http';
 import { buildProfile } from '#lib/server/profile';
 import { getProfile } from '#lib/server/db';
 
@@ -13,9 +14,6 @@ export const GET: RequestHandler = async ({ locals }) =>
 	json({ profile: await getProfile(locals.uid) });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const parsed = Body.safeParse(await request.json());
-	if (!parsed.success) error(400, parsed.error.issues[0]?.message ?? 'Bad request');
-	const { name, photoUrls, bio } = parsed.data;
-	const profile = await buildProfile(locals.uid, name, photoUrls, bio);
-	return json({ profile });
+	const { name, photoUrls, bio } = await parseBody(request, Body);
+	return json({ profile: await buildProfile(locals.uid, name, photoUrls, bio) });
 };

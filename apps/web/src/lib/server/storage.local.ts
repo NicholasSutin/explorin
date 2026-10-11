@@ -7,8 +7,6 @@ import { join, resolve, sep } from 'node:path';
 
 const ROOT = resolve(process.cwd(), '.photos');
 
-export const hasBucket = () => true;
-
 export async function putPhoto(uid: string, file: File): Promise<string> {
 	const ext = file.type.split('/')[1] || 'jpg';
 	const key = `${uid}/${crypto.randomUUID()}.${ext}`;

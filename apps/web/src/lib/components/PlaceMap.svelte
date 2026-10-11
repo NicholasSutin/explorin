@@ -3,7 +3,7 @@
 	 * Stylized static map served by /api/map (same-origin, key stays on the server).
 	 * Renders nothing when there are no coordinates or the map fails, so layouts degrade quietly.
 	 */
-	import type { LatLng } from '#lib/adventure';
+	import { formatLatLng, type LatLng } from '#lib/adventure';
 	let {
 		coords,
 		pins = [],
@@ -35,7 +35,7 @@
 			q.set('lng', coords.lng.toFixed(6));
 			q.set('zoom', String(zoom));
 		} else if (pins.length) {
-			q.set('pins', pins.map((p) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`).join(';'));
+			q.set('pins', pins.map(formatLatLng).join(';'));
 			if (numbered) q.set('numbered', '1');
 			if (trail) q.set('trail', '1');
 		} else return '';

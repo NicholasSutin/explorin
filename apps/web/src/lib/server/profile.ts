@@ -10,20 +10,15 @@ export async function buildProfile(
 	photoUrls: string[],
 	bio?: string
 ): Promise<Profile> {
-	const parts: Part[] = [];
-	for (let i = 0; i < photoUrls.length; i++) {
-		parts.push({ text: `Photo ${i + 1}:` });
-		parts.push(await imagePart(photoUrls[i]));
-	}
+	const images = await Promise.all(photoUrls.map(imagePart));
+	const parts: Part[] = images.flatMap((img, i) => [{ text: `Photo ${i + 1}:` }, img]);
 	parts.push({
 		text: `Name: ${name}.${bio ? ` Bio: "${bio}".` : ' No bio provided.'} Build the profile.`
 	});
 
 	const traits = await generateJson<Traits>(parts, PROFILE_SCHEMA, PROFILE_SYSTEM);
 	traits.activities = (traits.activities ?? []).filter((a) => a.confidence >= 0.35).slice(0, 6);
-	const embedding = await embed(traits.summary, 'doc');
-
-	await ensureUser(uid, name);
+	const [embedding] = await Promise.all([embed(traits.summary, 'doc'), ensureUser(uid, name)]);
 	await upsertProfile(uid, traits, embedding);
 	return (await getProfile(uid))!;
 }
@@ -32,12 +27,10 @@ const uniq = (xs: string[]) => [...new Set(xs.map((x) => x.trim().toLowerCase())
 
 /** Job 5 follow-up: merge learned preferences into traits and re-embed. */
 export async function mergeProfileUpdates(
-	uid: string,
+	current: Profile,
 	updates: ReflectionAnalysis['profile_updates'],
 	learned: string
 ): Promise<Profile | null> {
-	const current = await getProfile(uid);
-	if (!current) return null;
 	const t = current.traits;
 	const next: Traits = {
 		...t,
@@ -52,6 +45,6 @@ export async function mergeProfileUpdates(
 		summary: learned && !t.summary.includes(learned) ? `${t.summary} ${learned}` : t.summary
 	};
 	const embedding = await embed(next.summary, 'doc');
-	await upsertProfile(uid, next, embedding);
-	return getProfile(uid);
+	await upsertProfile(current.user_id, next, embedding);
+	return getProfile(current.user_id);
 }

@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import { DEMO_CACHE, LONGTAIL } from '$app/env/private';
 import { embed, generateJson, groundedPlaces, type GroundedPlace } from './gemini';
 import {
@@ -7,13 +8,20 @@ import {
 	INTENT_SYSTEM,
 	PLACE_NAMES_SCHEMA
 } from './prompts';
-import { getProfile, getProfileEmbedding, sql, upsertGroundedPlace, vec } from './db';
+import { getProfileWithEmbedding, sql, upsertGroundedPlace, vec } from './db';
 import { mapsPlace, nimbleEnabled, nimbleSdkEnabled, webSearch, type LivePlace } from './nimble';
 import { validateCards, type ComposedCard } from './validate';
+import { ttlCache } from './http';
 import type { Card, Intent, Quote, RecommendResponse, Source } from '#lib/types';
 
-// Midtown Manhattan default when the browser gives no location.
-const NYC = { lat: 40.7484, lng: -73.9857 };
+/** The recommend flow is single-city for now; everything location-specific hangs off this. */
+const CITY = {
+	name: 'New York City',
+	short: 'New York',
+	/** Midtown Manhattan default when the browser gives no location. */
+	center: { lat: 40.7484, lng: -73.9857 },
+	tz: 'America/New_York'
+};
 
 interface EvidenceRow {
 	id: string;
@@ -32,12 +40,15 @@ interface CandidateRow {
 	tags: string[];
 	notes: string | null;
 	maps_url: string | null;
+	live?: unknown;
+	live_at?: string | null;
 }
 
 const withTimeout = <T>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
 	Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), ms))]).catch(() => fallback);
 
 export const DEMO_PROMPT = 'a run with views of the water and the Empire State Building';
+const normalize = (prompt: string) => prompt.trim().toLowerCase();
 
 export async function recommend(
 	uid: string,
@@ -45,10 +56,10 @@ export async function recommend(
 	lat?: number,
 	lng?: number
 ): Promise<RecommendResponse> {
-	const profile = await getProfile(uid);
-	if (!profile) throw Object.assign(new Error('No profile yet'), { status: 400 });
-	const profileVec = (await getProfileEmbedding(uid))!;
-	const loc = { lat: lat ?? NYC.lat, lng: lng ?? NYC.lng };
+	const profile = await getProfileWithEmbedding(uid);
+	if (!profile?.embedding) error(400, 'No profile yet');
+	const profileVec = profile.embedding;
+	const loc = lat !== undefined && lng !== undefined ? { lat, lng } : CITY.center;
 
 	// 1-2. Intent and intent embedding in parallel. Maps grounding (20-30s) runs in the background and enriches
 	//      the places table with real Google place IDs / Maps links for the next request; it never blocks.
@@ -61,51 +72,47 @@ export async function recommend(
 	]);
 	lap('intent+embed');
 	void enrichWithMaps(prompt, loc);
-	const grounded: GroundedPlace[] = [];
 
 	// 4. Evidence retrieval (two-axis: what + who)
-	let evidence = await retrieve(intentVec, profileVec);
+	const evidence = await retrieve(intentVec, profileVec);
 	lap(`retrieval (${evidence.length} rows)`);
 
 	// Long-tail fallback: thin evidence -> Nimble web search -> Gemini names -> Maps grounding confirms
-	let extraGrounded: typeof grounded = [];
+	let grounded: GroundedPlace[] = [];
 	if (LONGTAIL && evidence.filter((e) => e.score > 0.45).length < 3 && nimbleEnabled()) {
-		const results = await withTimeout(webSearch(intent.search_query + ' New York City'), 6000, []);
+		const results = await withTimeout(webSearch(`${intent.search_query} ${CITY.name}`), 6000, []);
 		if (results.length) {
 			const { names } = await generateJson<{ names: string[] }>(
 				`Extract up to 6 specific real place names in NYC from these search results:\n` +
 					results.map((r) => `- ${r.title}: ${r.snippet}`).join('\n'),
 				PLACE_NAMES_SCHEMA
 			);
-			if (names.length) {
-				extraGrounded = await withTimeout(
+			if (names.length)
+				grounded = await withTimeout(
 					groundedPlaces(
-						`Confirm these are real places in New York City and return each: ${names.join('; ')}`,
+						`Confirm these are real places in ${CITY.name} and return each: ${names.join('; ')}`,
 						loc.lat,
 						loc.lng
 					),
 					8000,
 					[]
 				);
-			}
 		}
 	}
 
 	// 5. Candidates = curated seed places (tags are honest, so the composer knows e.g. which have esb_view)
-	//    UNION places from evidence UNION Maps-grounded places (upserted)
-	const groundedRows = await Promise.all(
-		[...grounded, ...extraGrounded].map((g) => upsertGroundedPlace(g))
-	);
-	const curated = await sql<CandidateRow[]>`
-		SELECT id, google_place_id, name, tags, notes, maps_url FROM places WHERE kind IS NOT NULL ORDER BY name`;
+	//    UNION places from evidence UNION Maps-grounded places (upserted). One query brings the cached live
+	//    context along, so step 6 needs no second read.
 	const evidencePlaceIds = [...new Set(evidence.map((e) => e.place_id))];
-	const evidencePlaces = evidencePlaceIds.length
-		? await sql<
-				CandidateRow[]
-			>`SELECT id, google_place_id, name, tags, notes, maps_url FROM places WHERE id IN ${sql(evidencePlaceIds)}`
-		: [];
+	const [rows, groundedRows] = await Promise.all([
+		sql<CandidateRow[]>`
+			SELECT id, google_place_id, name, tags, notes, maps_url, live, live_at FROM places
+			WHERE kind IS NOT NULL ${evidencePlaceIds.length ? sql`OR id IN ${sql(evidencePlaceIds)}` : sql``}
+			ORDER BY name`,
+		Promise.all(grounded.map((g) => upsertGroundedPlace(g)))
+	]);
 	const candidates = new Map<string, CandidateRow>();
-	for (const p of [...evidencePlaces, ...curated]) candidates.set(p.id, p);
+	for (const p of rows) candidates.set(p.id, p);
 	for (const p of groundedRows)
 		if (!candidates.has(p.id))
 			candidates.set(p.id, {
@@ -118,34 +125,24 @@ export async function recommend(
 
 	// 6. Live context: served from places.live (cached), refreshed in the background when older than 30 min.
 	//    Never blocks the response.
-	const top = [...new Set([...evidencePlaceIds, ...candidates.keys()])]
-		.slice(0, 5)
-		.map((id) => candidates.get(id)!)
-		.filter(Boolean);
 	const live: Record<string, unknown> = {};
-	if (top.length) {
-		const rows = await sql<{ id: string; live: unknown; live_at: string | null }[]>`
-			SELECT id, live, live_at FROM places WHERE id IN ${sql([...candidates.keys()])}`;
-		for (const r of rows) if (r.live) live[r.id] = r.live;
-		if (nimbleSdkEnabled()) {
-			const topIds = new Set(top.map((p) => p.id));
-			const stale = rows.filter(
-				(r) =>
-					topIds.has(r.id) &&
-					(!r.live_at || Date.now() - new Date(r.live_at).getTime() > 30 * 60 * 1000)
-			);
-			for (const r of stale) {
-				const name = candidates.get(r.id)!.name;
-				void mapsPlace(`${name} New York`, 15000)
-					.then(async (l) => {
-						if (l)
-							await sql`UPDATE places SET live = ${sql.json(l as never)}, live_at = now(),
-								google_place_id = COALESCE(google_place_id, ${l.google_place_id ?? null}),
-								maps_url = CASE WHEN google_place_id IS NULL AND ${l.maps_url ?? null}::text IS NOT NULL THEN ${l.maps_url ?? null} ELSE maps_url END
-								WHERE id = ${r.id}`;
-					})
-					.catch(() => {});
-			}
+	for (const r of rows) if (r.live) live[r.id] = r.live;
+	if (nimbleSdkEnabled()) {
+		const top = new Set([...evidencePlaceIds, ...candidates.keys()].slice(0, 5));
+		const stale = rows.filter(
+			(r) =>
+				top.has(r.id) && (!r.live_at || Date.now() - new Date(r.live_at).getTime() > 30 * 60 * 1000)
+		);
+		for (const r of stale) {
+			void mapsPlace(`${r.name} ${CITY.short}`, 15000)
+				.then(async (l) => {
+					if (l)
+						await sql`UPDATE places SET live = ${sql.json(l as never)}, live_at = now(),
+							google_place_id = COALESCE(google_place_id, ${l.google_place_id ?? null}),
+							maps_url = CASE WHEN google_place_id IS NULL AND ${l.maps_url ?? null}::text IS NOT NULL THEN ${l.maps_url ?? null} ELSE maps_url END
+							WHERE id = ${r.id}`;
+				})
+				.catch(() => {});
 		}
 	}
 	lap(`live (${Object.keys(live).length} cached)`);
@@ -158,12 +155,11 @@ export async function recommend(
 			`CANDIDATES: ${JSON.stringify([...candidates.values()].map((c) => ({ place_id: c.id, name: c.name, tags: c.tags, notes: c.notes })))}`,
 			`EVIDENCE: ${JSON.stringify(evidence.slice(0, 8).map((e) => ({ quote_id: e.id, place_id: e.place_id, quote: e.quote, display_name: e.display_name, emotions: e.emotions, source: e.source })))}`,
 			`LIVE: ${JSON.stringify(live)}`,
-			`NOW: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`
+			`NOW: ${new Date().toLocaleString('en-US', { timeZone: CITY.tz })}`
 		].join('\n\n'),
 		COMPOSE_SCHEMA,
 		COMPOSE_SYSTEM
 	);
-
 	lap('compose');
 
 	// 8. Validate
@@ -173,13 +169,16 @@ export async function recommend(
 		new Set(evidence.map((e) => e.id))
 	);
 
-	// 9 + 10. Hydrate and insert experiences
+	// 9 + 10. Insert experiences in one statement, then hydrate the cards
+	const inserted = valid.length
+		? await sql<{ id: string }[]>`
+			INSERT INTO experiences ${sql(
+				valid.map((c) => ({ user_id: uid, place_id: c.place_id, prompt, status: 'recommended' }))
+			)} RETURNING id`
+		: [];
 	const byQuote = new Map(evidence.map((e) => [e.id, e]));
-	const cards: Card[] = [];
-	for (const c of valid) {
+	const cards: Card[] = valid.map((c, i) => {
 		const place = candidates.get(c.place_id)!;
-		const [exp] = await sql<{ id: string }[]>`
-			INSERT INTO experiences (user_id, place_id, prompt, status) VALUES (${uid}, ${c.place_id}, ${prompt}, 'recommended') RETURNING id`;
 		const quotes: Quote[] = c.quote_ids
 			.map((q) => byQuote.get(q)!)
 			.map((e) => ({
@@ -189,21 +188,21 @@ export async function recommend(
 				source: e.source,
 				emotions: e.emotions ?? []
 			}));
-		cards.push({
-			experience_id: exp.id,
+		return {
+			experience_id: inserted[i].id,
 			place_id: c.place_id,
 			place_name: place.name,
 			google_place_id: place.google_place_id ?? null,
 			maps_url:
 				place.maps_url ??
-				`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + ' New York')}`,
+				`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${CITY.short}`)}`,
 			title: c.title,
 			plan: c.plan,
 			why_for_you: c.why_for_you,
 			quotes,
 			right_now: formatRightNow(live[c.place_id] as LivePlace | undefined) ?? c.right_now ?? null
-		});
-	}
+		};
+	});
 
 	lap('done');
 	return {
@@ -213,12 +212,18 @@ export async function recommend(
 	};
 }
 
+/** Prompts grounded recently; the same request should not re-bill Maps grounding every time. */
+const groundedPrompts = ttlCache<true>(60 * 60 * 1000, 500);
+
 /** Background: ground the request with Google Maps, upsert new places, and attach place IDs to curated places by name. */
 async function enrichWithMaps(prompt: string, loc: { lat: number; lng: number }) {
+	const key = normalize(prompt);
+	if (groundedPrompts.get(key)) return;
+	groundedPrompts.set(key, true);
 	try {
 		const grounded = await withTimeout(
 			groundedPlaces(
-				`List up to 5 real places in New York City that match this request: "${prompt}". Prefer parks, waterfront paths, and viewpoints.`,
+				`List up to 5 real places in ${CITY.name} that match this request: "${prompt}". Prefer parks, waterfront paths, and viewpoints.`,
 				loc.lat,
 				loc.lng
 			),
@@ -272,8 +277,8 @@ async function retrieve(intentVec: number[], profileVec: number[]): Promise<Evid
 
 /** Cached wrapper for the scripted demo prompt (persisted in Postgres so dev reloads keep it); everything else runs live. */
 export async function recommendCached(uid: string, prompt: string, lat?: number, lng?: number) {
-	const key = `${uid}:${prompt.trim().toLowerCase()}`;
-	const isDemo = DEMO_CACHE && prompt.trim().toLowerCase() === DEMO_PROMPT.toLowerCase();
+	const key = `${uid}:${normalize(prompt)}`;
+	const isDemo = DEMO_CACHE && normalize(prompt) === normalize(DEMO_PROMPT);
 	if (isDemo) {
 		const [hit] = await sql<{ value: RecommendResponse }[]>`
 			SELECT value FROM response_cache WHERE key = ${key} AND created_at > now() - interval '2 hours'`;

@@ -16,16 +16,13 @@
 	let ready = $derived(name.trim().length > 0 && files.length >= 1 && !busy);
 
 	onMount(async () => {
-		try {
-			if ((await getProfile()).profile) goto('/ask');
-		} catch {
-			/* no DB yet; stay */
-		}
-		try {
-			personas = (await api<{ personas: typeof personas }>('/api/demo/persona')).personas;
-		} catch {
-			/* ignore */
-		}
+		const [existing, presets] = await Promise.allSettled([
+			getProfile(),
+			api<{ personas: typeof personas }>('/api/demo/persona')
+		]);
+		// Either call can fail without a database; the page still works for a fresh start.
+		if (existing.status === 'fulfilled' && existing.value.profile) goto('/ask');
+		if (presets.status === 'fulfilled') personas = presets.value.personas;
 	});
 
 	async function usePersona(id: string) {

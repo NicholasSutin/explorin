@@ -2,28 +2,33 @@
 import { decodePhoto } from './heic';
 import type { Profile, RecommendResponse, ReflectionAnalysis } from './types';
 
+/** Pull the server's message out of a failed response; SvelteKit's `error()` answers `{ message }`. */
+export async function errorMessage(
+	res: Response,
+	fallback = 'Something went wrong. Please try again.'
+) {
+	try {
+		return ((await res.json()) as { message?: string }).message || fallback;
+	} catch {
+		return fallback;
+	}
+}
+
 export async function api<T>(
 	path: string,
-	init: RequestInit & { json?: unknown } = {}
+	init: RequestInit & { json?: unknown; timeoutMs?: number } = {}
 ): Promise<T> {
-	const { json: body, ...rest } = init;
+	const { json: body, timeoutMs, ...rest } = init;
 	const res = await fetch(path, {
 		...rest,
 		headers:
 			body !== undefined
 				? { 'Content-Type': 'application/json', ...(rest.headers ?? {}) }
 				: rest.headers,
-		body: body !== undefined ? JSON.stringify(body) : rest.body
+		body: body !== undefined ? JSON.stringify(body) : rest.body,
+		signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : rest.signal
 	});
-	if (!res.ok) {
-		let msg = res.statusText;
-		try {
-			msg = ((await res.json()) as { message?: string }).message ?? msg;
-		} catch {
-			/* ignore */
-		}
-		throw new Error(msg);
-	}
+	if (!res.ok) throw new Error(await errorMessage(res, res.statusText));
 	return res.json() as Promise<T>;
 }
 
@@ -32,22 +37,47 @@ export async function api<T>(
  * into JPEG so the server and the AI only ever see one format. Throws if the file is not an image
  * this browser can open.
  */
-export async function stripAndResize(file: File, maxEdge = 1600): Promise<File> {
+export async function reencodePhoto(
+	file: File,
+	{ maxEdge = 1600, quality = 0.85 }: { maxEdge?: number; quality?: number } = {}
+): Promise<Blob> {
 	const bmp = await decodePhoto(file);
 	const scale = Math.min(1, maxEdge / Math.max(bmp.width, bmp.height));
 	const canvas = document.createElement('canvas');
 	canvas.width = Math.round(bmp.width * scale);
 	canvas.height = Math.round(bmp.height * scale);
-	canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+	const context = canvas.getContext('2d');
+	if (!context) {
+		bmp.close();
+		throw new Error('Your browser could not process this photo.');
+	}
+	context.drawImage(bmp, 0, 0, canvas.width, canvas.height);
 	bmp.close();
-	const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+	const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', quality));
 	if (!blob) throw new Error(`Could not process ${file.name}.`);
+	return blob;
+}
+
+/** `reencodePhoto` as an upload-ready JPEG File. */
+export async function stripAndResize(file: File, maxEdge = 1600): Promise<File> {
+	const blob = await reencodePhoto(file, { maxEdge });
 	return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+}
+
+/** `reencodePhoto` as a JPEG data URL, for histories kept in localStorage. */
+export async function photoDataUrl(file: File, maxEdge = 1200, quality = 0.72): Promise<string> {
+	const blob = await reencodePhoto(file, { maxEdge, quality });
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result));
+		reader.onerror = () => reject(reader.error);
+		reader.readAsDataURL(blob);
+	});
 }
 
 export async function uploadPhotos(files: File[]): Promise<string[]> {
 	const form = new FormData();
-	for (const f of files) form.append('files', await stripAndResize(f));
+	for (const f of await Promise.all(files.map((f) => stripAndResize(f)))) form.append('files', f);
 	const { urls } = await api<{ urls: string[] }>('/api/upload', { method: 'POST', body: form });
 	return urls;
 }

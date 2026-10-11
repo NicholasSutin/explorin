@@ -1,10 +1,11 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import {
 	discoverInput,
 	runDiscovery,
 	type DiscoveryEvent,
 	type DiscoveryStep
 } from '#lib/server/discover';
+import { parseBody } from '#lib/server/http';
 import type { RequestHandler } from './$types';
 
 /**
@@ -13,18 +14,11 @@ import type { RequestHandler } from './$types';
  * as it happens. Otherwise it answers with the final result as plain JSON.
  */
 export const POST: RequestHandler = async ({ request }) => {
-	let body;
-	try {
-		body = discoverInput.safeParse(await request.json());
-	} catch {
-		return json({ error: 'Please send a valid discovery request.' }, { status: 400 });
-	}
-	if (!body.success)
-		return json(
-			{ error: 'Add an experience prompt and a city (keep the prompt under 800 characters).' },
-			{ status: 400 }
-		);
-	const input = body.data;
+	const input = await parseBody(
+		request,
+		discoverInput,
+		'Add an experience prompt and a city (keep the prompt under 800 characters).'
+	);
 
 	if (request.headers.get('accept')?.includes('application/x-ndjson')) {
 		const encoder = new TextEncoder();
@@ -59,7 +53,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (event.type === 'step') steps.push(event.step);
 		else final = event;
 	});
-	if (!final) return json({ error: 'Discovery failed.' }, { status: 500 });
-	if (final.type === 'error') return json({ error: final.error }, { status: final.status });
+	if (!final) error(500, 'Discovery failed.');
+	if (final.type === 'error') error(final.status, final.error);
 	return json({ ...final.result, steps });
 };

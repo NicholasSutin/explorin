@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit/hooks';
+import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	let uid = event.cookies.get('uid');
@@ -13,4 +13,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 	event.locals.uid = uid;
 	return resolve(event);
+};
+
+/** Unexpected errors (not thrown via `error()`): log the cause, answer with one readable message. */
+export const handleError: HandleServerError = ({ kind, error, event }) => {
+	if (kind !== 'unknown') return; // `error()` and validation failures already carry their message
+	console.error(`[${event.request.method} ${event.url.pathname}]`, error);
+	return { message: 'Something went wrong. Please try again.' };
 };

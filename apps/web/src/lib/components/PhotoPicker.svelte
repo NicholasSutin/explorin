@@ -6,7 +6,21 @@
 		max = 5,
 		capture = false
 	}: { files?: File[]; max?: number; capture?: boolean } = $props();
-	let previews = $derived(files.map((f) => URL.createObjectURL(f)));
+	/** One blob URL per File, created when it first appears and revoked when it leaves the list. */
+	const urls = new Map<File, string>();
+	let previews = $state<string[]>([]);
+	$effect(() => {
+		for (const f of files) if (!urls.has(f)) urls.set(f, URL.createObjectURL(f));
+		for (const [f, url] of urls)
+			if (!files.includes(f)) {
+				URL.revokeObjectURL(url);
+				urls.delete(f);
+			}
+		previews = files.map((f) => urls.get(f)!);
+		return () => {
+			if (!files.length) for (const url of urls.values()) URL.revokeObjectURL(url);
+		};
+	});
 	let converting = $state(0);
 	let error = $state('');
 

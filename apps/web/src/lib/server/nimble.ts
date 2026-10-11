@@ -15,10 +15,17 @@ import {
 	NIMBLE_SECRET,
 	NIMBLE_WEBAPI_URL
 } from '$app/env/private';
+import type { PlaceReview } from '#lib/adventure';
+import { DAY, timedFetch, ttlCache } from './http';
 
 export const nimbleSdkEnabled = () => Boolean(NIMBLE_API_KEY);
 export const nimbleMapsEnabled = () => Boolean(NIMBLE_USERNAME && NIMBLE_SECRET);
 export const nimbleEnabled = () => nimbleSdkEnabled() || nimbleMapsEnabled();
+
+const BEARER = NIMBLE_API_KEY ? `Bearer ${NIMBLE_API_KEY.replace(/^Bearer\s+/i, '')}` : '';
+const BASIC = nimbleMapsEnabled()
+	? `Basic ${Buffer.from(`${NIMBLE_USERNAME}:${NIMBLE_SECRET}`).toString('base64')}`
+	: '';
 
 async function post(
 	url: string,
@@ -26,42 +33,32 @@ async function post(
 	body: Record<string, unknown>,
 	timeoutMs: number
 ): Promise<any> {
-	const ctrl = new AbortController();
-	const t = setTimeout(() => ctrl.abort(), timeoutMs);
-	try {
-		const res = await fetch(url, {
+	const res = await timedFetch(
+		url,
+		{
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', Authorization: auth },
-			body: JSON.stringify(body),
-			signal: ctrl.signal
-		});
-		if (!res.ok)
-			throw new Error(
-				`Nimble ${new URL(url).pathname} ${res.status}: ${(await res.text()).slice(0, 300)}`
-			);
-		return res.json();
-	} finally {
-		clearTimeout(t);
-	}
+			body: JSON.stringify(body)
+		},
+		timeoutMs
+	);
+	if (!res.ok)
+		throw new Error(
+			`Nimble ${new URL(url).pathname} ${res.status}: ${(await res.text()).slice(0, 300)}`
+		);
+	return res.json();
 }
 
 const sdk = (path: string, body: Record<string, unknown>, timeoutMs = 20000) => {
-	if (!NIMBLE_API_KEY) throw new Error('NIMBLE_API_KEY not set');
-	return post(
-		`${NIMBLE_BASE_URL}${path}`,
-		`Bearer ${NIMBLE_API_KEY.replace(/^Bearer\s+/i, '')}`,
-		body,
-		timeoutMs
-	);
+	if (!BEARER) throw new Error('NIMBLE_API_KEY not set');
+	return post(`${NIMBLE_BASE_URL}${path}`, BEARER, body, timeoutMs);
 };
 
 const maps = (search_engine: string, params: Record<string, unknown>, timeoutMs = 15000) => {
-	if (!NIMBLE_USERNAME || !NIMBLE_SECRET)
-		throw new Error('NIMBLE_USERNAME / NIMBLE_SECRET not set');
-	const basic = `Basic ${Buffer.from(`${NIMBLE_USERNAME}:${NIMBLE_SECRET}`).toString('base64')}`;
+	if (!BASIC) throw new Error('NIMBLE_USERNAME / NIMBLE_SECRET not set');
 	return post(
 		`${NIMBLE_WEBAPI_URL}/realtime/serp`,
-		basic,
+		BASIC,
 		{ search_engine, country: 'US', locale: 'en', parse: true, ...params },
 		timeoutMs
 	);
@@ -69,24 +66,26 @@ const maps = (search_engine: string, params: Record<string, unknown>, timeoutMs 
 
 const entities = (data: any) => data?.parsing?.entities ?? data?.parsing ?? {};
 
-export interface Review {
-	text: string;
-	rating: number | null;
-}
+export type Review = PlaceReview;
 
-/** Google Maps reviews for a place query (Web API). Empty on failure or when not configured. */
+const reviewCache = ttlCache<{ place: string; reviews: Review[] }>(DAY);
+
+/** Google Maps reviews for a place query (Web API). Empty on failure or when not configured; cached for a day either way. */
 export async function mapsReviews(query: string): Promise<{ place: string; reviews: Review[] }> {
 	if (!nimbleMapsEnabled()) return { place: query, reviews: [] };
+	const key = query.trim().toLowerCase();
+	const hit = reviewCache.get(key);
+	if (hit) return hit;
 	try {
 		const search = entities(await maps('google_maps_search', { query }));
 		const first = (search.SearchResult ?? search.Place ?? search.results ?? [])[0];
 		const placeId = first?.place_id ?? first?.placeId;
-		if (!placeId) return { place: query, reviews: [] };
+		if (!placeId) return reviewCache.set(key, { place: query, reviews: [] });
 		const data = entities(
 			await maps('google_maps_reviews', { place_id: placeId, sort: 'relevant' })
 		);
 		const list: any[] = data.Review ?? data.Reviews ?? data.reviews ?? [];
-		return {
+		return reviewCache.set(key, {
 			place: first.title ?? first.name ?? query,
 			reviews: list
 				.map((r) => ({
@@ -95,10 +94,10 @@ export async function mapsReviews(query: string): Promise<{ place: string; revie
 				}))
 				.filter((r) => r.text.length > 20)
 				.slice(0, 20)
-		};
+		});
 	} catch (e) {
 		console.warn('mapsReviews failed', (e as Error).message);
-		return { place: query, reviews: [] };
+		return reviewCache.set(key, { place: query, reviews: [] });
 	}
 }
 

@@ -7,7 +7,6 @@
 import { env } from 'cloudflare:workers';
 
 const bucket = (): R2Bucket | undefined => (env as { PHOTOS?: R2Bucket }).PHOTOS;
-export const hasBucket = () => Boolean(bucket());
 
 export async function putPhoto(uid: string, file: File): Promise<string> {
 	const b = bucket();

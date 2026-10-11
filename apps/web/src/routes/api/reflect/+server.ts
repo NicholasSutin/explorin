@@ -1,5 +1,6 @@
-import { json, error, type RequestHandler } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
+import { parseBody } from '#lib/server/http';
 import { analyzeReflection } from '#lib/server/reflect';
 
 const Body = z.object({
@@ -10,14 +11,6 @@ const Body = z.object({
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const parsed = Body.safeParse(await request.json());
-	if (!parsed.success) error(400, parsed.error.issues[0]?.message ?? 'Bad request');
-	const { experienceId, text, photoUrls, consent } = parsed.data;
-	try {
-		return json(await analyzeReflection(locals.uid, experienceId, text, photoUrls, consent));
-	} catch (e: any) {
-		if (e?.status) error(e.status, e.message);
-		console.error('reflect failed', e);
-		error(500, 'Could not analyze reflection');
-	}
+	const { experienceId, text, photoUrls, consent } = await parseBody(request, Body);
+	return json(await analyzeReflection(locals.uid, experienceId, text, photoUrls, consent));
 };

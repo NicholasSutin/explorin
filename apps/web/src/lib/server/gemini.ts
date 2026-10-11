@@ -65,6 +65,28 @@ export async function imagePart(url: string): Promise<Part> {
 	return { inlineData: { mimeType, data } };
 }
 
+/**
+ * Loose JSON generation for the discovery and scrapbook flows: no response schema, short
+ * timeout, and null instead of throwing so every caller can degrade honestly.
+ */
+export async function adventureAI<T>(prompt: string): Promise<T | null> {
+	if (!GEMINI_API_KEY) return null;
+	try {
+		const result = await ai.models.generateContent({
+			model: MODEL,
+			contents: prompt,
+			config: {
+				responseMimeType: 'application/json',
+				httpOptions: { timeout: 18000 },
+				thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+			}
+		});
+		return JSON.parse(result.text || 'null') as T;
+	} catch {
+		return null;
+	}
+}
+
 export interface GroundedPlace {
 	placeId: string;
 	title: string;

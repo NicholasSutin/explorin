@@ -10,6 +10,14 @@ export interface LatLng {
 	lat: number;
 	lng: number;
 }
+/** "lat,lng" at 6 decimals: the format /api/map, Static Maps and directions links all take. */
+export const formatLatLng = (p: LatLng) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+/** Google Maps directions deep link: free, no key, opens the native app on phones. */
+export function directionsUrl(coords: LatLng, placeId?: string): string {
+	const q = new URLSearchParams({ api: '1', destination: formatLatLng(coords) });
+	if (placeId) q.set('destination_place_id', placeId);
+	return `https://www.google.com/maps/dir/?${q.toString()}`;
+}
 export interface PlaceReview {
 	text: string;
 	rating: number | null;
@@ -20,6 +28,9 @@ export interface PlaceReview {
 export interface Experience {
 	id: string;
 	title: string;
+	/** Venue name on its own, e.g. "The High Line". */
+	place: string;
+	/** Display string, "<place> · <city>". */
 	location: string;
 	description: string;
 	url: string;
@@ -68,6 +79,7 @@ export interface DiscoveryStep {
 export const demoExperiences: Experience[] = [
 	{
 		id: 'high-line',
+		place: 'The High Line',
 		title: 'A little above the everyday',
 		location: 'The High Line · New York City',
 		description:
@@ -79,6 +91,7 @@ export const demoExperiences: Experience[] = [
 	},
 	{
 		id: 'brooklyn',
+		place: 'Brooklyn Bridge Park',
 		title: 'Chase the waterfront light',
 		location: 'Brooklyn Bridge Park · New York City',
 		description:
@@ -90,6 +103,7 @@ export const demoExperiences: Experience[] = [
 	},
 	{
 		id: 'museum',
+		place: 'The Metropolitan Museum of Art',
 		title: 'Get wonderfully lost in art',
 		location: 'The Metropolitan Museum of Art · New York City',
 		description:

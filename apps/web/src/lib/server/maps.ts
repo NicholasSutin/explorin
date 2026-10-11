@@ -12,9 +12,8 @@
  * (a Cloud-based map style from the console), `style=cloud` passes it as `map_id` instead.
  */
 import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_MAP_ID } from '$app/env/private';
-import type { LatLng } from '#lib/adventure';
-
-export const mapsEnabled = () => Boolean(GOOGLE_MAPS_API_KEY);
+import { formatLatLng as fmt, type LatLng } from '#lib/adventure';
+import { DAY, timedFetch, ttlCache } from './http';
 
 export type MapStyle = 'paper' | 'ink' | 'cloud';
 export const MAP_STYLES: MapStyle[] = ['paper', 'ink', 'cloud'];
@@ -87,10 +86,8 @@ export interface MapRequest {
 	trail?: boolean;
 }
 
-const fmt = (p: LatLng) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
-
-/** Build the upstream Static Maps URL. Exported for tests; never send this to the browser. */
-export function staticMapUrl(req: MapRequest): string {
+/** Build the upstream Static Maps URL. Never send this to the browser. */
+function staticMapUrl(req: MapRequest): string {
 	const q = new URLSearchParams();
 	q.set('size', `${req.width}x${req.height}`);
 	q.set('scale', '2');
@@ -116,39 +113,21 @@ export function staticMapUrl(req: MapRequest): string {
 	return `https://maps.googleapis.com/maps/api/staticmap?${q.toString()}`;
 }
 
-const imageCache = new Map<string, { at: number; type: string; body: ArrayBuffer }>();
-const DAY = 24 * 60 * 60 * 1000;
-const MAX_CACHE = 300;
+type MapImage = { type: string; body: ArrayBuffer };
+const imageCache = ttlCache<MapImage>(DAY, 300);
 
 /** Fetch (or serve from cache) a rendered map image. Null when Maps is off or Google fails. */
-export async function staticMap(
-	req: MapRequest
-): Promise<{ type: string; body: ArrayBuffer } | null> {
+export async function staticMap(req: MapRequest): Promise<MapImage | null> {
 	if (!GOOGLE_MAPS_API_KEY) return null;
 	const url = staticMapUrl(req);
 	const hit = imageCache.get(url);
-	if (hit && Date.now() - hit.at < DAY) return hit;
-	const ctrl = new AbortController();
-	const t = setTimeout(() => ctrl.abort(), 8000);
+	if (hit) return hit;
 	try {
-		const res = await fetch(url, { signal: ctrl.signal });
+		const res = await timedFetch(url);
 		const type = res.headers.get('content-type') || '';
 		if (!res.ok || !type.startsWith('image/')) return null;
-		const body = await res.arrayBuffer();
-		if (imageCache.size >= MAX_CACHE) imageCache.delete(imageCache.keys().next().value!);
-		const value = { at: Date.now(), type, body };
-		imageCache.set(url, value);
-		return value;
+		return imageCache.set(url, { type, body: await res.arrayBuffer() });
 	} catch {
 		return null;
-	} finally {
-		clearTimeout(t);
 	}
-}
-
-/** Google Maps directions deep link: free, no key, opens the native app on phones. */
-export function directionsUrl(coords: LatLng, placeId?: string): string {
-	const q = new URLSearchParams({ api: '1', destination: fmt(coords) });
-	if (placeId) q.set('destination_place_id', placeId);
-	return `https://www.google.com/maps/dir/?${q.toString()}`;
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { mapsEnabled, staticMap, MAP_STYLES, type MapStyle } from '#lib/server/maps';
+import { staticMap, MAP_STYLES, type MapStyle } from '#lib/server/maps';
+import { placesEnabled } from '#lib/server/places';
 import type { RequestHandler } from './$types';
 
 const coord = z.coerce.number().finite();
@@ -39,7 +40,7 @@ export const GET: RequestHandler = async ({ url, setHeaders }) => {
 	if (!center && !pins.length) return new Response('Missing lat/lng or pins', { status: 400 });
 	if (pins.some((c) => Math.abs(c.lat) > 90 || Math.abs(c.lng) > 180))
 		return new Response('Invalid pin', { status: 400 });
-	if (!mapsEnabled()) return new Response('Maps not configured', { status: 503 });
+	if (!placesEnabled()) return new Response('Maps not configured', { status: 503 });
 	const image = await staticMap({
 		center,
 		zoom: center ? p.zoom : undefined,

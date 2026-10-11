@@ -106,7 +106,5 @@ export function sourceLabel(s: Source): string {
 			return 'From public reviews';
 		case 'seed':
 			return 'From seed notes';
-		default:
-			return 'From public reviews';
 	}
 }
