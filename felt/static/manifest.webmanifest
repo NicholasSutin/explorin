@@ -1,0 +1,10 @@
+{
+	"name": "Felt",
+	"short_name": "Felt",
+	"description": "NYC experiences recommended by how people like you felt there.",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#fafafa",
+	"theme_color": "#0f766e",
+	"icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

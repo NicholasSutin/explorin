@@ -1,0 +1,11 @@
+{
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"strict": true,
+		"paths": {
+			"#lib/*": ["./src/lib/*"],
+			"#storage": ["./src/lib/server/storage.local.ts"]
+		}
+	},
+	"include": ["src", "vite.config.ts", "scripts", "worker-configuration.d.ts"]
+}

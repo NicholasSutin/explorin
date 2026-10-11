@@ -1,0 +1,56 @@
+import postgres from 'postgres';
+import { DATABASE_URL } from '$app/env/private';
+import type { Place, Profile, Traits } from '#lib/types';
+
+export const sql = postgres(DATABASE_URL, { max: 5, idle_timeout: 20, prepare: false });
+
+export const vec = (v: number[]) => `[${v.join(',')}]`;
+
+export async function ensureUser(uid: string, name?: string | null) {
+	await sql`INSERT INTO users (id, name) VALUES (${uid}, ${name ?? null})
+	          ON CONFLICT (id) DO UPDATE SET name = COALESCE(EXCLUDED.name, users.name)`;
+}
+
+export async function getProfile(uid: string): Promise<Profile | null> {
+	const rows = await sql<Profile[]>`
+		SELECT p.user_id, u.name, p.traits, p.summary, p.updated_at
+		FROM profiles p JOIN users u ON u.id = p.user_id WHERE p.user_id = ${uid}`;
+	return rows[0] ?? null;
+}
+
+export async function getProfileEmbedding(uid: string): Promise<number[] | null> {
+	const rows = await sql<{ embedding: string | null }[]>`
+		SELECT embedding::text AS embedding FROM profiles WHERE user_id = ${uid}`;
+	const t = rows[0]?.embedding;
+	return t ? JSON.parse(t) : null;
+}
+
+export async function upsertProfile(uid: string, traits: Traits, embedding: number[]) {
+	await sql`INSERT INTO profiles (user_id, traits, summary, embedding, updated_at)
+	          VALUES (${uid}, ${sql.json(traits as never)}, ${traits.summary}, ${vec(embedding)}::vector, now())
+	          ON CONFLICT (user_id) DO UPDATE SET traits = EXCLUDED.traits, summary = EXCLUDED.summary,
+	            embedding = EXCLUDED.embedding, updated_at = now()`;
+}
+
+export async function listPlaces(): Promise<Place[]> {
+	return sql<Place[]>`SELECT * FROM places ORDER BY name`;
+}
+
+export async function getPlace(id: string): Promise<Place | null> {
+	const rows = await sql<Place[]>`SELECT * FROM places WHERE id = ${id}`;
+	return rows[0] ?? null;
+}
+
+/** Upsert a Maps-grounded place by google_place_id. Returns the row. */
+export async function upsertGroundedPlace(p: {
+	placeId: string;
+	title: string;
+	uri: string;
+}): Promise<Place> {
+	const rows = await sql<Place[]>`
+		INSERT INTO places (google_place_id, name, maps_url, tags)
+		VALUES (${p.placeId}, ${p.title}, ${p.uri}, '{}')
+		ON CONFLICT (google_place_id) DO UPDATE SET maps_url = COALESCE(places.maps_url, EXCLUDED.maps_url)
+		RETURNING *`;
+	return rows[0];
+}

@@ -1,0 +1,86 @@
+// Helpers for standalone scripts (run with: node --env-file=.env --import tsx scripts/<name>.ts).
+// Scripts cannot import $app/env, so they read process.env directly.
+import postgres from 'postgres';
+import { GoogleGenAI } from '@google/genai';
+
+export const env = (k: string, required = true) => {
+	const v = process.env[k];
+	if (!v && required) throw new Error(`${k} not set (put it in .env)`);
+	return v ?? '';
+};
+
+// Lazy so scripts that only need Nimble (e.g. nimble-smoke) run without DATABASE_URL / GEMINI_API_KEY.
+let _sql: ReturnType<typeof postgres> | undefined;
+let _ai: GoogleGenAI | undefined;
+export const sql: ReturnType<typeof postgres> = new Proxy((() => {}) as unknown as ReturnType<typeof postgres>, {
+	get: (_t, k) => Reflect.get((_sql ??= postgres(env('DATABASE_URL'), { max: 3, prepare: false })), k),
+	apply: (_t, _this, args) => (_sql ??= postgres(env('DATABASE_URL'), { max: 3, prepare: false }))(...(args as [TemplateStringsArray, ...unknown[]]))
+});
+export const ai = (): GoogleGenAI => (_ai ??= new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') }));
+export const MODEL = 'gemini-3.8-flash';
+export const vec = (v: number[]) => `[${v.join(',')}]`;
+
+export async function generateJson<T>(
+	contents: string,
+	schema: object,
+	system?: string
+): Promise<T> {
+	const res = await ai().models.generateContent({
+		model: MODEL,
+		contents,
+		config: {
+			responseMimeType: 'application/json',
+			responseSchema: schema,
+			systemInstruction: system,
+			temperature: 0.3
+		}
+	});
+	return JSON.parse(res.text!) as T;
+}
+
+export async function embedDoc(text: string): Promise<number[]> {
+	const out = await ai().models.embedContent({
+		model: 'gemini-embedding-2',
+		contents: `title: none | text: ${text}`,
+		config: { outputDimensionality: 768 }
+	});
+	return out.embeddings![0].values!;
+}
+
+const SDK_BASE = process.env.NIMBLE_BASE_URL || 'https://sdk.nimbleway.com';
+const WEBAPI_BASE = process.env.NIMBLE_WEBAPI_URL || 'https://api.webit.live/api/v1';
+export const nimbleSdkEnabled = () => Boolean(process.env.NIMBLE_API_KEY);
+export const nimbleMapsEnabled = () =>
+	Boolean(process.env.NIMBLE_USERNAME && process.env.NIMBLE_SECRET);
+export const nimbleEnabled = () => nimbleSdkEnabled() || nimbleMapsEnabled();
+
+async function post(url: string, auth: string, body: Record<string, unknown>): Promise<any> {
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', Authorization: auth },
+		body: JSON.stringify(body)
+	});
+	if (!res.ok)
+		throw new Error(
+			`Nimble ${new URL(url).pathname} ${res.status}: ${(await res.text()).slice(0, 400)}`
+		);
+	return res.json();
+}
+/** SDK API (Bearer API key): /v2/search, /v2/extract, /v2/extract/templates/run */
+export const nimbleSdk = (path: string, body: Record<string, unknown>) =>
+	post(`${SDK_BASE}${path}`, `Bearer ${env('NIMBLE_API_KEY').replace(/^Bearer\s+/i, '')}`, body);
+/** Legacy Web API (Basic username:secret): /realtime/serp with google_maps_* engines */
+export const nimbleWebApi = (search_engine: string, params: Record<string, unknown>) =>
+	post(
+		`${WEBAPI_BASE}/realtime/serp`,
+		`Basic ${Buffer.from(`${env('NIMBLE_USERNAME')}:${env('NIMBLE_SECRET')}`).toString('base64')}`,
+		{ search_engine, country: 'US', locale: 'en', parse: true, ...params }
+	);
+export const htmlToText = (html: string) =>
+	html
+		.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+		.replace(/<style[\s\S]*?<\/style>/gi, ' ')
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.slice(0, 60000);

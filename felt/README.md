@@ -1,0 +1,50 @@
+# Felt
+
+Hyper-personalized NYC experiences, recommended with evidence from how similar people felt there.
+Built at the AI Engineer NYC Hackathon, October 11, 2026. Scope lives in [`../pre-build/PLAN.md`](../pre-build/PLAN.md).
+
+**Gemini** does the seeing (photo profiler), reasoning (intent, composer, reflection analysis), Maps grounding, and embeddings.
+[https://console.cloud.google.com/billing]
+**Nimble** brings real public reviews (Google Maps, Tripadvisor, Yelp) for cold start, the live "right now" line, and long-tail web search.
+Postgres + pgvector stores profiles, places, and reflections. Hosted on **Cloudflare Workers** with photos in **R2**.
+
+## Setup
+
+```bash
+cp .env.example .env     # fill in keys
+npm install
+npm run setup            # schema + 14 seed places
+npm run nimble:smoke     # confirm Nimble endpoints/fields before ingest
+npm run ingest           # real reviews -> labeled reflections (or: npm run db:seed-reflections as fallback)
+npm run dev              # plain Vite dev server with HMR; photos stored in .photos/
+```
+
+Scripts run with Node's `--env-file=.env`.
+
+### Cloudflare (later)
+
+The default build uses adapter-node and local-disk photos. Set `DEPLOY_TARGET=cloudflare` (the `build:cf`, `preview:cf`, `deploy` scripts do) to build for Workers + R2.
+
+```bash
+npx wrangler login
+npx wrangler r2 bucket create felt-photos
+npx wrangler secret put GEMINI_API_KEY
+npx wrangler secret put DATABASE_URL
+npx wrangler secret put NIMBLE_API_KEY
+cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run preview`
+npm run deploy
+```
+
+Optional: put [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) in front of Postgres and read `platform.env.HYPERDRIVE.connectionString`.
+
+## How it works
+
+1. Photos + bio -> Gemini profiler -> traits with evidence -> embedded summary
+2. Prompt -> intent -> (embedding ‖ Maps grounding) -> two-axis retrieval (what + who felt it) -> composer (IDs only) -> validator -> cards
+3. Start / Finish -> photo + text reflection -> Gemini emotion analysis -> stored as quotable evidence for the next person
+
+Quotes are only ever pulled from the database by ID; the model never writes quote text. Review excerpts are labeled with their source.
+
+## Disclosure
+
+Code written during the event with AI-assisted coding (Claude Code). No sign-in; anonymous cookie session. Photo EXIF (including GPS) is stripped client side before upload.
