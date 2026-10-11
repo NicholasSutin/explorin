@@ -5,7 +5,7 @@ export async function adventureAI<T>(prompt: string): Promise<T | null> {
 	try {
 		const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 		const result = await ai.models.generateContent({
-			model: 'gemini-2.5-flash',
+			model: 'gemini-3.8-flash',
 			contents: prompt,
 			config: { responseMimeType: 'application/json', httpOptions: { timeout: 18000 } }
 		});

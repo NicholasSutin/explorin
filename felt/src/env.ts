@@ -4,7 +4,7 @@ const optional = (v: string | undefined) => v || undefined;
 
 export const variables = defineEnvVars({
 	GEMINI_API_KEY: {
-		schema: (v) => v || '',
+		schema: (v) => (v || '').trim(),
 		description: 'Google AI Studio key (billed tier for Maps grounding)'
 	},
 	GOOGLE_MAPS_API_KEY: {
