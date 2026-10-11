@@ -1,17 +1,13 @@
 import { defineEnvVars } from '@sveltejs/kit/env';
 
-const required = (name: string) => (v: string | undefined) => {
-	if (!v) throw new Error(`${name} is not set`);
-	return v;
-};
 const optional = (v: string | undefined) => v || undefined;
 
 export const variables = defineEnvVars({
 	GEMINI_API_KEY: {
-		schema: required('GEMINI_API_KEY'),
+		schema: (v) => v || '',
 		description: 'Google AI Studio key (billed tier for Maps grounding)'
 	},
-	DATABASE_URL: { schema: required('DATABASE_URL'), description: 'Postgres with pgvector' },
+	DATABASE_URL: { schema: (v) => v || '', description: 'Postgres with pgvector' },
 	NIMBLE_API_KEY: {
 		schema: optional,
 		description:

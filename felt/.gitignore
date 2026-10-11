@@ -29,3 +29,6 @@ worker-configuration.d.ts
 
 # local photo storage (dev)
 .photos
+
+/test-results
+/playwright-report

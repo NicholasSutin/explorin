@@ -12,10 +12,19 @@ export const env = (k: string, required = true) => {
 // Lazy so scripts that only need Nimble (e.g. nimble-smoke) run without DATABASE_URL / GEMINI_API_KEY.
 let _sql: ReturnType<typeof postgres> | undefined;
 let _ai: GoogleGenAI | undefined;
-export const sql: ReturnType<typeof postgres> = new Proxy((() => {}) as unknown as ReturnType<typeof postgres>, {
-	get: (_t, k) => Reflect.get((_sql ??= postgres(env('DATABASE_URL'), { max: 3, prepare: false })), k),
-	apply: (_t, _this, args) => (_sql ??= postgres(env('DATABASE_URL'), { max: 3, prepare: false }))(...(args as [TemplateStringsArray, ...unknown[]]))
-});
+export const sql: ReturnType<typeof postgres> = new Proxy(
+	(() => {}) as unknown as ReturnType<typeof postgres>,
+	{
+		get: (_t, k) =>
+			Reflect.get((_sql ??= postgres(env('DATABASE_URL'), { max: 3, prepare: false })), k),
+		apply: (_t, _this, args) =>
+			Reflect.apply(
+				(_sql ??= postgres(env('DATABASE_URL'), { max: 3, prepare: false })),
+				_this,
+				args
+			)
+	}
+);
 export const ai = (): GoogleGenAI => (_ai ??= new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') }));
 export const MODEL = 'gemini-3.8-flash';
 export const vec = (v: number[]) => `[${v.join(',')}]`;
