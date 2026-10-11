@@ -51,6 +51,7 @@
 	"dependencies": {
 		"@google/genai": "^2.28.0",
 		"html-to-image": "^1.11.13",
+		"libheif-js": "^1.23.5",
 		"postgres": "^3.4.9",
 		"zod": "^4.6.6"
 	}

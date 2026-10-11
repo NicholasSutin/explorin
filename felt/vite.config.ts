@@ -23,6 +23,8 @@ export default defineConfig({
 	// `.devtunnels.ms` allows VS Code port-forwarding tunnels (Vite blocks unknown Host headers).
 	server: { host: true, allowedHosts: ['.devtunnels.ms'] },
 	preview: { host: true },
+	// The HEIC decode worker lazy-imports a 1.4 MB libheif bundle; only ES-format workers can code-split.
+	worker: { format: 'es' },
 	plugins: [
 		tailwindcss(),
 		sveltekit({
