@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "kontour-travel-planner": {
+      "source": "bookingdesk-ai/kontour-travel-planner",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "03531ebfa4602d8af4125bc7cf65c2d950b945b9fb7db0715bd7e5289b469246"
+    },
+    "travel-planner": {
+      "source": "ailabs-393/ai-labs-claude-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills/travel-planner/SKILL.md",
+      "computedHash": "8320b1c4b544113788926eee4cb7a31ed1f354227d59cd9f880a51a0c02e101d"
+    }
+  }
+}
