@@ -58,5 +58,5 @@ A and B both satisfy the requirement; A wins on the only dimension that differs 
 ## Action items
 
 1. [x] Scaffold the Kit app, form action, D1 binding, migration and brand sync (2026-10-11).
-2. [ ] `npx wrangler d1 create explorin-waitlist`, paste the id into `wrangler.jsonc`, `npm run db:migrate -w apps/marketing`.
+2. [x] D1 `explorin-waitlist` created in the `explorin` account, id in `wrangler.jsonc`, migration applied remotely (2026-10-12). Both Worker configs now pin `account_id` so wrangler works non-interactively.
 3. [ ] `npm run deploy -w apps/marketing`, then make `og:image` absolute with the site origin.

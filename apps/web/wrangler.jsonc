@@ -1,5 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
+	"account_id": "94015fdd2754ebfbcb440e274d9f62c8", // Cloudflare account "explorin"
 	"name": "explorin",
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2026-10-01",

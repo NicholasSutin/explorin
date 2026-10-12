@@ -1,5 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
+	"account_id": "94015fdd2754ebfbcb440e274d9f62c8", // Cloudflare account "explorin"
 	"name": "explorin-marketing",
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2026-10-01",
@@ -7,12 +8,12 @@
 	"assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
 	"observability": { "enabled": true },
 	// Waitlist storage. Create once: npx wrangler d1 create explorin-waitlist
-	// then paste the returned database_id below and run: npm run db:migrate
+	// Schema changes: add a file under migrations/ and run: npm run db:migrate
 	"d1_databases": [
 		{
 			"binding": "WAITLIST",
 			"database_name": "explorin-waitlist",
-			"database_id": "REPLACE_WITH_D1_ID",
+			"database_id": "06558a86-8204-46a8-b28a-85f0f065027c",
 			"migrations_dir": "migrations"
 		}
 	],
