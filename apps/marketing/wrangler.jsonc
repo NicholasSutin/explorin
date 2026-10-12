@@ -19,9 +19,9 @@
 	],
 	// Non-secret settings (TURNSTILE_SITE_KEY, TURNSTILE_HOSTNAMES, APP_URL, WAITLIST_FROM_EMAIL) can go here as
 	// "vars"; secrets (TURNSTILE_SECRET_KEY, RESEND_API_KEY) via `npx wrangler secret put <NAME>`. Defaults: src/env.ts.
-	// APP_URL is deliberately absent: explorin.app hosts this landing page, not the app, so "Open the app" stays
-	// hidden until the app has its own public hostname (e.g. "APP_URL": "https://app.explorin.app").
+	// explorin.app hosts this landing page; the app (Worker "explorin-app") is at app.explorin.app.
 	"vars": {
+		"APP_URL": "https://app.explorin.app",
 		"TURNSTILE_SITE_KEY": "***REMOVED-TURNSTILE-SECRET***",
 		"TURNSTILE_HOSTNAMES": "explorin.app,localhost,explorin-marketing.explorin.workers.dev"
 	}

@@ -49,5 +49,5 @@ The real cost of A is the second code path, and it is kept to two files. Everyth
 ## Action items
 
 1. [x] Single env declaration in `src/env.ts`; duplicate `vars` removed from `wrangler.jsonc`.
-2. [x] Renamed the Worker and package to `explorin` and the bucket to `explorin-photos`; bucket created (2026-10-11). Before the first deploy under the new name: `npx wrangler secret put` for GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY (and optional GOOGLE_MAPS_MAP_ID, NIMBLE_USERNAME, NIMBLE_SECRET) on the `explorin` Worker; copy objects from `felt-photos` if any matter; update links to the old Worker URL.
+2. [x] Worker is `explorin-app` on the Custom Domain `app.explorin.app` (explorin.app itself is the marketing Worker); package `@explorin/web`; bucket `explorin-photos` created (2026-10-12). Before the first deploy under the new name: `npx wrangler secret put` for GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY (and optional GOOGLE_MAPS_MAP_ID, NIMBLE_USERNAME, NIMBLE_SECRET) on the `explorin-app` Worker; copy objects from `felt-photos` if any matter; update links to the old Worker URL.
 3. [ ] Wrap background promises in `waitUntil` for the Cloudflare build.

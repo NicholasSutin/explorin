@@ -15,7 +15,7 @@ The second surface carried the internal working name "Felt" in its package name,
 
 ## Decision
 
-1. **One name.** Every "Felt" identifier becomes Explorin: `@explorin/web`, Worker `explorin`, bucket `explorin-photos`, titles, header, `explorin.*` storage keys. Prose and docs stop calling the profile flow "legacy".
+1. **One name.** Every "Felt" identifier becomes Explorin: `@explorin/web`, Worker `explorin-app` (app.explorin.app), bucket `explorin-photos`, titles, header, `explorin.*` storage keys. Prose and docs stop calling the profile flow "legacy".
 2. **One navigation.** The discovery header links to "People like you" (`/onboarding`, which forwards to `/ask` when a profile exists); the profile side's header carries the Explorin lockup and an "Explore" tab back to `/`. Route groups are `(profile)` and `(flow)`.
 3. **One retrieval, used by both.** The two-axis pgvector retrieval behind `/api/recommend` now also runs inside `/api/discover` as a `people` step, attaching up to two first-person quotes to each discovered place when the database is configured ([ADR-0005](0005-people-like-you-in-discovery.md)). Discovery still works, and says so, without a database.
 
@@ -62,4 +62,4 @@ C costs a small amount of code and makes the product story coherent on the main 
 1. [x] Rebrand identifiers, titles, header and storage keys (2026-10-11).
 2. [x] Link the two surfaces in both headers; rename route group `(app)` to `(profile)`.
 3. [x] Add the `people` step to discovery (ADR-0005 step 1).
-4. [x] `explorin-photos` bucket created (2026-10-11). Secrets still need `npx wrangler secret put` on the `explorin` Worker before the first deploy under the new name (ADR-0004).
+4. [x] `explorin-photos` bucket created (2026-10-11). Secrets still need `npx wrangler secret put` on the `explorin-app` Worker before the first deploy under the new name (ADR-0004).

@@ -1,8 +1,11 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"account_id": "94015fdd2754ebfbcb440e274d9f62c8", // Cloudflare account "explorin"
-	"name": "explorin",
+	"name": "explorin-app",
 	"main": ".svelte-kit/cloudflare/_worker.js",
+	// Public hostname. A Custom Domain needs the explorin.app zone in this account; Cloudflare creates the DNS
+	// record and certificate on deploy. explorin.app itself is the marketing site (apps/marketing).
+	"routes": [{ "pattern": "app.explorin.app", "custom_domain": true }],
 	"compatibility_date": "2026-10-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
