@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Turnstile from '#lib/Turnstile.svelte';
+	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import type { PageProps } from './$types';
 	let { data, form }: PageProps = $props();
 	let submitting = $state(false);
@@ -161,11 +162,13 @@
 					onToken={(token) => (verified = Boolean(token))}
 				/>
 				<button class="button" type="submit" disabled={submitting || !verified}>
-					{submitting
-						? 'Adding you…'
-						: verified
-							? 'Join the waitlist ↗'
-							: 'Checking you are human…'}
+					{#if submitting}
+						Adding you…
+					{:else if verified}
+						Join the waitlist <ArrowUpRight size={18} strokeWidth={2.5} aria-hidden="true" />
+					{:else}
+						Checking you are human…
+					{/if}
 				</button>
 			</form>
 			{#if form?.error}<p class="error" id="waitlist-error" role="alert">{form.error}</p>{/if}

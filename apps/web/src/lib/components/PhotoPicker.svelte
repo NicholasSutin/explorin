@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { stripAndResize } from '#lib/client';
 	import { isAcceptedPhoto, isHeicFile, PHOTO_ACCEPT } from '#lib/heic';
+	import X from '@lucide/svelte/icons/x';
 	let {
 		files = $bindable<File[]>([]),
 		max = 5,
@@ -64,7 +65,7 @@
 				onclick={() => remove(i)}
 				aria-label="Remove photo {i + 1}"
 				class="absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white"
-				>×</button
+				><X size={16} aria-hidden="true" /></button
 			>
 			<span class="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 text-xs text-white"
 				>{i + 1}</span

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { authClient } from '#lib/auth-client';
+	import Mail from '@lucide/svelte/icons/mail';
 
 	const email = $derived(page.url.searchParams.get('email') ?? '');
 	let sent = $state(false);
@@ -20,7 +21,9 @@
 
 <svelte:head><title>Explorin · Check your email</title></svelte:head>
 
-<div class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-3xl">✉️</div>
+<div class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+	<Mail size={28} aria-hidden="true" />
+</div>
 <h1 class="mt-6 text-3xl leading-tight font-semibold">Check your inbox.</h1>
 <p class="mt-3 text-neutral-600">
 	We sent a confirmation link{#if email}

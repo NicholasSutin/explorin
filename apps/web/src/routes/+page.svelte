@@ -13,6 +13,7 @@
 	import { sourceLabel } from '#lib/types';
 	import { isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
 	import PlaceMap from '#lib/components/PlaceMap.svelte';
+	import X from '@lucide/svelte/icons/x';
 	import './explorin.css';
 	type Recognition = {
 		lang: string;
@@ -915,7 +916,7 @@
 					{#each photos as photo, i}<div>
 							<img src={photo} alt={`Adventure photo ${i + 1}`} /><button
 								aria-label={`Remove photo ${i + 1}`}
-								onclick={() => (photos = photos.filter((_, n) => n !== i))}>×</button
+								onclick={() => (photos = photos.filter((_, n) => n !== i))}><X size={14} aria-hidden="true" /></button
 							>
 						</div>{/each}
 				</div>
