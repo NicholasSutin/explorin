@@ -1,5 +1,5 @@
 <script lang="ts">
-	/** Phone frame plus the Ask / You tabs for the profile-based flow. */
+	/** Phone frame plus tabs for the profile side of Explorin: Explore (discovery), Ask, You. */
 	import { page } from '$app/state';
 	import type { LayoutProps } from './$types';
 	let { children }: LayoutProps = $props();
@@ -13,8 +13,11 @@
 	<header
 		class="sticky top-0 z-10 flex items-center justify-between bg-neutral-50/90 px-5 py-3 backdrop-blur"
 	>
-		<a href="/ask" class="text-xl font-semibold tracking-tight text-accent-dark">Felt</a>
+		<a href="/" aria-label="Explorin home" class="flex items-center">
+			<img src="/brand/lockup-horizontal-ink.svg" alt="explorin." class="h-6 w-auto" />
+		</a>
 		<nav class="flex gap-1 text-sm">
+			<a href="/" class="rounded-full px-3 py-1.5 text-neutral-600">Explore</a>
 			{#each tabs as t}
 				<a
 					href={t.href}

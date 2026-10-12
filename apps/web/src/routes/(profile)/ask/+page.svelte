@@ -42,7 +42,7 @@
 	}
 </script>
 
-<svelte:head><title>Felt · Ask</title></svelte:head>
+<svelte:head><title>Explorin · Ask</title></svelte:head>
 
 {#if busy}
 	<Loader stages={['Reading your profile', 'Finding real places', 'Asking people like you']} />

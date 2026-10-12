@@ -51,7 +51,7 @@
 	}
 </script>
 
-<svelte:head><title>Felt · Start</title></svelte:head>
+<svelte:head><title>Explorin · Start</title></svelte:head>
 
 {#if busy}
 	<Loader
@@ -59,7 +59,7 @@
 	/>
 {:else}
 	<div class="pt-10" in:fade>
-		<p class="text-sm font-medium text-accent-dark">Felt</p>
+		<p class="text-sm font-medium text-accent-dark">Explorin · people like you</p>
 		<h1 class="mt-1 text-3xl leading-tight font-semibold">
 			Places recommended by how people like you felt there.
 		</h1>

@@ -12,7 +12,7 @@ Explorin helps someone find a real place to go in a city, live the outing, and k
 |---|---|---|
 | Discover | Prompt + city + interests → Nimble web search → Gemini picks real places → Google Places verifies (photo, coordinates, reviews). Streams its progress. | `apps/web` route `/`, `POST /api/discover` |
 | Adventure | Start an experience, add reflections (typed or voice), add 1–4 photos, generate a scrapbook story, export PNG, keep history on device. | `apps/web` route `/`, `POST /api/scrapbook` |
-| Profile recommend (legacy "Felt") | Build a taste profile from photos, retrieve evidence quotes with pgvector, compose three cards, reflect afterwards and update the profile. | `apps/web` routes `/onboarding`, `/ask`, `/go`, `/reflect`, `/profile`; `/api/profile`, `/api/recommend`, `/api/reflect`, `/api/experience`, `/api/upload` |
+| People like you | Build a taste profile from photos, retrieve evidence quotes with pgvector, compose three cards, reflect afterwards and update the profile. The same retrieval also attaches quotes to discovery results. | `apps/web` routes `/onboarding`, `/ask`, `/go`, `/reflect`, `/profile`; `/api/profile`, `/api/recommend`, `/api/reflect`, `/api/experience`, `/api/upload`; `lib/server/evidence.ts` inside `/api/discover` |
 | Maps | Same-origin, brand-styled static map images and Google photo redirects. | `GET /api/map`, `GET /api/photo` |
 | Marketing | Public landing page: what Explorin is, a few postcards, a link into the app. | `apps/marketing` |
 
@@ -28,7 +28,7 @@ Explorin helps someone find a real place to go in a city, live the outing, and k
 
 - SvelteKit 3 / Svelte 5 runes, TypeScript, Tailwind for the legacy flow and plain CSS for Explorin.
 - Default deploy is adapter-node (any Node host). `DEPLOY_TARGET=cloudflare` builds for Workers + R2.
-- Postgres with pgvector is required only by the legacy profile flow.
+- Postgres with pgvector is required by the profile flow and by the "people like you" quotes; discovery runs without it and says so in its pipeline panel.
 
 ## 2. High-level design
 
@@ -42,13 +42,14 @@ Explorin helps someone find a real place to go in a city, live the outing, and k
 ┌──────────────────────────────── apps/web (SvelteKit) ─────────────────────────────────┐
 │                                                                                        │
 │  routes/+page.svelte  (Explorin: discover → adventure → scrapbook → history)           │
-│  routes/(app)/*       (legacy profile flow with tab header)                            │
-│  routes/(flow)/*      (legacy in-adventure pages, no header)                           │
+│  routes/(profile)/*   (taste profile: onboarding, ask, you; tab header)                 │
+│  routes/(flow)/*      (in-adventure pages for the profile side, no header)             │
 │                                                                                        │
 │  routes/api/*  ──►  lib/server/                                                        │
 │     discover ──────► discover.ts ──► nimble.ts (web search)                            │
 │                                  ──► gemini.ts (adventureAI: pick places)              │
 │                                  ──► places.ts (Text Search, Place Details, photos)    │
+│                                  ──► evidence.ts (people like you: pgvector quotes)    │
 │     scrapbook ─────► gemini.ts (adventureAI: story)                                    │
 │     map / photo ───► maps.ts / places.ts (cached proxies, key never leaves server)     │
 │     recommend ─────► recommend.ts ──► db.ts (pgvector retrieval) + gemini.ts + nimble  │
@@ -74,10 +75,12 @@ UI ── POST /api/discover (Accept: application/x-ndjson) ──► runDiscove
       ◄── {step: ai done, items: place names}              Gemini picks ≤4 named places (JSON)
       ◄── {step: places running}
       ◄── {step: places done, "3 on the map · 3 photos"}   Places Text Search + Details, in parallel per place
+      ◄── {step: people running}
+      ◄── {step: people done, "4 quotes for 2 places"}      embed(prompt) + one pgvector query scoped to these place names
       ◄── {result: {experiences, mode, notice}}
 ```
 
-Each stage has a fallback: no search results → 503 with a message and the curated set offered; AI unparseable → the search matches themselves become the experiences; no Places key → the step is marked skipped.
+Each stage has a fallback: no search results → 503 with a message and the curated set offered; AI unparseable → the search matches themselves become the experiences; no Places key → the step is marked skipped; no database or no matching reflections → the people step is marked skipped and cards simply have no quotes.
 
 ### Data flow: adventure and scrapbook
 
@@ -166,7 +169,7 @@ None. The only "event" surface is the NDJSON stream from `/api/discover`, which 
 | Nimble down / no key | Discover answers 503 with a message; curated set still works | Honest fallback, demo mode |
 | Gemini down | Search matches are shown as experiences; scrapbook uses the user's own words | `adventureAI` returns null |
 | Places down / no key | No photos, coordinates or reviews; map images hidden | Steps marked skipped |
-| Postgres down | Legacy flow fails; Explorin flow unaffected | Only legacy routes import `db.ts` |
+| Postgres down | Profile routes fail; discovery loses its quotes and marks the people step failed | `evidence.ts` catches and continues; `db.ts` is loaded lazily on that path |
 | Worker isolate recycled | Caches cold; next request pays upstream once | Acceptable at demo scale |
 
 **Monitoring.** Workers observability is on in `wrangler.jsonc`. Adapter-node logs timing laps for recommend (`[recommend] …`) and route failures through `handleError`. There are no alerts; add them when there is an SLO.
@@ -177,10 +180,11 @@ None. The only "event" surface is the NDJSON stream from `/api/discover`, which 
 |---|---|---|---|
 | Monorepo via npm workspaces ([ADR-0001](adr/0001-monorepo-workspaces.md)) | `apps/*`, `packages/*` | separate repos | One developer, shared brand; revisit never at this size |
 | Marketing site ([ADR-0002](adr/0002-marketing-site-static.md)) | static HTML/CSS, zero dependencies | SvelteKit/Astro app | A landing page does not need a framework; revisit when it needs a CMS, i18n or shared components |
-| Legacy profile flow ([ADR-0003](adr/0003-legacy-profile-flow.md)) | kept, isolated in route groups | delete | Product decision pending; the Explorin flow does not depend on it |
+| One product ([ADR-0003](adr/0003-one-product.md), [ADR-0005](adr/0005-people-like-you-in-discovery.md)) | profile flow kept and linked; its retrieval feeds discovery | delete it, or keep two unlinked flows | "People like you" is the differentiator; discovery still works without a database |
 | Deploy targets ([ADR-0004](adr/0004-deploy-targets.md)) | adapter-node default, Cloudflare behind a flag | one target | Node is simplest for dev and the demo; Workers is where the R2 photos live |
 | In-process caches | `ttlCache` Maps | Cloudflare Cache API / KV | Simplest; revisit when running on many isolates, by caching `/api/map` and `/api/photo` responses with the Cache API (they already send `Cache-Control`) |
 | Photos as data URLs in `localStorage` | simple, private | IndexedDB blobs | `localStorage` is ~5 MB; 12 adventures × 4 photos at 1200 px fits. Revisit if history grows or photos get bigger |
 | Fire-and-forget background work | `void promise` | queue / `waitUntil` | On Workers, work after the response may be cancelled; use `platform.context.waitUntil` when deploying the legacy flow there |
-| Single city in the legacy flow | `CITY` constant | per-request city | Discover is already city-parameterised; lift `CITY` to a request parameter when a second city appears |
-| Prompt-string demo cache | exact prompt match | explicit `demo` flag | Discover already uses a flag; align recommend with it if the legacy flow stays |
+| Single city in the profile flow | `CITY` constant | per-request city | Discover is already city-parameterised; lift `CITY` to a request parameter when a second city appears |
+| Prompt-string demo cache | exact prompt match | explicit `demo` flag | Discover already uses a flag; align recommend with it |
+| Place matching for quotes | name containment against `places.name` | Google place ID join | Works for the curated set and demo; join on `google_place_id` once discovery places are upserted into `places` (ADR-0005 step 2) |

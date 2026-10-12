@@ -16,7 +16,7 @@
 	let clock = $derived(`${pad(Math.floor(elapsed / 60))}:${pad(elapsed % 60)}`);
 
 	onMount(() => {
-		const key = `felt:start:${id}`;
+		const key = `explorin.start.${id}`;
 		const saved = sessionStorage.getItem(key);
 		if (saved) startedAt = Number(saved);
 		else sessionStorage.setItem(key, String(startedAt));
@@ -35,7 +35,7 @@
 	}
 </script>
 
-<svelte:head><title>Felt · Go</title></svelte:head>
+<svelte:head><title>Explorin · Go</title></svelte:head>
 
 <div class="flex min-h-[70dvh] flex-col items-center justify-center text-center" in:fade>
 	<p class="text-sm font-medium tracking-wide text-accent-dark uppercase">

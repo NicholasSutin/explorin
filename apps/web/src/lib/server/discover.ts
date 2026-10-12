@@ -9,6 +9,7 @@ import { nimbleMapsEnabled, webSearch } from '#lib/server/nimble';
 import { adventureAI } from '#lib/server/gemini';
 import { demoExperiences, type DiscoveryStep, type Experience } from '#lib/adventure';
 import { enrichPlaces, placesEnabled } from '#lib/server/places';
+import { attachVoices, evidenceEnabled } from '#lib/server/evidence';
 
 export const discoverInput = z.object({
 	prompt: z.string().trim().min(3).max(800),
@@ -19,6 +20,10 @@ export const discoverInput = z.object({
 	demo: z.boolean().default(false)
 });
 export type DiscoverInput = z.infer<typeof discoverInput>;
+/** Who is asking: lets "people like you" weight quotes by the asker's own profile when they have one. */
+export interface DiscoverContext {
+	uid?: string;
+}
 
 export type { DiscoveryStep };
 
@@ -72,12 +77,14 @@ const LABELS: Record<DiscoveryStep['id'], () => string> = {
 	search: () => 'Nimble searches the web',
 	ai: () => 'Gemini picks real places for you',
 	places: enrichLabel,
+	people: () => 'People like you who have been there',
 	curated: () => 'Curated NYC collection'
 };
 
 export async function runDiscovery(
 	input: DiscoverInput,
-	emit: (event: DiscoveryEvent) => void
+	emit: (event: DiscoveryEvent) => void,
+	ctx: DiscoverContext = {}
 ): Promise<void> {
 	const { prompt, location, interests, insights, about, demo } = input;
 	const step = (
@@ -104,6 +111,32 @@ export async function runDiscovery(
 		return out;
 	}
 
+	/** Attach first-person quotes from the profile side; the differentiator, so it gets its own step. */
+	async function people(items: Experience[]): Promise<Experience[]> {
+		if (!evidenceEnabled()) {
+			step('people', 'skipped', { detail: 'No evidence database configured' });
+			return items;
+		}
+		step('people', 'running', { detail: 'Matching reflections to these places' });
+		const t = Date.now();
+		try {
+			const { experiences, voices, profile } = await attachVoices(prompt, items, ctx.uid);
+			const matched = experiences.filter((e) => e.voices?.length).length;
+			step('people', voices ? 'done' : 'skipped', {
+				detail: voices
+					? `${plural(voices, 'quote')} for ${plural(matched, 'place')}${profile ? ', weighted by your profile' : ''}`
+					: 'Nobody like you has written about these places yet',
+				items: experiences.filter((e) => e.voices?.length).map((e) => e.place),
+				ms: Date.now() - t
+			});
+			return experiences;
+		} catch (e) {
+			console.warn('[discover] people like you failed', (e as Error).message);
+			step('people', 'failed', { detail: 'Evidence unavailable right now', ms: Date.now() - t });
+			return items;
+		}
+	}
+
 	if (demo) {
 		step('curated', 'done', {
 			detail: `${demoExperiences.length} hand-picked places, no live search`,
@@ -113,7 +146,7 @@ export async function runDiscovery(
 		emit({
 			type: 'result',
 			result: {
-				experiences: await enrich(demoExperiences),
+				experiences: await people(await enrich(demoExperiences)),
 				mode: 'demo',
 				notice: 'Demo collection · real NYC places, curated examples rather than live search.'
 			}
@@ -212,7 +245,7 @@ Search results: ${JSON.stringify(candidates)}`
 	emit({
 		type: 'result',
 		result: {
-			experiences: await enrich(chosen),
+			experiences: await people(await enrich(chosen)),
 			mode: 'live',
 			notice: ai
 				? 'Live Nimble search · places picked by Gemini · verified with Google Places. Check source details before heading out.'

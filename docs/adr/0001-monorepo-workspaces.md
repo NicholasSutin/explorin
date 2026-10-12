@@ -6,7 +6,7 @@
 
 ## Context
 
-The hackathon repo grew as a single SvelteKit app (`felt/`) with brand assets, marketing photos, planning docs and render output scattered at the root. A marketing site is coming, the brand kit is shared by both, and the app should stay deployable on its own.
+The hackathon repo grew as a single SvelteKit app (then in a `felt/` folder) with brand assets, marketing photos, planning docs and render output scattered at the root. A marketing site is coming, the brand kit is shared by both, and the app should stay deployable on its own.
 
 ## Decision
 

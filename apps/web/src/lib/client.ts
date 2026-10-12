@@ -132,7 +132,7 @@ export function getLocation(timeoutMs = 2500): Promise<{ lat: number; lng: numbe
 }
 
 /** Keep the last results in sessionStorage so /go and /reflect can show place names without a round trip. */
-const KEY = 'felt:lastCards';
+const KEY = 'explorin.lastCards.v1';
 export function saveCards(r: RecommendResponse) {
 	try {
 		sessionStorage.setItem(KEY, JSON.stringify(r));

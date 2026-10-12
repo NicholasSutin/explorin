@@ -35,7 +35,7 @@
 	}
 </script>
 
-<svelte:head><title>Felt · Reflect</title></svelte:head>
+<svelte:head><title>Explorin · Reflect</title></svelte:head>
 
 {#if result}
 	<Toast message={result.learned} bind:show={toast} />

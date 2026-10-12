@@ -19,7 +19,7 @@
 	});
 </script>
 
-<svelte:head><title>Felt · You</title></svelte:head>
+<svelte:head><title>Explorin · You</title></svelte:head>
 
 {#if profile}
 	{@const t = profile.traits}

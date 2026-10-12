@@ -70,13 +70,16 @@
 	display: flex;
 	gap: 8px;
 }
-.exp-header nav button {
+.exp-header nav button,
+.exp-header nav a {
 	border: 0;
 	background: transparent;
 	padding: 10px 16px;
 	border-radius: 30px;
 	color: #64756b;
 	font-size: 14px;
+	text-decoration: none;
+	line-height: normal;
 }
 .exp-header nav button.current {
 	background: #e5ebdf;
@@ -402,6 +405,37 @@
 	font-size: 11px;
 	font-style: normal;
 	color: #7b857a;
+}
+/* "People like you": first-person quotes from the profile side, matched to this place. */
+.voices {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 2px 0 4px;
+}
+.voices .voices-label {
+	margin: 0;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--green, #285c47);
+}
+.voices blockquote {
+	margin: 0;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: #e5ebdf;
+	font-size: 13px;
+	line-height: 1.45;
+	color: #203d32;
+}
+.voices cite {
+	display: block;
+	margin-top: 5px;
+	font-size: 11px;
+	font-style: normal;
+	color: #4f6f52;
 }
 .card-body {
 	padding: 22px;

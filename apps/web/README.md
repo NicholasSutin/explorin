@@ -1,6 +1,6 @@
-**Explorin MVP:** The new discovery-to-scrapbook experience is at `/`. See [MVP setup and verification](MVP.md) for the credential-free demo and live API configuration. Original Felt onboarding is retained at `/onboarding`.
+# Explorin web app
 
-# Felt
+Discovery-to-scrapbook at `/`, and the photo-based taste profile at `/onboarding`, `/ask`, `/profile`. One product: discovery results carry "people like you" evidence from the profile side whenever the database is configured. See [MVP.md](MVP.md) for the credential-free demo and live API configuration.
 
 Hyper-personalized NYC experiences, recommended with evidence from how similar people felt there.
 Built at the AI Engineer NYC Hackathon, October 11, 2026. Scope lives in [`../../docs/pre-build/PLAN.md`](../../docs/pre-build/PLAN.md).
@@ -29,7 +29,7 @@ The default build uses adapter-node and local-disk photos. Set `DEPLOY_TARGET=cl
 
 ```bash
 npx wrangler login
-npx wrangler r2 bucket create felt-photos
+npx wrangler r2 bucket create explorin-photos
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put NIMBLE_API_KEY

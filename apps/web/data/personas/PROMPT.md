@@ -9,7 +9,7 @@ Replace `Nick` with the person's first name before sending.
 ---
 
 ```text
-You are building a seed profile for Nick for a demo app called Felt, which recommends outdoor NYC experiences based on how similar people felt at real places.
+You are building a seed profile for Nick for an app called Explorin, which recommends outdoor NYC experiences based on how similar people felt at real places.
 
 Gather evidence about Nick as a person OUTDOORS from the sources you can access: photos and captions, Strava or fitness logs, calendar events, Google Maps saved places and timeline, notes, journal entries, and social posts. Use only what is clearly supported. Never infer or include health conditions, religion, ethnicity, sexuality, politics, income, or anyone else's private details. Use first names only.
 

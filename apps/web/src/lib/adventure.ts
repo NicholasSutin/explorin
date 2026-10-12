@@ -25,6 +25,15 @@ export interface PlaceReview {
 	/** e.g. "2 months ago" */
 	when?: string;
 }
+/** A first-person quote from the profile side ("people like you"), matched to a place. */
+export interface PlaceVoice {
+	id: string;
+	quote: string;
+	/** "Maya, running" or "Google Maps reviewer". */
+	who: string;
+	source: 'user' | 'public_review' | 'tripadvisor_review' | 'yelp_review' | 'seed';
+	emotions: string[];
+}
 export interface Experience {
 	id: string;
 	title: string;
@@ -51,6 +60,8 @@ export interface Experience {
 	/** Up to 5 reviews, Google "most relevant" order (Places) or Nimble Maps fallback. */
 	reviews?: PlaceReview[];
 	reviewSource?: 'google-places' | 'nimble';
+	/** Up to two quotes from people like the asker who have been here, when the evidence database is configured. */
+	voices?: PlaceVoice[];
 }
 export interface Adventure {
 	id: string;
@@ -67,7 +78,7 @@ export interface Adventure {
 export const HISTORY_KEY = 'explorin.history.v1';
 /** One stage of the discovery pipeline, streamed from /api/discover so the UI can show the work. */
 export interface DiscoveryStep {
-	id: 'search' | 'ai' | 'places' | 'curated';
+	id: 'search' | 'ai' | 'places' | 'people' | 'curated';
 	label: string;
 	state: 'running' | 'done' | 'skipped' | 'failed';
 	/** One line of what happened, e.g. "8 pages read". */

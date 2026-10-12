@@ -9,6 +9,7 @@
 		type DiscoveryStep
 	} from '#lib/adventure';
 	import { api, errorMessage, photoDataUrl } from '#lib/client';
+	import { sourceLabel } from '#lib/types';
 	import { isAcceptedPhoto, PHOTO_ACCEPT } from '#lib/heic';
 	import PlaceMap from '#lib/components/PlaceMap.svelte';
 	import './explorin.css';
@@ -519,7 +520,7 @@
 				disabled={!mounted}
 				class:current={view === 'history'}
 				onclick={() => navigate('history')}>My memories <span>{history.length}</span></button
-			>
+			><a href="/onboarding">People like you</a>
 		</nav>
 	</header>
 	<div class="exp-content">
@@ -758,6 +759,18 @@
 															: 'Google'}</cite
 													>
 												</blockquote>{/if}
+										</div>{/if}
+									{#if experience.voices?.length}<div class="voices">
+											<p class="voices-label">How it felt for people like you</p>
+											{#each experience.voices as v (v.id)}<blockquote>
+													&ldquo;{v.quote}&rdquo;
+													<cite
+														>{v.who} &middot; {sourceLabel(
+															v.source
+														)}{#each v.emotions.slice(0, 2) as e}
+															&middot; #{e}{/each}</cite
+													>
+												</blockquote>{/each}
 										</div>{/if}
 									<div class="fit">
 										<span>&#8599;</span>

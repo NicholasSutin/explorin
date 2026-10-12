@@ -1,13 +1,13 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "felt",
+	"name": "explorin",
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2026-10-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
 	"observability": { "enabled": true },
-	// Photos live in R2. Create once: npx wrangler r2 bucket create felt-photos
-	"r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "felt-photos" }]
+	// Photos live in R2. Create once: npx wrangler r2 bucket create explorin-photos
+	"r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "explorin-photos" }]
 	// Secrets (GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY, optional GOOGLE_MAPS_MAP_ID) go in:
 	// npx wrangler secret put <NAME>. Defaults for the optional vars live in src/env.ts; override here with "vars" if needed.
 	// Optional: Hyperdrive in front of Postgres for connection pooling at the edge.

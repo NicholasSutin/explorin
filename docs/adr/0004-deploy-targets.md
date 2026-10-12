@@ -49,5 +49,5 @@ The real cost of A is the second code path, and it is kept to two files. Everyth
 ## Action items
 
 1. [x] Single env declaration in `src/env.ts`; duplicate `vars` removed from `wrangler.jsonc`.
-2. [ ] Rename the Worker and package from `felt` to `explorin` when the deployed name can change (changes the Worker URL).
+2. [x] Renamed the Worker and package to `explorin` and the bucket to `explorin-photos` (2026-10-11). Before the next Cloudflare deploy: `npx wrangler r2 bucket create explorin-photos` (or copy objects from `felt-photos`), re-put the secrets on the new Worker name, and update any link to the old `felt` Worker URL.
 3. [ ] Wrap background promises in `waitUntil` for the Cloudflare build.

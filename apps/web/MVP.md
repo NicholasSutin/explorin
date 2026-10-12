@@ -1,14 +1,14 @@
 # Explorin.app MVP
 
-Mobile-first adventure discovery and personal scrapbooks, built with SvelteKit 3 and TypeScript. The existing Felt database/profile experience is retained at `/onboarding`, `/ask`, `/profile`, `/go/*`, and `/reflect/*`.
+Mobile-first adventure discovery and personal scrapbooks, built with SvelteKit 3 and TypeScript. The photo-based taste profile lives at `/onboarding`, `/ask`, `/profile`, `/go/*` and `/reflect/*`; when `DATABASE_URL` is set, discovery results also show "people like you" quotes from that side.
 
 ## Quick start
 
 Requires Node.js 22.12+ (Node 24 recommended).
 
 ```sh
-cd felt
-npm ci
+cd apps/web
+npm install
 npm run dev
 ```
 
@@ -20,7 +20,7 @@ For live discovery, copy `.env.example` to `.env` and set:
 - `GEMINI_API_KEY`: Google AI Studio API key; required for AI ranking and emotional scrapbook writing. New MVP uses `gemini-3.8-flash` with an 18-second timeout.
 - `GOOGLE_MAPS_API_KEY`: optional Google Cloud key with **Places API (New)** enabled; adds a real photo of each place to experience cards (demo and live). Server-only. One Text Search (Pro SKU, `places.id,places.photos` field mask) per place and one Place Photo media call per image, both cached in memory for 24 h. Free monthly caps: 5,000 Text Search Pro and 1,000 Place Photos; beyond that $32 and $7 per 1,000. Photos are served via `GET /api/photo?name=...`, which validates the resource name and redirects to the Google-hosted image, with the contributor attribution shown on the card as Google's policy requires. Without the key, cards keep the illustrated placeholder. The same key fetches Place Details `rating,userRatingCount,reviews` (Enterprise + Atmosphere SKU, 1,000 free per month then $25 per 1,000): at most 5 reviews in Google's relevance order, no sort control in the New API. Cards show the rating and the top review. If Places is not configured but `NIMBLE_USERNAME`/`NIMBLE_SECRET` are, reviews come from Nimble's `google_maps_reviews` instead and are labeled "via Nimble".
 - Maps: the same key with **Maps Static API** enabled powers `GET /api/map` ($2 per 1,000 after 10,000 free per month, cached in memory per image). Maps are styled server-side with the brand palette (`style=paper` cream field-notes look, `style=ink` dark banner look) via Static Maps style parameters; set `GOOGLE_MAPS_MAP_ID` to a Cloud-based map style and request `style=cloud` to use a console-designed style instead. Maps appear as a polaroid inset on each card (links to Google Maps directions), the "You're here" banner during an adventure, a round stamp on the scrapbook (same-origin, so it survives PNG export), and a numbered trail map on My memories. Without the key, every map slot collapses quietly.
-- `DATABASE_URL`: only needed for the retained Felt profile/recommendation routes and database scripts, not the new MVP.
+- `DATABASE_URL`: Postgres with pgvector. Needed for the profile routes, the database scripts, and the "people like you" quotes on discovery cards; discovery itself works without it.
 - `NIMBLE_USERNAME` / `NIMBLE_SECRET`: optional legacy Maps integration; not needed for the new MVP.
 
 Never expose keys using public environment variables. For Cloudflare, use Wrangler secrets as described in `README.md`.
