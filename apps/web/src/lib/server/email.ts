@@ -1,6 +1,6 @@
 /**
- * Account emails through Resend's HTTP API (no SDK). Verification and password-reset links come from
- * better-auth; this module only formats and sends them. Without RESEND_API_KEY the link is logged in
+ * Account emails through Resend's HTTP API (no SDK). Sign-up, verification and password-reset links come
+ * from better-auth; this module only formats and sends them. Without RESEND_API_KEY the link is logged in
  * dev so sign-up can still be completed locally, and the send is reported as failed in production.
  */
 import { dev } from '$app/env';
@@ -52,6 +52,20 @@ async function send(to: string, subject: string, paragraphs: string[], url: stri
 }
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || 'there';
+
+/** The sign-up link: opening it creates the account and asks for a password; for an existing account it just signs in. */
+export const sendSignupLinkEmail = (to: string, url: string) =>
+	send(
+		to,
+		'Finish creating your Explorin account',
+		[
+			'Hi there,',
+			`Open this link to confirm your email and choose a password: ${url}`,
+			'The link works once, for one hour. If you already have an account, the same link signs you in. If you did not ask for it, you can ignore this email.',
+			'go somewhere. feel something.\nExplorin'
+		],
+		url
+	);
 
 export const sendVerificationEmail = (to: string, name: string, url: string) =>
 	send(

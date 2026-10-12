@@ -24,7 +24,8 @@ const RULES: Record<string, { binding: string; kind: string; message: string }> 
 		kind: 'sign-in',
 		message: 'Too many sign-in attempts. Please wait a minute and try again.'
 	},
-	'/sign-up/email': {
+	// Sign-up: the emailed link that creates the account (or signs an existing one in).
+	'/sign-in/magic-link': {
 		binding: 'RATE_LIMITER_SIGN_UP',
 		kind: 'sign-up',
 		message: 'Too many sign-up attempts. Please wait a minute and try again.'

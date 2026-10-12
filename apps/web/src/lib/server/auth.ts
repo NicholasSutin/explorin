@@ -1,11 +1,13 @@
 /**
- * better-auth instance: email + password, email verification before the first session, Cloudflare
- * Turnstile on sign-up / sign-in / password reset, sessions in Postgres through the app's existing
- * postgres.js connection (Kysely dialect). Mounted at /api/auth by hooks.server.ts.
+ * better-auth instance. Sign-up is email first: the form takes an address and a Turnstile token, the
+ * magic-link plugin emails a one-hour link, opening it creates the (verified) account, starts the session
+ * and lands on /signup/password where the password is chosen (`setPassword`). Sign-in is then email +
+ * password. Turnstile guards the link request, sign-in and password reset; sessions live in Postgres
+ * through the app's existing postgres.js connection (Kysely dialect). Mounted at /api/auth by hooks.server.ts.
  * https://www.better-auth.com/docs
  */
 import { betterAuth } from 'better-auth';
-import { captcha } from 'better-auth/plugins';
+import { captcha, magicLink } from 'better-auth/plugins';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import { building, dev } from '$app/env';
 import { getRequestEvent } from '$app/server';
@@ -17,7 +19,7 @@ import {
 	TURNSTILE_SECRET_KEY
 } from '$app/env/private';
 import { ensureUser, sql } from './db';
-import { sendPasswordResetEmail, sendVerificationEmail } from './email';
+import { sendPasswordResetEmail, sendSignupLinkEmail, sendVerificationEmail } from './email';
 
 /** Turnstile `action` every auth form renders its widget with; the server rejects tokens for any other. */
 export const TURNSTILE_ACTION = 'auth';
@@ -32,7 +34,10 @@ if (!building && !dev && !TURNSTILE_SECRET_KEY)
 	);
 
 /** Paths that must carry a Turnstile token (`x-captcha-response`); relative to /api/auth. */
-const CAPTCHA_ENDPOINTS = ['/sign-up/email', '/sign-in/email', '/request-password-reset'];
+const CAPTCHA_ENDPOINTS = ['/sign-in/magic-link', '/sign-in/email', '/request-password-reset'];
+
+/** Where the emailed sign-up link lands: the page that asks for a password (it forwards accounts that have one). */
+export const SIGNUP_PASSWORD_PATH = '/signup/password';
 
 /**
  * Cloudflare's dummy secrets (1x…, 2x…, 3x… "always passes / always fails / token spent") answer siteverify
@@ -67,6 +72,8 @@ export const auth = betterAuth({
 	},
 	emailAndPassword: {
 		enabled: true,
+		// Accounts are only created by opening the emailed link (magic-link plugin), never by POST /sign-up/email.
+		disableSignUp: true,
 		minPasswordLength: 8,
 		requireEmailVerification: true,
 		revokeSessionsOnPasswordReset: true,
@@ -74,8 +81,8 @@ export const auth = betterAuth({
 			await sendPasswordResetEmail(user.email, user.name, url);
 		}
 	},
+	// Link-created accounts are verified from the start; this only covers accounts from before the link flow.
 	emailVerification: {
-		sendOnSignUp: true,
 		sendOnSignIn: true,
 		autoSignInAfterVerification: true,
 		expiresIn: 60 * 60,
@@ -104,12 +111,19 @@ export const auth = betterAuth({
 			create: {
 				// Mirror into the app's `users` table so profiles, experiences and reflections can reference the account.
 				after: async (user) => {
-					await ensureUser(user.id, user.name);
+					await ensureUser(user.id, user.name || null); // the name is chosen at onboarding
 				}
 			}
 		}
 	},
 	plugins: [
+		magicLink({
+			expiresIn: 60 * 60,
+			storeToken: 'hashed',
+			sendMagicLink: async ({ email, url }) => {
+				await sendSignupLinkEmail(email, url);
+			}
+		}),
 		captcha({
 			provider: 'cloudflare-turnstile',
 			secretKey: TURNSTILE_SECRET_KEY ?? '',
@@ -135,6 +149,21 @@ export async function getSession(headers: Headers): Promise<Session | null> {
 		console.warn('[auth] getSession failed', (e as Error).message);
 		return null;
 	}
+}
+
+/** True when the account can sign in with a password (the sign-up link flow was completed). */
+export async function hasPassword(userId: string): Promise<boolean> {
+	const ctx = await auth.$context;
+	const account = await ctx.internalAdapter.findCredentialAccount(userId);
+	return Boolean(account?.password);
+}
+
+/**
+ * Set the first password on the signed-in account (the step after the emailed sign-up link). Server-only
+ * endpoint: better-auth refuses it once a password exists, so it can never overwrite one.
+ */
+export async function setPassword(headers: Headers, newPassword: string) {
+	await auth.api.setPassword({ headers, body: { newPassword } });
 }
 
 /** Record the onboarding answers on the account (server-only fields). */

@@ -38,7 +38,7 @@ cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run previ
 npm run deploy
 ```
 
-Secrets, with what each enables: `GEMINI_API_KEY`, `DATABASE_URL`, `NIMBLE_API_KEY` (discovery and AI); `GOOGLE_MAPS_API_KEY` (place photos, reviews, stylized static maps); `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), `TURNSTILE_SECRET_KEY` (a Turnstile site that lists app.explorin.app; the site key is a var) and `RESEND_API_KEY` (confirmation and reset emails) together enable accounts. Without the last three, sign-in answers 503 and only the demo works. One-off changes still work with `npx wrangler secret put NAME`.
+Secrets, with what each enables: `GEMINI_API_KEY`, `DATABASE_URL`, `NIMBLE_API_KEY` (discovery and AI); `GOOGLE_MAPS_API_KEY` (place photos, reviews, stylized static maps); `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), `TURNSTILE_SECRET_KEY` (a Turnstile site that lists app.explorin.app; the site key is a var) and `RESEND_API_KEY` (sign-up link and reset emails) together enable accounts. Without the last three, sign-in answers 503 and only the demo works. One-off changes still work with `npx wrangler secret put NAME`.
 
 Optional: put [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) in front of Postgres and read `platform.env.HYPERDRIVE.connectionString`.
 

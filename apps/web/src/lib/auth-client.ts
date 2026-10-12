@@ -1,11 +1,13 @@
 /** Browser-side better-auth client. Calls go to this origin's /api/auth. */
 import { createAuthClient } from 'better-auth/svelte';
-import { inferAdditionalFields } from 'better-auth/client/plugins';
+import { inferAdditionalFields, magicLinkClient } from 'better-auth/client/plugins';
 import type { auth } from '#lib/server/auth';
 
-export const authClient = createAuthClient({ plugins: [inferAdditionalFields<typeof auth>()] });
+export const authClient = createAuthClient({
+	plugins: [inferAdditionalFields<typeof auth>(), magicLinkClient()]
+});
 
-/** Headers that satisfy the server's Turnstile check on sign-up, sign-in and password reset. */
+/** Headers that satisfy the server's Turnstile check on the sign-up link, sign-in and password reset. */
 export const captchaHeaders = (token: string) => ({ 'x-captcha-response': token });
 
 /** Only same-origin paths may be used as a post-login destination. */

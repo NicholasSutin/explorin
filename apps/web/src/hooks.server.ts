@@ -20,8 +20,10 @@ const PROTECTED_API = [
 	'/api/recommend',
 	'/api/demo/persona'
 ];
-/** Signed-in visitors are sent away from these. */
+/** Signed-in visitors are sent away from these (exact paths: /signup/password needs the session the link just set). */
 const GUEST_ONLY = ['/login', '/signup', '/forgot'];
+/** better-auth's session cookie: `__Secure-` is prepended whenever `useSecureCookies` is on (production). */
+const SESSION_COOKIES = ['__Secure-explorin.session_token', 'explorin.session_token'];
 
 const startsWithAny = (path: string, prefixes: string[]) =>
 	prefixes.some((p) =>
@@ -39,7 +41,7 @@ const authRoutes: Handle = async ({ event, resolve }) => {
 
 const session: Handle = async ({ event, resolve }) => {
 	// Only ask the database when a session cookie is present; the demo path never touches it.
-	const hasCookie = event.cookies.get('explorin.session_token') !== undefined;
+	const hasCookie = SESSION_COOKIES.some((name) => event.cookies.get(name) !== undefined);
 	const s = hasCookie && authConfigured() ? await getSession(event.request.headers) : null;
 	event.locals.user = s?.user ?? null;
 	event.locals.session = s?.session ?? null;
@@ -74,7 +76,7 @@ const guard: Handle = async ({ event, resolve }) => {
 		if (!user.onboardedAt && !onboarding) redirect(303, '/onboarding');
 		if (user.onboardedAt && pathname === '/onboarding') redirect(303, '/');
 	}
-	if (isPage && user && startsWithAny(pathname, GUEST_ONLY)) redirect(303, '/');
+	if (isPage && user && GUEST_ONLY.includes(pathname)) redirect(303, '/');
 	if (
 		!isPage &&
 		!user &&

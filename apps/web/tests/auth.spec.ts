@@ -24,15 +24,24 @@ test('per-account write APIs answer 401 for guests', async ({ request }) => {
 	expect((await res.json()).message).toMatch(/sign in/i);
 });
 
-test('sign-up form renders with the Turnstile widget and the sign-in link', async ({ page }) => {
+test('sign-up form asks only for an email, with the Turnstile widget and the sign-in link', async ({
+	page
+}) => {
 	await page.goto('/signup');
 	await expect(page.getByRole('heading', { name: 'Make it yours.' })).toBeVisible();
 	await expect(page.getByLabel('Email')).toBeVisible();
+	await expect(page.getByLabel('Password')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Send me a link' })).toBeDisabled();
 	await expect(page.locator('.turnstile')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
 	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
 		true
 	);
+});
+
+test('the password step needs the session the emailed link creates', async ({ page }) => {
+	await page.goto('/signup/password', { waitUntil: 'commit' });
+	await expect(page).toHaveURL(/\/signup$/);
 });
 
 test('home page offers sign in to guests and keeps the demo open', async ({ page }) => {
