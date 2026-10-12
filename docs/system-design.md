@@ -14,7 +14,7 @@ Explorin helps someone find a real place to go in a city, live the outing, and k
 | Adventure | Start an experience, add reflections (typed or voice), add 1–4 photos, generate a scrapbook story, export PNG, keep history on device. | `apps/web` route `/`, `POST /api/scrapbook` |
 | People like you | Build a taste profile from photos, retrieve evidence quotes with pgvector, compose three cards, reflect afterwards and update the profile. The same retrieval also attaches quotes to discovery results. | `apps/web` routes `/onboarding`, `/ask`, `/go`, `/reflect`, `/profile`; `/api/profile`, `/api/recommend`, `/api/reflect`, `/api/experience`, `/api/upload`; `lib/server/evidence.ts` inside `/api/discover` |
 | Maps | Same-origin, brand-styled static map images and Google photo redirects. | `GET /api/map`, `GET /api/photo` |
-| Marketing | Public landing page and waitlist: what Explorin is, a few postcards, a link into the app, an email form writing to D1. | `apps/marketing` (SvelteKit on Workers) |
+| Marketing | Public landing page and waitlist: what Explorin is, a few postcards, a link into the app, an email form gated by Turnstile (verified server-side) writing to D1, with a Resend welcome email. | `apps/marketing` (SvelteKit on Workers) |
 
 ### Non-functional
 

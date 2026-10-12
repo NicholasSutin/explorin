@@ -14,7 +14,9 @@
 		"db:migrate:local": "wrangler d1 migrations apply explorin-waitlist --local",
 		"db:migrate": "wrangler d1 migrations apply explorin-waitlist --remote",
 		"waitlist:export": "wrangler d1 execute explorin-waitlist --remote --command \"SELECT email, source, created_at FROM waitlist ORDER BY created_at\"",
-		"deploy": "npm run build && wrangler deploy"
+		"deploy": "npm run build && wrangler deploy",
+		"format": "prettier --write .",
+		"lint": "prettier --check ."
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-cloudflare": "^8.0.0",
@@ -24,7 +26,9 @@
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.3.0",
-		"wrangler": "^4.149.0"
+		"wrangler": "^4.149.0",
+		"prettier": "^3.8.3",
+		"prettier-plugin-svelte": "^4.1.0"
 	},
 	"imports": {
 		"#lib/*": "./src/lib/*"

@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Turnstile from '#lib/Turnstile.svelte';
 	import type { PageProps } from './$types';
 	let { data, form }: PageProps = $props();
 	let submitting = $state(false);
+	/** Set by the Turnstile widget once the visitor passes; the button stays disabled until then. */
+	let verified = $state(false);
+	let resetTurnstile = $state<() => void>(() => {});
 	const done = $derived(form?.status === 'added' || form?.status === 'already');
 </script>
 
@@ -66,13 +70,14 @@
 				<h3>Say what you're craving</h3>
 				<p>
 					"A rainy afternoon with art and really good coffee." Explorin searches the web, picks
-					real, named places, checks each one on the map, and shows how people like you felt
-					there.
+					real, named places, checks each one on the map, and shows how people like you felt there.
 				</p>
 			</li>
 			<li>
 				<h3>Live your story</h3>
-				<p>Start the adventure. Jot a thought or say it out loud. Add a few photos along the way.</p>
+				<p>
+					Start the adventure. Jot a thought or say it out loud. Add a few photos along the way.
+				</p>
 			</li>
 			<li>
 				<h3>Keep the feeling</h3>
@@ -108,6 +113,8 @@
 					return async ({ update }) => {
 						await update();
 						submitting = false;
+						// A token is single-use: whatever happened, the next attempt needs a fresh one.
+						resetTurnstile();
 					};
 				}}
 			>
@@ -129,12 +136,21 @@
 					<label for="website">Website</label>
 					<input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
 				</div>
-				<button class="button" type="submit" disabled={submitting}>
-					{submitting ? 'Adding you…' : 'Join the waitlist ↗'}
+				<Turnstile
+					action="waitlist"
+					bind:reset={resetTurnstile}
+					onToken={(token) => (verified = Boolean(token))}
+				/>
+				<button class="button" type="submit" disabled={submitting || !verified}>
+					{submitting
+						? 'Adding you…'
+						: verified
+							? 'Join the waitlist ↗'
+							: 'Checking you are human…'}
 				</button>
 			</form>
 			{#if form?.error}<p class="error" id="waitlist-error" role="alert">{form.error}</p>{/if}
-			<p class="fine">No spam, no sharing. One email when your city opens.</p>
+			<p class="fine">No spam, no sharing. One welcome email now, one when your city opens.</p>
 		{/if}
 	</section>
 

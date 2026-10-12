@@ -53,10 +53,11 @@ A and B both satisfy the requirement; A wins on the only dimension that differs 
 
 - Easier: adding pages, sharing brand components with the app, reading the waitlist.
 - Harder: the site now needs `npm install` and a Worker deploy; the D1 database must exist before the first deploy.
-- Revisit: add Turnstile if bots get past the honeypot; move `APP_URL` to a per-environment var once staging exists.
+- Revisit: move `APP_URL` to a per-environment var once staging exists.
+- Added the same day: the form only submits after a Cloudflare Turnstile challenge, verified server-side with the canonical siteverify call (success, action `waitlist`, hostname allowlist, fail closed), and new signups get a Resend welcome email when a key is set. The no-JavaScript path is therefore closed by design; the honeypot stays as a second layer.
 
 ## Action items
 
 1. [x] Scaffold the Kit app, form action, D1 binding, migration and brand sync (2026-10-11).
 2. [x] D1 `explorin-waitlist` created in the `explorin` account, id in `wrangler.jsonc`, migration applied remotely (2026-10-12). Both Worker configs now pin `account_id` so wrangler works non-interactively.
-3. [ ] `npm run deploy -w apps/marketing`, then make `og:image` absolute with the site origin.
+3. [ ] Set `TURNSTILE_SITE_KEY` and `TURNSTILE_HOSTNAMES` in `wrangler.jsonc` vars, `wrangler secret put TURNSTILE_SECRET_KEY` and `RESEND_API_KEY`, then `npm run deploy -w apps/marketing` and make `og:image` absolute with the site origin.
