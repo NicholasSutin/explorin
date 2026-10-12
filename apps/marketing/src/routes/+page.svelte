@@ -55,7 +55,6 @@
 				src="https://cdn.explorin.app/brag.mp4"
 				autoplay
 				muted
-				loop
 				playsinline
 				controls
 				preload="metadata"
