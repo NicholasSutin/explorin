@@ -29,7 +29,11 @@
 		<a href="#top" aria-label="Explorin home"
 			><img src="/brand/lockup-horizontal-ink.svg" alt="explorin." width="180" height="28" /></a
 		>
-		<a class="button ghost" href={data.appUrl}>Open the app</a>
+		{#if data.appUrl}
+			<a class="button ghost" href={data.appUrl}>Open the app</a>
+		{:else}
+			<a class="button ghost" href="#waitlist">Join the waitlist</a>
+		{/if}
 	</header>
 
 	<section class="hero" id="top">

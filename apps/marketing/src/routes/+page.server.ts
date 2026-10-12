@@ -1,14 +1,21 @@
 import { fail } from '@sveltejs/kit';
-import { APP_URL } from '$app/env/private';
+import { publicAppUrl } from '#lib/server/app-url';
 import { sendWelcome } from '#lib/server/email';
 import { turnstileConfigured, verifyTurnstile } from '#lib/server/turnstile';
 import { email, join, waitlistEnabled } from '#lib/server/waitlist';
 import type { Actions, PageServerLoad } from './$types';
 
-/** Must match the `action` the widget is rendered with, so a token minted elsewhere cannot be replayed here. */
-export const ACTION = 'waitlist';
+/**
+ * Must match the `action` the widget is rendered with, so a token minted elsewhere cannot be replayed here.
+ * Not exported: SvelteKit only allows its own named exports from a route module, and the build fails otherwise.
+ */
+const ACTION = 'waitlist';
 
-export const load: PageServerLoad = () => ({ appUrl: APP_URL });
+/**
+ * The header's "Open the app" link. Hidden until APP_URL is set, and also when APP_URL points back at
+ * this site: explorin.app serves the landing page, so a link there would just reload the page.
+ */
+export const load: PageServerLoad = ({ url }) => ({ appUrl: publicAppUrl(url) });
 
 export const actions: Actions = {
 	join: async ({ request, getClientAddress }) => {

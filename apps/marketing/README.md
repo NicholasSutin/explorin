@@ -30,6 +30,8 @@ npx wrangler secret put RESEND_API_KEY          # optional: welcome email
 
 Non-secret settings (`TURNSTILE_SITE_KEY`, `TURNSTILE_HOSTNAMES`, `APP_URL`, `WAITLIST_FROM_EMAIL`) go in `wrangler.jsonc` under `vars`; defaults and descriptions live in `src/env.ts`. Export the list with `npm run waitlist:export`.
 
+`APP_URL` is unset in production on purpose. This site lives at `explorin.app`, so a link there would only reload the landing page. Until the app has its own public hostname, the header shows "Join the waitlist" instead of "Open the app" and the welcome email leaves out the demo link. When the app is deployed, add `"APP_URL": "https://<app hostname>"` to `vars`; a value whose hostname is this site's is ignored with a warning in the Worker logs.
+
 ## Layout
 
 - `src/routes/+page.svelte`: the page. `+page.server.ts` holds the `join` form action: honeypot, zod email check, Turnstile siteverify (action `waitlist`, hostname allowlist), insert-or-ignore, welcome email.

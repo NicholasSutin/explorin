@@ -6,6 +6,9 @@ import { RESEND_API_KEY, WAITLIST_FROM_EMAIL, APP_URL } from '$app/env/private';
 
 export const emailConfigured = () => Boolean(RESEND_API_KEY);
 
+const linkify = (html: string) =>
+	APP_URL ? html.replace(APP_URL, `<a href="${APP_URL}">${APP_URL}</a>`) : html;
+
 export async function sendWelcome(to: string): Promise<boolean> {
 	if (!RESEND_API_KEY) return false;
 	const text = [
@@ -13,8 +16,8 @@ export async function sendWelcome(to: string): Promise<boolean> {
 		'',
 		'Explorin is opening city by city, New York first. We will send one email when your city opens, and nothing else.',
 		'',
-		`In the meantime, the NYC demo is open: ${APP_URL}`,
-		'',
+		// Only when the app has a public URL of its own (APP_URL); otherwise there is nowhere to send people yet.
+		...(APP_URL ? [`In the meantime, the NYC demo is open: ${APP_URL}`, ''] : []),
 		'go somewhere. feel something.',
 		'Explorin'
 	].join('\n');
@@ -31,7 +34,7 @@ export async function sendWelcome(to: string): Promise<boolean> {
 					.split('\n\n')
 					.map(
 						(p) =>
-							`<p>${p.replace(/\n/g, '<br>').replace(APP_URL, `<a href="${APP_URL}">${APP_URL}</a>`)}</p>`
+							`<p>${linkify(p.replace(/\n/g, '<br>'))}</p>`
 					)
 					.join('')
 			}),

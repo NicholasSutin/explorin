@@ -35,7 +35,15 @@ export const variables = defineEnvVars({
 		description: 'Sender for the welcome email; must be on a domain verified in Resend'
 	},
 	APP_URL: {
-		schema: (v) => v?.trim() || 'https://explorin.app',
-		description: 'Where "Open the app" points'
+		schema: (v) => {
+			const url = v?.trim();
+			if (!url) return undefined;
+			if (!/^https?:\/\//i.test(url)) throw new Error(`APP_URL must be an absolute http(s) URL, got "${url}"`);
+			return url;
+		},
+		description:
+			'Where "Open the app" and the welcome email\'s demo link point. Leave unset until the app has its own ' +
+			'public hostname: with no value the button is not rendered and the email omits the link. It must not ' +
+			'be this site\'s own origin (explorin.app hosts the landing page, not the app).'
 	}
 });
