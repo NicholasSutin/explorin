@@ -30,7 +30,34 @@ npx wrangler secret put RESEND_API_KEY          # optional: welcome email
 
 Non-secret settings (`TURNSTILE_SITE_KEY`, `TURNSTILE_HOSTNAMES`, `APP_URL`, `WAITLIST_FROM_EMAIL`) go in `wrangler.jsonc` under `vars`; defaults and descriptions live in `src/env.ts`. Export the list with `npm run waitlist:export`.
 
-`APP_URL` is unset in production on purpose. This site lives at `explorin.app`, so a link there would only reload the landing page. Until the app has its own public hostname, the header shows "Join the waitlist" instead of "Open the app" and the welcome email leaves out the demo link. When the app is deployed, add `"APP_URL": "https://<app hostname>"` to `vars`; a value whose hostname is this site's is ignored with a warning in the Worker logs.
+`APP_URL` points at the app's public hostname (`https://app.explorin.app`) so the header shows "Open the app" and the welcome email carries the demo link. A value whose hostname is this site's own is ignored with a warning in the Worker logs, since a link there would only reload the landing page; leaving it unset hides both links.
+
+## Domain and zone settings
+
+Everything the `explorin.app` zone needs beyond the Workers themselves. These live in the Cloudflare dashboard, not in any config file, so this is the record of them (set 2026-10-12).
+
+| Hostname | Served by | Created by |
+|---|---|---|
+| `explorin.app` | this Worker (`explorin-marketing`) | Custom Domain in `wrangler.jsonc`; deploy creates the DNS record and certificate |
+| `www.explorin.app` | redirect to the apex | manual proxied placeholder record `AAAA www 100::` plus the Redirect Rule below |
+| `app.explorin.app` | the app Worker (`explorin-app`, `apps/web`) | Custom Domain in `apps/web/wrangler.jsonc` |
+| `cdn.explorin.app` | R2 bucket custom domain | R2 bucket settings; the root path returns 404 because no object lives at `/` |
+
+Dashboard settings, zone-wide:
+
+- **Rules, then Redirect Rules.** One rule, "Redirect www to apex": wildcard pattern, request URL `https://www.*`, target `https://${1}`, 301. The capture keeps the path and query string. The www placeholder record exists only so the request reaches Cloudflare, where the rule runs.
+- **SSL/TLS, then Edge Certificates.** Always Use HTTPS on (replaces an http-to-https Redirect Rule and covers every subdomain, cdn included). HSTS on with max-age 1 month and subdomains included, preload off; raise max-age once the setup has been stable. Minimum TLS Version 1.2.
+
+Check it from a shell after any change:
+
+```bash
+for u in http://explorin.app https://www.explorin.app 'https://www.explorin.app/x?y=1' https://app.explorin.app; do
+  curl -sS -o /dev/null -w "$u -> %{http_code} %{redirect_url}\n" "$u"
+done
+curl -sSI https://explorin.app | grep -i strict-transport
+```
+
+Expected: http and www both 301 to `https://explorin.app/...` with the query string intact, the app 200, and a `strict-transport-security` header on the apex.
 
 ## Layout
 

@@ -26,6 +26,11 @@
 						: 'text-neutral-600'}">{t.label}</a
 				>
 			{/each}
+			{#if page.data.user}
+				<form method="POST" action="/signout">
+					<button type="submit" class="rounded-full px-3 py-1.5 text-neutral-500">Sign out</button>
+				</form>
+			{/if}
 		</nav>
 	</header>
 	<main class="flex-1 px-4 pb-32">{@render children()}</main>

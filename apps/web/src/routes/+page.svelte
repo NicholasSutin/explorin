@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { page } from '$app/state';
 	import { toBlob } from 'html-to-image';
 	import {
 		directionsUrl,
@@ -520,7 +521,12 @@
 				disabled={!mounted}
 				class:current={view === 'history'}
 				onclick={() => navigate('history')}>My memories <span>{history.length}</span></button
-			><a href="/onboarding">People like you</a>
+			><a href="/onboarding/photos">People like you</a>{#if page.data.user}<form
+					method="POST"
+					action="/signout"
+				>
+					<button type="submit" title={page.data.user.email}>Sign out</button>
+				</form>{:else}<a href="/login" class="signin">Sign in</a>{/if}
 		</nav>
 	</header>
 	<div class="exp-content">

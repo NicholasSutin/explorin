@@ -46,5 +46,50 @@ export const variables = defineEnvVars({
 	DEMO_CACHE: {
 		schema: (v) => v !== 'false',
 		description: 'Cache the scripted demo prompt response'
+	},
+	// Accounts (better-auth). Locally these come from `.env`; on Workers, secrets via `wrangler secret put`.
+	BETTER_AUTH_SECRET: {
+		schema: optional,
+		description:
+			'Signs session cookies and tokens; generate with `openssl rand -base64 32`. Required for sign-in.'
+	},
+	BETTER_AUTH_URL: {
+		schema: (v) => {
+			const url = v?.trim();
+			if (!url) return undefined;
+			if (!/^https?:\/\//i.test(url))
+				throw new Error(`BETTER_AUTH_URL must be an absolute http(s) URL, got "${url}"`);
+			return url.replace(/\/$/, '');
+		},
+		description:
+			'Public origin of this app (https://app.explorin.app); used in verification and reset links. ' +
+			'Inferred from the request when unset.'
+	},
+	TURNSTILE_SITE_KEY: {
+		public: true,
+		schema: (v) => v?.trim() || '',
+		description: 'Cloudflare Turnstile site key (public; rendered on the sign-in and sign-up forms)'
+	},
+	TURNSTILE_SECRET_KEY: {
+		schema: optional,
+		description:
+			'Turnstile secret for siteverify. Sign-up, sign-in and password reset refuse every request without it.'
+	},
+	TURNSTILE_HOSTNAMES: {
+		schema: (v) =>
+			(v ?? '')
+				.split(',')
+				.map((h) => h.trim().toLowerCase())
+				.filter(Boolean),
+		description:
+			'Comma-separated hostnames a Turnstile token may have been solved on. Empty means any (dev only).'
+	},
+	RESEND_API_KEY: {
+		schema: optional,
+		description: 'Resend API key for verification and password-reset emails'
+	},
+	AUTH_FROM_EMAIL: {
+		schema: (v) => v?.trim() || 'Explorin <onboarding@resend.dev>',
+		description: 'Sender for account emails; must be on a domain verified in Resend'
 	}
 });

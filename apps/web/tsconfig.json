@@ -4,7 +4,8 @@
 		"strict": true,
 		"paths": {
 			"#lib/*": ["./src/lib/*"],
-			"#storage": ["./src/lib/server/storage.local.ts"]
+			"#storage": ["./src/lib/server/storage.local.ts"],
+			"#bindings": ["./src/lib/server/bindings.node.ts"]
 		}
 	},
 	"include": ["src", "vite.config.ts", "scripts", "worker-configuration.d.ts"]

@@ -34,6 +34,9 @@ npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put NIMBLE_API_KEY
 npx wrangler secret put GOOGLE_MAPS_API_KEY   # optional: place photos, reviews and stylized static maps
+npx wrangler secret put BETTER_AUTH_SECRET     # accounts: openssl rand -base64 32
+npx wrangler secret put TURNSTILE_SECRET_KEY   # accounts: Turnstile site that lists app.explorin.app (site key is a var)
+npx wrangler secret put RESEND_API_KEY         # accounts: confirmation and reset emails
 cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run preview`
 npm run deploy
 ```

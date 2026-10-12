@@ -3,6 +3,10 @@
 	"account_id": "94015fdd2754ebfbcb440e274d9f62c8", // Cloudflare account "explorin"
 	"name": "explorin-marketing",
 	"main": ".svelte-kit/cloudflare/_worker.js",
+	// explorin.app is the landing page (this Worker). Cloudflare creates the DNS record and certificate on deploy;
+	// www -> apex and http -> https are Redirect Rules in the dashboard (Rules > Redirect Rules). www needs a
+	// proxied placeholder DNS record (AAAA www 100::) so the request reaches Cloudflare; it is not routed here.
+	"routes": [{ "pattern": "explorin.app", "custom_domain": true }],
 	"compatibility_date": "2026-10-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
@@ -23,6 +27,6 @@
 	"vars": {
 		"APP_URL": "https://app.explorin.app",
 		"TURNSTILE_SITE_KEY": "0x4AAAAAAFUOm-CrWG7U8E3X",
-		"TURNSTILE_HOSTNAMES": "explorin.app,localhost,explorin-marketing.explorin.workers.dev"
+		"TURNSTILE_HOSTNAMES": "explorin.app,explorin-marketing.explorin.workers.dev"
 	}
 }

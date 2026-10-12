@@ -81,6 +81,10 @@
 	text-decoration: none;
 	line-height: normal;
 }
+.exp-header nav a.signin {
+	color: var(--ink);
+	box-shadow: inset 0 0 0 1px #dce0d4;
+}
 .exp-header nav button.current {
 	background: #e5ebdf;
 	color: var(--ink);

@@ -16,9 +16,16 @@ const storage = fileURLToPath(
 		import.meta.url
 	)
 );
+// Same idea for raw bindings (rate limiters): `cloudflare:workers` only resolves on Workers.
+const bindings = fileURLToPath(
+	new URL(
+		cloudflare ? './src/lib/server/bindings.cloudflare.ts' : './src/lib/server/bindings.node.ts',
+		import.meta.url
+	)
+);
 
 export default defineConfig({
-	resolve: { alias: { '#storage': storage } },
+	resolve: { alias: { '#storage': storage, '#bindings': bindings } },
 	// Listen on all interfaces so the dev server is reachable on the LAN.
 	// `.devtunnels.ms` allows VS Code port-forwarding tunnels (Vite blocks unknown Host headers).
 	server: { host: true, allowedHosts: ['.devtunnels.ms'] },

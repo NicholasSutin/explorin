@@ -1,8 +1,36 @@
-import postgres from 'postgres';
+import postgres, { type Sql } from 'postgres';
+import { getRequestEvent } from '$app/server';
 import { DATABASE_URL } from '$app/env/private';
+import { onWorkers } from '#bindings';
 import type { Place, Profile, Traits } from '#lib/types';
 
-export const sql = postgres(DATABASE_URL, { max: 5, idle_timeout: 20, prepare: false });
+const options = { max: onWorkers ? 1 : 5, idle_timeout: 20, prepare: false } as const;
+
+/** One shared pool on Node. On Workers it only serves work that runs outside any request. */
+const shared: Sql = postgres(DATABASE_URL, options);
+
+/**
+ * The connection for the current request. Workers forbid using a socket opened by one request from
+ * another, so there each request gets its own single-connection instance, created on first use and
+ * closed by hooks.server.ts when the response body finishes. On Node the shared pool is returned.
+ */
+export function requestSql(): Sql {
+	if (!onWorkers) return shared;
+	let locals: App.Locals;
+	try {
+		locals = getRequestEvent().locals;
+	} catch {
+		return shared; // not inside a request (build analysis, background work)
+	}
+	return (locals.sql ??= postgres(DATABASE_URL, options));
+}
+
+/** Tagged-template client that always resolves to `requestSql()`; use it like a plain postgres.js `sql`. */
+export const sql: Sql = new Proxy(shared, {
+	get: (_t, key) => Reflect.get(requestSql(), key),
+	apply: (_t, thisArg, args) =>
+		Reflect.apply(requestSql() as unknown as (...a: unknown[]) => unknown, thisArg, args)
+});
 
 export const vec = (v: number[]) => `[${v.join(',')}]`;
 
