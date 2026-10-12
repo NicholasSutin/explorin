@@ -22,7 +22,7 @@
 	// explorin.app hosts this landing page; the app (Worker "explorin-app") is at app.explorin.app.
 	"vars": {
 		"APP_URL": "https://app.explorin.app",
-		"TURNSTILE_SITE_KEY": "***REMOVED-TURNSTILE-SECRET***",
+		"TURNSTILE_SITE_KEY": "0x4AAAAAAFUOm-CrWG7U8E3X",
 		"TURNSTILE_HOSTNAMES": "explorin.app,localhost,explorin-marketing.explorin.workers.dev"
 	}
 }
