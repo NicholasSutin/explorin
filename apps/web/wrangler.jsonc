@@ -48,7 +48,7 @@
 	"vars": {
 		"BETTER_AUTH_URL": "https://app.explorin.app",
 		"TURNSTILE_SITE_KEY": "0x4AAAAAAFUppmWr4tQ59Tnr",
-		"TURNSTILE_HOSTNAMES": "app.explorin.app,localhost",
+		"TURNSTILE_HOSTNAMES": "app.explorin.app",
 		"AUTH_FROM_EMAIL": "Explorin <hello@explorin.app>"
 	},
 	// Hyperdrive pools connections to the Tiger Data Postgres at the edge; every request opens its own connection

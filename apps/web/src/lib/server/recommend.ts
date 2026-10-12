@@ -9,9 +9,11 @@ import {
 	PLACE_NAMES_SCHEMA
 } from './prompts';
 import { getProfileWithEmbedding, sql, upsertGroundedPlace, vec } from './db';
-import { mapsPlace, nimbleEnabled, nimbleSdkEnabled, webSearch, type LivePlace } from './nimble';
+import { mapsPlace, nimbleEnabled, webSearch, type LivePlace } from './nimble';
 import { validateCards, type ComposedCard } from './validate';
 import { ttlCache } from './http';
+import { background } from './background';
+import { onWorkers } from '#bindings';
 import type { Card, Intent, Quote, RecommendResponse, Source } from '#lib/types';
 
 /** The recommend flow is single-city for now; everything location-specific hangs off this. */
@@ -71,7 +73,7 @@ export async function recommend(
 		embed(prompt, 'query')
 	]);
 	lap('intent+embed');
-	void enrichWithMaps(prompt, loc);
+	background(enrichWithMaps(prompt, loc));
 
 	// 4. Evidence retrieval (two-axis: what + who)
 	const evidence = await retrieve(intentVec, profileVec);
@@ -126,22 +128,24 @@ export async function recommend(
 	//    Never blocks the response.
 	const live: Record<string, unknown> = {};
 	for (const r of rows) if (r.live) live[r.id] = r.live;
-	if (nimbleSdkEnabled()) {
+	if (nimbleEnabled()) {
 		const top = new Set([...evidencePlaceIds, ...candidates.keys()].slice(0, 5));
 		const stale = rows.filter(
 			(r) =>
 				top.has(r.id) && (!r.live_at || Date.now() - new Date(r.live_at).getTime() > 30 * 60 * 1000)
 		);
 		for (const r of stale) {
-			void mapsPlace(`${r.name} ${CITY.short}`, 15000)
-				.then(async (l) => {
-					if (l)
-						await sql`UPDATE places SET live = ${sql.json(l as never)}, live_at = now(),
+			background(
+				mapsPlace(`${r.name} ${CITY.short}`, 15000)
+					.then(async (l) => {
+						if (l)
+							await sql`UPDATE places SET live = ${sql.json(l as never)}, live_at = now(),
 							google_place_id = COALESCE(google_place_id, ${l.google_place_id ?? null}),
 							maps_url = CASE WHEN google_place_id IS NULL AND ${l.maps_url ?? null}::text IS NOT NULL THEN ${l.maps_url ?? null} ELSE maps_url END
 							WHERE id = ${r.id}`;
-				})
-				.catch(() => {});
+					})
+					.catch(() => {})
+			);
 		}
 	}
 	lap(`live (${Object.keys(live).length} cached)`);
@@ -226,7 +230,8 @@ async function enrichWithMaps(prompt: string, loc: { lat: number; lng: number })
 				loc.lat,
 				loc.lng
 			),
-			40000,
+			// Workers allow ~30 s of waitUntil work after the response is sent.
+			onWorkers ? 25000 : 40000,
 			[]
 		);
 		for (const g of grounded) {

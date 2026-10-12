@@ -60,9 +60,9 @@ Explorin helps someone find a real place to go in a city, live the outing, and k
 │  hooks.server.ts    : anonymous uid cookie; handleError gives unknown errors one message│
 └──────────┬──────────────────┬───────────────────┬───────────────────┬──────────────────┘
            │                  │                   │                   │
-     Google Gemini      Nimble SDK/Web API   Google Places +     Postgres + pgvector
+     Google Gemini      Nimble SDK API       Google Places +     Postgres + pgvector
    (3.8-flash, embed,   (search, extract,    Static Maps          (legacy flow only)
-    Maps grounding)      Maps reviews)
+    Maps grounding)      live place context)
 ```
 
 ### Data flow: discover (the main path)
@@ -184,7 +184,7 @@ None. The only "event" surface is the NDJSON stream from `/api/discover`, which 
 | Deploy targets ([ADR-0004](adr/0004-deploy-targets.md)) | adapter-node default, Cloudflare behind a flag | one target | Node is simplest for dev and the demo; Workers is where the R2 photos live |
 | In-process caches | `ttlCache` Maps | Cloudflare Cache API / KV | Simplest; revisit when running on many isolates, by caching `/api/map` and `/api/photo` responses with the Cache API (they already send `Cache-Control`) |
 | Photos as data URLs in `localStorage` | simple, private | IndexedDB blobs | `localStorage` is ~5 MB; 12 adventures × 4 photos at 1200 px fits. Revisit if history grows or photos get bigger |
-| Fire-and-forget background work | `void promise` | queue / `waitUntil` | On Workers, work after the response may be cancelled; use `platform.context.waitUntil` when deploying the legacy flow there |
+| Fire-and-forget background work | `background()` (`waitUntil` from `cloudflare:workers`; the request's DB connection closes after the tasks settle) | queue | `waitUntil` allows about 30 s after the response; move Maps enrichment to a queue if it needs longer |
 | Single city in the profile flow | `CITY` constant | per-request city | Discover is already city-parameterised; lift `CITY` to a request parameter when a second city appears |
 | Prompt-string demo cache | exact prompt match | explicit `demo` flag | Discover already uses a flag; align recommend with it |
 | Place matching for quotes | name containment against `places.name` | Google place ID join | Works for the curated set and demo; join on `google_place_id` once discovery places are upserted into `places` (ADR-0005 step 2) |

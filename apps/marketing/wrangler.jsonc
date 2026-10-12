@@ -21,12 +21,13 @@
 			"migrations_dir": "migrations"
 		}
 	],
-	// Non-secret settings (TURNSTILE_SITE_KEY, TURNSTILE_HOSTNAMES, APP_URL, WAITLIST_FROM_EMAIL) can go here as
+	// Non-secret settings (TURNSTILE_SITE_KEY, TURNSTILE_HOSTNAMES, APP_URL, WAITLIST_FROM_EMAIL) live here as
 	// "vars"; secrets (TURNSTILE_SECRET_KEY, RESEND_API_KEY) via `npx wrangler secret put <NAME>`. Defaults: src/env.ts.
 	// explorin.app hosts this landing page; the app (Worker "explorin-app") is at app.explorin.app.
 	"vars": {
 		"APP_URL": "https://app.explorin.app",
 		"TURNSTILE_SITE_KEY": "0x4AAAAAAFUOm-CrWG7U8E3X",
-		"TURNSTILE_HOSTNAMES": "explorin.app,explorin-marketing.explorin.workers.dev"
+		"TURNSTILE_HOSTNAMES": "explorin.app,explorin-marketing.explorin.workers.dev",
+		"WAITLIST_FROM_EMAIL": "Explorin <hi@explorin.app>"
 	}
 }

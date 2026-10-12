@@ -5,7 +5,7 @@
  * degrades honestly: no AI means plain search matches, no search means the curated set.
  */
 import { z } from 'zod';
-import { nimbleMapsEnabled, webSearch } from '#lib/server/nimble';
+import { webSearch } from '#lib/server/nimble';
 import { adventureAI } from '#lib/server/gemini';
 import { demoExperiences, type DiscoveryStep, type Experience } from '#lib/adventure';
 import { enrichPlaces, placesEnabled } from '#lib/server/places';
@@ -66,12 +66,7 @@ const safeUrl = (value: string) => {
 	}
 };
 
-const enrichLabel = () =>
-	placesEnabled()
-		? 'Google Places verifies each spot'
-		: nimbleMapsEnabled()
-			? 'Nimble pulls Google Maps reviews'
-			: 'Place details';
+const enrichLabel = () => (placesEnabled() ? 'Google Places verifies each spot' : 'Place details');
 
 const LABELS: Record<DiscoveryStep['id'], () => string> = {
 	search: () => 'Nimble searches the web',
@@ -94,7 +89,7 @@ export async function runDiscovery(
 	) => emit({ type: 'step', step: { id, label: LABELS[id](), state, ...extra } });
 
 	async function enrich(items: Experience[]): Promise<Experience[]> {
-		if (!placesEnabled() && !nimbleMapsEnabled()) {
+		if (!placesEnabled()) {
 			step('places', 'skipped', { detail: 'No Places key' });
 			return items;
 		}

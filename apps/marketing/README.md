@@ -24,9 +24,11 @@ npm run deploy
 Then the secrets, once each:
 
 ```bash
-npx wrangler secret put TURNSTILE_SECRET_KEY
-npx wrangler secret put RESEND_API_KEY          # optional: welcome email
+cp .env.prod.example .env.prod               # TURNSTILE_SECRET_KEY, RESEND_API_KEY (optional: welcome email); gitignored
+npm run secrets:marketing --prefix ../..     # wrangler secret bulk; --dry-run lists what would be sent
 ```
+
+One-off changes still work with `npx wrangler secret put NAME`.
 
 Non-secret settings (`TURNSTILE_SITE_KEY`, `TURNSTILE_HOSTNAMES`, `APP_URL`, `WAITLIST_FROM_EMAIL`) go in `wrangler.jsonc` under `vars`; defaults and descriptions live in `src/env.ts`. Export the list with `npm run waitlist:export`.
 

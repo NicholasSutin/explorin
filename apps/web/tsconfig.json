@@ -2,6 +2,8 @@
 	"extends": "$app/tsconfig",
 	"compilerOptions": {
 		"strict": true,
+		// wrangler types references the built worker (.svelte-kit/cloudflare/_worker.js); its compiled JS is not ours to check.
+		"checkJs": false,
 		"paths": {
 			"#lib/*": ["./src/lib/*"],
 			"#storage": ["./src/lib/server/storage.local.ts"],

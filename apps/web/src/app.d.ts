@@ -14,6 +14,8 @@ declare global {
 			session: Session['session'] | null;
 			/** Workers only: this request's database connection, opened lazily by `requestSql()`. */
 			sql?: Sql;
+			/** Workers only: promises started by `background()`; `sql` is closed once they have settled. */
+			background?: Promise<void>[];
 		}
 	}
 }

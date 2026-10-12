@@ -59,7 +59,7 @@ export interface Experience {
 	reviewCount?: number;
 	/** Up to 5 reviews, Google "most relevant" order (Places) or Nimble Maps fallback. */
 	reviews?: PlaceReview[];
-	reviewSource?: 'google-places' | 'nimble';
+	reviewSource?: 'google-places';
 	/** Up to two quotes from people like the asker who have been here, when the evidence database is configured. */
 	voices?: PlaceVoice[];
 }

@@ -1,5 +1,5 @@
 /** One real call per Nimble job so we can confirm endpoint paths and response field names before trusting them. */
-import { nimbleSdk, nimbleWebApi, nimbleSdkEnabled, nimbleMapsEnabled } from './_shared';
+import { nimbleSdk, nimbleEnabled } from './_shared';
 
 const show = (label: string, data: any) => {
 	console.log(`\n=== ${label}`);
@@ -13,7 +13,7 @@ const attempt = async (label: string, fn: () => Promise<any>) => {
 	}
 };
 
-if (nimbleSdkEnabled()) {
+if (nimbleEnabled()) {
 	await attempt('SDK /v2/search', () =>
 		nimbleSdk('/v2/search', {
 			query: 'scenic running routes NYC Empire State view',
@@ -41,22 +41,3 @@ if (nimbleSdkEnabled()) {
 		};
 	});
 } else console.log('NIMBLE_API_KEY not set: skipping SDK checks');
-
-if (nimbleMapsEnabled()) {
-	await attempt('WebAPI google_maps_search', () =>
-		nimbleWebApi('google_maps_search', { query: 'Gantry Plaza State Park New York' })
-	);
-	await attempt('WebAPI google_maps_reviews (needs place_id from above)', async () => {
-		const s = await nimbleWebApi('google_maps_search', {
-			query: 'Gantry Plaza State Park New York'
-		});
-		const ents = s?.parsing?.entities ?? s?.parsing ?? {};
-		const pid = (ents.SearchResult ?? ents.Place ?? [])[0]?.place_id;
-		return pid
-			? nimbleWebApi('google_maps_reviews', { place_id: pid })
-			: { note: 'no place_id found; inspect search output above', entityKeys: Object.keys(ents) };
-	});
-} else
-	console.log(
-		'NIMBLE_USERNAME/SECRET not set: skipping legacy Web API (Google Maps reviews) checks'
-	);

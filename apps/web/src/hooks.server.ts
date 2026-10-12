@@ -5,7 +5,7 @@ import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { auth, authConfigured, getSession } from '#lib/server/auth';
 import { authRateLimit } from '#lib/server/rate-limit';
-import { onWorkers } from '#bindings';
+import { onWorkers, waitUntil } from '#bindings';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -88,16 +88,27 @@ const guard: Handle = async ({ event, resolve }) => {
 
 /**
  * Workers: close this request's database connection once the response body is done (it may be a stream
- * that keeps querying, so "after resolve" is too early). The adapter exposes no `ctx.waitUntil`, so the
- * body is piped through a transform whose flush/cancel does the closing.
+ * that keeps querying, so "after resolve" is too early) and every `background()` task has settled. The body
+ * is piped through a transform whose flush/cancel starts the close; the close itself runs under
+ * `waitUntil` so the runtime does not cancel it along with the request.
  */
 const dbScope: Handle = async ({ event, resolve }) => {
+	if (onWorkers) event.locals.background = [];
 	const response = await resolve(event);
 	if (!onWorkers) return response;
 	const close = () => {
-		const s = event.locals.sql;
-		event.locals.sql = undefined;
-		if (s) void s.end({ timeout: 5 }).catch(() => {});
+		const pending = event.locals.background ?? [];
+		event.locals.background = [];
+		const done = Promise.allSettled(pending).then(() => {
+			const s = event.locals.sql;
+			event.locals.sql = undefined;
+			return s?.end({ timeout: 5 }).catch(() => {});
+		});
+		try {
+			waitUntil(done);
+		} catch {
+			/* no request context left (should not happen); the promise still runs */
+		}
 	};
 	if (!response.body) {
 		close();

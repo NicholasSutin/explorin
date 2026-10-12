@@ -38,3 +38,4 @@ data/personas/*.json
 
 # launch-video asset pack (generated locally, never committed)
 brag-assets/
+!.env.prod.example

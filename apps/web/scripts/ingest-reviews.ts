@@ -1,19 +1,10 @@
 /**
  * Cold start: real public reviews -> Gemini picks feeling-sentences -> reflections rows.
- * Sources: Google Maps (via Nimble SERP), Tripadvisor + Yelp pages (via Nimble Web API, parsed by Gemini).
- * Run once: node --env-file=.env --import tsx scripts/ingest-reviews.ts [--only "Place Name"] [--skip-maps]
+ * Sources: the review pages listed in places.review_urls (Tripadvisor, Yelp, other public pages), fetched via the
+ * Nimble SDK Extract API and parsed by Gemini.
+ * Run once: node --env-file=.env --import tsx scripts/ingest-reviews.ts [--only "Place Name"]
  */
-import {
-	sql,
-	generateJson,
-	embedDoc,
-	nimbleSdk,
-	nimbleWebApi,
-	nimbleSdkEnabled,
-	nimbleMapsEnabled,
-	htmlToText,
-	vec
-} from './_shared';
+import { sql, generateJson, embedDoc, nimbleSdk, nimbleEnabled, htmlToText, vec } from './_shared';
 import {
 	INGEST_SCHEMA,
 	INGEST_SYSTEM,
@@ -31,35 +22,15 @@ const DISPLAY: Record<Source, string> = {
 const only = process.argv.includes('--only')
 	? process.argv[process.argv.indexOf('--only') + 1]
 	: null;
-const skipMaps = process.argv.includes('--skip-maps');
-if (!nimbleSdkEnabled()) {
+if (!nimbleEnabled()) {
 	console.error(
 		'NIMBLE_API_KEY not set; nothing to ingest. Kill rule: npm run db:seed-reflections'
 	);
 	process.exit(1);
 }
-if (!nimbleMapsEnabled() && !skipMaps)
-	console.warn(
-		'NIMBLE_USERNAME/SECRET not set: skipping Google Maps reviews, using Tripadvisor/Yelp pages only'
-	);
 
 const places = await sql<{ id: string; name: string; review_urls: string[] }[]>`
 	SELECT id, name, review_urls FROM places ${only ? sql`WHERE name = ${only}` : sql``} ORDER BY name`;
-
-async function mapsReviews(place: string): Promise<string[]> {
-	const search = await nimbleWebApi('google_maps_search', { query: `${place} New York` });
-	const ents = search?.parsing?.entities ?? search?.parsing ?? {};
-	const first = (ents.SearchResult ?? ents.Place ?? [])[0];
-	const placeId = first?.place_id ?? first?.placeId;
-	if (!placeId) return [];
-	const data = await nimbleWebApi('google_maps_reviews', { place_id: placeId, sort: 'relevant' });
-	const rents = data?.parsing?.entities ?? data?.parsing ?? {};
-	const list: any[] = rents.Review ?? rents.Reviews ?? rents.reviews ?? [];
-	return list
-		.map((r) => String(r.text ?? r.review ?? r.snippet ?? ''))
-		.filter((t) => t.length > 20)
-		.slice(0, 20);
-}
 
 async function pageReviews(url: string, place: string): Promise<string[]> {
 	const data = await nimbleSdk('/v2/extract', {
@@ -108,16 +79,6 @@ async function store(placeId: string, source: Source, reviews: string[]) {
 let total = 0;
 for (const p of places) {
 	const jobs: Promise<void>[] = [];
-	if (!skipMaps)
-		jobs.push(
-			mapsReviews(p.name)
-				.then((r) => store(p.id, 'public_review', r))
-				.then((n) => {
-					total += n;
-					console.log(`  maps        ${p.name}: +${n}`);
-				})
-				.catch((e) => console.warn(`  maps        ${p.name}: ${e.message}`))
-		);
 	for (const url of p.review_urls ?? []) {
 		const source: Source = url.includes('tripadvisor')
 			? 'tripadvisor_review'

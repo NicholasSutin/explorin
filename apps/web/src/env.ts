@@ -27,18 +27,6 @@ export const variables = defineEnvVars({
 		schema: (v) => v || 'https://sdk.nimbleway.com',
 		description: 'Nimble SDK API base'
 	},
-	NIMBLE_USERNAME: {
-		schema: optional,
-		description: 'Nimble Web API username (Client credentials); needed for Google Maps engines'
-	},
-	NIMBLE_SECRET: {
-		schema: optional,
-		description: 'Nimble Web API secret/password (Client credentials)'
-	},
-	NIMBLE_WEBAPI_URL: {
-		schema: (v) => v || 'https://api.webit.live/api/v1',
-		description: 'Nimble Web API base'
-	},
 	LONGTAIL: {
 		schema: (v) => v === 'true',
 		description: 'Enable the slow long-tail web-search fallback (off for the demo)'

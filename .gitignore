@@ -6,3 +6,5 @@ node_modules/
 # launch-video render output (local only)
 media/brag/
 brag-output/
+# local agent config
+.codex/

@@ -31,16 +31,13 @@ The default build uses adapter-node and local-disk photos. Set `DEPLOY_TARGET=cl
 npx wrangler login
 npx wrangler r2 bucket create explorin-photos
 npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL"   # once; id goes in wrangler.jsonc
-npx wrangler secret put GEMINI_API_KEY
-npx wrangler secret put DATABASE_URL
-npx wrangler secret put NIMBLE_API_KEY
-npx wrangler secret put GOOGLE_MAPS_API_KEY   # optional: place photos, reviews and stylized static maps
-npx wrangler secret put BETTER_AUTH_SECRET     # accounts: openssl rand -base64 32
-npx wrangler secret put TURNSTILE_SECRET_KEY   # accounts: Turnstile site that lists app.explorin.app (site key is a var)
-npx wrangler secret put RESEND_API_KEY         # accounts: confirmation and reset emails
+cp .env.prod.example .env.prod   # fill in; gitignored
+npm run secrets:web --prefix ../..   # pushes every non-empty key as a secret (wrangler secret bulk); --dry-run lists them
 cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run preview`
 npm run deploy
 ```
+
+Secrets, with what each enables: `GEMINI_API_KEY`, `DATABASE_URL`, `NIMBLE_API_KEY` (discovery and AI); `GOOGLE_MAPS_API_KEY` (place photos, reviews, stylized static maps); `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), `TURNSTILE_SECRET_KEY` (a Turnstile site that lists app.explorin.app; the site key is a var) and `RESEND_API_KEY` (confirmation and reset emails) together enable accounts. Without the last three, sign-in answers 503 and only the demo works. One-off changes still work with `npx wrangler secret put NAME`.
 
 Optional: put [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) in front of Postgres and read `platform.env.HYPERDRIVE.connectionString`.
 

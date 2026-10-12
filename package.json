@@ -13,6 +13,8 @@
 		"dev:marketing": "npm run dev --workspace apps/marketing",
 		"check:web": "npm run check --workspace apps/web",
 		"test:web": "npm run test:e2e --workspace apps/web",
-		"deploy:web": "npm run deploy --workspace apps/web"
+		"deploy:web": "npm run deploy --workspace apps/web",
+		"secrets:web": "node scripts/push-secrets.mjs web",
+		"secrets:marketing": "node scripts/push-secrets.mjs marketing"
 	}
 }

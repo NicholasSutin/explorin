@@ -760,9 +760,7 @@
 														>{experience.reviews[0].author ??
 															'Visitor'}{#if experience.reviews[0].when}
 															&middot; {experience.reviews[0].when}{/if}
-														&middot; {experience.reviewSource === 'nimble'
-															? 'via Nimble'
-															: 'Google'}</cite
+														&middot; Google</cite
 													>
 												</blockquote>{/if}
 										</div>{/if}

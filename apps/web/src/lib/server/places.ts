@@ -14,7 +14,6 @@
  */
 import { GOOGLE_MAPS_API_KEY } from '$app/env/private';
 import type { Experience } from '#lib/adventure';
-import { mapsReviews, nimbleMapsEnabled } from '#lib/server/nimble';
 import { DAY, fetchJson, ttlCache } from './http';
 
 export const placesEnabled = () => Boolean(GOOGLE_MAPS_API_KEY);
@@ -172,10 +171,10 @@ type Enrichable = Pick<
 
 /**
  * Attach photo, coordinates, Maps link, rating and reviews to each experience.
- * Places first, Nimble reviews as fallback. Never throws; items pass through untouched on failure.
+ * Never throws; items pass through untouched on failure or without a Places key.
  */
 export async function enrichPlaces<T extends Enrichable>(items: T[]): Promise<T[]> {
-	if (!placesEnabled() && !nimbleMapsEnabled()) return items;
+	if (!placesEnabled()) return items;
 	return Promise.all(
 		items.map(async (item) => {
 			const query = item.placeQuery || `${item.title} ${item.location}`;
@@ -192,10 +191,6 @@ export async function enrichPlaces<T extends Enrichable>(items: T[]): Promise<T[
 					const r = await placeReviews(place.placeId);
 					if (r) out = { ...out, ...r, reviewSource: 'google-places' };
 				}
-			}
-			if (!out.reviews?.length && nimbleMapsEnabled()) {
-				const { reviews } = await mapsReviews(query);
-				if (reviews.length) out = { ...out, reviews: reviews.slice(0, 5), reviewSource: 'nimble' };
 			}
 			return out;
 		})

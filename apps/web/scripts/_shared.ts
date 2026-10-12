@@ -53,11 +53,7 @@ export async function embedDoc(text: string): Promise<number[]> {
 }
 
 const SDK_BASE = process.env.NIMBLE_BASE_URL || 'https://sdk.nimbleway.com';
-const WEBAPI_BASE = process.env.NIMBLE_WEBAPI_URL || 'https://api.webit.live/api/v1';
-export const nimbleSdkEnabled = () => Boolean(process.env.NIMBLE_API_KEY);
-export const nimbleMapsEnabled = () =>
-	Boolean(process.env.NIMBLE_USERNAME && process.env.NIMBLE_SECRET);
-export const nimbleEnabled = () => nimbleSdkEnabled() || nimbleMapsEnabled();
+export const nimbleEnabled = () => Boolean(process.env.NIMBLE_API_KEY);
 
 async function post(url: string, auth: string, body: Record<string, unknown>): Promise<any> {
 	const res = await fetch(url, {
@@ -74,13 +70,6 @@ async function post(url: string, auth: string, body: Record<string, unknown>): P
 /** SDK API (Bearer API key): /v2/search, /v2/extract, /v2/extract/templates/run */
 export const nimbleSdk = (path: string, body: Record<string, unknown>) =>
 	post(`${SDK_BASE}${path}`, `Bearer ${env('NIMBLE_API_KEY').replace(/^Bearer\s+/i, '')}`, body);
-/** Legacy Web API (Basic username:secret): /realtime/serp with google_maps_* engines */
-export const nimbleWebApi = (search_engine: string, params: Record<string, unknown>) =>
-	post(
-		`${WEBAPI_BASE}/realtime/serp`,
-		`Basic ${Buffer.from(`${env('NIMBLE_USERNAME')}:${env('NIMBLE_SECRET')}`).toString('base64')}`,
-		{ search_engine, country: 'US', locale: 'en', parse: true, ...params }
-	);
 export const htmlToText = (html: string) =>
 	html
 		.replace(/<script[\s\S]*?<\/script>/gi, ' ')
