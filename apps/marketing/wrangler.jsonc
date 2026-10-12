@@ -1,0 +1,23 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "explorin-marketing",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+	"observability": { "enabled": true },
+	// Waitlist storage. Create once: npx wrangler d1 create explorin-waitlist
+	// then paste the returned database_id below and run: npm run db:migrate
+	"d1_databases": [
+		{
+			"binding": "WAITLIST",
+			"database_name": "explorin-waitlist",
+			"database_id": "REPLACE_WITH_D1_ID",
+			"migrations_dir": "migrations"
+		}
+	],
+	"vars": {
+		// Where "Open the app" goes. Override per environment.
+		"APP_URL": "https://explorin.app"
+	}
+}

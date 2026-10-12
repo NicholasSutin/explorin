@@ -14,7 +14,7 @@ Explorin helps someone find a real place to go in a city, live the outing, and k
 | Adventure | Start an experience, add reflections (typed or voice), add 1–4 photos, generate a scrapbook story, export PNG, keep history on device. | `apps/web` route `/`, `POST /api/scrapbook` |
 | People like you | Build a taste profile from photos, retrieve evidence quotes with pgvector, compose three cards, reflect afterwards and update the profile. The same retrieval also attaches quotes to discovery results. | `apps/web` routes `/onboarding`, `/ask`, `/go`, `/reflect`, `/profile`; `/api/profile`, `/api/recommend`, `/api/reflect`, `/api/experience`, `/api/upload`; `lib/server/evidence.ts` inside `/api/discover` |
 | Maps | Same-origin, brand-styled static map images and Google photo redirects. | `GET /api/map`, `GET /api/photo` |
-| Marketing | Public landing page: what Explorin is, a few postcards, a link into the app. | `apps/marketing` |
+| Marketing | Public landing page and waitlist: what Explorin is, a few postcards, a link into the app, an email form writing to D1. | `apps/marketing` (SvelteKit on Workers) |
 
 ### Non-functional
 
@@ -33,9 +33,9 @@ Explorin helps someone find a real place to go in a city, live the outing, and k
 ## 2. High-level design
 
 ```
-                        ┌─────────────────────────┐
-   browser              │  apps/marketing (static)│  → links to the app
-                        └─────────────────────────┘
+                        ┌──────────────────────────────────────────────┐
+   browser              │ apps/marketing (SvelteKit Worker) ──► D1 waitlist│  → links to the app
+                        └──────────────────────────────────────────────┘
       │
       │ HTTPS
       ▼
@@ -179,7 +179,7 @@ None. The only "event" surface is the NDJSON stream from `/api/discover`, which 
 | Decision | Chosen | Alternative | Why, and when to revisit |
 |---|---|---|---|
 | Monorepo via npm workspaces ([ADR-0001](adr/0001-monorepo-workspaces.md)) | `apps/*`, `packages/*` | separate repos | One developer, shared brand; revisit never at this size |
-| Marketing site ([ADR-0002](adr/0002-marketing-site-static.md)) | static HTML/CSS, zero dependencies | SvelteKit/Astro app | A landing page does not need a framework; revisit when it needs a CMS, i18n or shared components |
+| Marketing site ([ADR-0006](adr/0006-marketing-on-workers-with-waitlist.md), supersedes ADR-0002) | SvelteKit on Workers, D1 waitlist | Astro; static page plus a separate Worker | Same toolchain as the app; the waitlist needed a server and storage |
 | One product ([ADR-0003](adr/0003-one-product.md), [ADR-0005](adr/0005-people-like-you-in-discovery.md)) | profile flow kept and linked; its retrieval feeds discovery | delete it, or keep two unlinked flows | "People like you" is the differentiator; discovery still works without a database |
 | Deploy targets ([ADR-0004](adr/0004-deploy-targets.md)) | adapter-node default, Cloudflare behind a flag | one target | Node is simplest for dev and the demo; Workers is where the R2 photos live |
 | In-process caches | `ttlCache` Maps | Cloudflare Cache API / KV | Simplest; revisit when running on many isolates, by caching `/api/map` and `/api/photo` responses with the Cache API (they already send `Cache-Control`) |

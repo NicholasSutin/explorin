@@ -1,6 +1,6 @@
 # ADR-0002: The marketing site is static HTML with no build dependencies
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-0006](0006-marketing-on-workers-with-waitlist.md) (the site gained a waitlist the same day)
 **Date:** 2026-10-11
 **Deciders:** Nick Sutin
 

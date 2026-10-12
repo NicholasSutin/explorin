@@ -8,6 +8,8 @@
 		"build": "npm run build:web && npm run build:marketing",
 		"build:web": "npm run build --workspace apps/web",
 		"build:marketing": "npm run build --workspace apps/marketing",
+		"check:marketing": "npm run check --workspace apps/marketing",
+		"deploy:marketing": "npm run deploy --workspace apps/marketing",
 		"dev:marketing": "npm run dev --workspace apps/marketing",
 		"check:web": "npm run check --workspace apps/web",
 		"test:web": "npm run test:e2e --workspace apps/web",
