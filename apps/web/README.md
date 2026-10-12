@@ -32,7 +32,8 @@ npx wrangler login
 npx wrangler r2 bucket create explorin-photos
 npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL"   # once; id goes in wrangler.jsonc
 cp .env.prod.example .env.prod   # fill in; gitignored
-npm run secrets:web --prefix ../..   # pushes every non-empty key as a secret (wrangler secret bulk); --dry-run lists them
+npm run secrets:web --prefix ../..          # status: what is on the Worker vs. in the file
+npm run secrets:web:update --prefix ../..   # create or overwrite every non-empty key (secrets:web:new creates only; :sync also deletes, after confirming)
 cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run preview`
 npm run deploy
 ```

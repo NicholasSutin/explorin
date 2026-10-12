@@ -25,7 +25,8 @@ Then the secrets, once each:
 
 ```bash
 cp .env.prod.example .env.prod               # TURNSTILE_SECRET_KEY, RESEND_API_KEY (optional: welcome email); gitignored
-npm run secrets:marketing --prefix ../..     # wrangler secret bulk; --dry-run lists what would be sent
+npm run secrets:marketing --prefix ../..          # status: what is on the Worker vs. in the file
+npm run secrets:marketing:update --prefix ../..   # create or overwrite (secrets:marketing:new creates only; :sync also deletes, after confirming)
 ```
 
 One-off changes still work with `npx wrangler secret put NAME`.

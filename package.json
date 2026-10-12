@@ -14,7 +14,13 @@
 		"check:web": "npm run check --workspace apps/web",
 		"test:web": "npm run test:e2e --workspace apps/web",
 		"deploy:web": "npm run deploy --workspace apps/web",
-		"secrets:web": "node scripts/push-secrets.mjs web",
-		"secrets:marketing": "node scripts/push-secrets.mjs marketing"
+		"secrets:web": "node scripts/push-secrets.mjs web status",
+		"secrets:web:new": "node scripts/push-secrets.mjs web new",
+		"secrets:web:update": "node scripts/push-secrets.mjs web update",
+		"secrets:web:sync": "node scripts/push-secrets.mjs web sync",
+		"secrets:marketing": "node scripts/push-secrets.mjs marketing status",
+		"secrets:marketing:new": "node scripts/push-secrets.mjs marketing new",
+		"secrets:marketing:update": "node scripts/push-secrets.mjs marketing update",
+		"secrets:marketing:sync": "node scripts/push-secrets.mjs marketing sync"
 	}
 }
