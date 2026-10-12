@@ -62,4 +62,4 @@ C costs a small amount of code and makes the product story coherent on the main 
 1. [x] Rebrand identifiers, titles, header and storage keys (2026-10-11).
 2. [x] Link the two surfaces in both headers; rename route group `(app)` to `(profile)`.
 3. [x] Add the `people` step to discovery (ADR-0005 step 1).
-4. [ ] Create the `explorin-photos` bucket and re-put secrets before the next Cloudflare deploy (ADR-0004).
+4. [x] `explorin-photos` bucket created (2026-10-11). Secrets still need `npx wrangler secret put` on the `explorin` Worker before the first deploy under the new name (ADR-0004).
