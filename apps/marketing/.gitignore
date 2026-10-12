@@ -1,0 +1,11 @@
+node_modules
+.svelte-kit
+.wrangler
+worker-configuration.d.ts
+# copied from packages/brand by `npm run sync-brand`
+static/brand/
+.env
+.env.*
+!.env.example
+.dev.vars
+!.env.prod.example

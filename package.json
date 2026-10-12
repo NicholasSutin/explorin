@@ -1,0 +1,26 @@
+{
+	"name": "explorin",
+	"private": true,
+	"workspaces": ["apps/*", "packages/*"],
+	"scripts": {
+		"dev": "npm run dev:web",
+		"dev:web": "npm run dev --workspace apps/web",
+		"build": "npm run build:web && npm run build:marketing",
+		"build:web": "npm run build --workspace apps/web",
+		"build:marketing": "npm run build --workspace apps/marketing",
+		"check:marketing": "npm run check --workspace apps/marketing",
+		"deploy:marketing": "npm run deploy --workspace apps/marketing",
+		"dev:marketing": "npm run dev --workspace apps/marketing",
+		"check:web": "npm run check --workspace apps/web",
+		"test:web": "npm run test:e2e --workspace apps/web",
+		"deploy:web": "npm run deploy --workspace apps/web",
+		"secrets:web": "node scripts/push-secrets.mjs web status",
+		"secrets:web:new": "node scripts/push-secrets.mjs web new",
+		"secrets:web:update": "node scripts/push-secrets.mjs web update",
+		"secrets:web:sync": "node scripts/push-secrets.mjs web sync",
+		"secrets:marketing": "node scripts/push-secrets.mjs marketing status",
+		"secrets:marketing:new": "node scripts/push-secrets.mjs marketing new",
+		"secrets:marketing:update": "node scripts/push-secrets.mjs marketing update",
+		"secrets:marketing:sync": "node scripts/push-secrets.mjs marketing sync"
+	}
+}

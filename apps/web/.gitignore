@@ -1,0 +1,41 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Cloudflare
+.dev.vars
+.wrangler
+worker-configuration.d.ts
+
+# local photo storage (dev)
+.photos
+
+# personal seed data (never commit; repo is public)
+data/personas/*.json
+
+/test-results
+/playwright-report
+
+# launch-video asset pack (generated locally, never committed)
+brag-assets/
+!.env.prod.example

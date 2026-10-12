@@ -1,0 +1,39 @@
+{
+	"name": "@explorin/marketing",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Explorin public site on Cloudflare Workers: landing page and waitlist (D1).",
+	"scripts": {
+		"sync-brand": "rm -rf static/brand && mkdir -p static/brand && cp ../../packages/brand/svg/lockup-horizontal-ink.svg ../../packages/brand/svg/lockup-horizontal-cream.svg ../../packages/brand/svg/favicon.svg ../../packages/brand/svg/pattern-tile.svg ../../packages/brand/svg/mark-orange.svg ../../packages/brand/png/og-card-green-1200.png ../../packages/brand/png/app-icon-green-180.png static/brand/",
+		"dev": "npm run sync-brand && npm run db:migrate:local && vite dev --port 4321",
+		"build": "npm run sync-brand && vite build",
+		"preview": "npm run build && wrangler dev",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && wrangler types && svelte-check --tsconfig ./tsconfig.json",
+		"db:migrate:local": "wrangler d1 migrations apply explorin-waitlist --local",
+		"db:migrate": "wrangler d1 migrations apply explorin-waitlist --remote",
+		"waitlist:export": "wrangler d1 execute explorin-waitlist --remote --command \"SELECT email, source, created_at FROM waitlist ORDER BY created_at\"",
+		"deploy": "npm run build && wrangler deploy",
+		"format": "prettier --write .",
+		"lint": "prettier --check ."
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-cloudflare": "^8.0.0",
+		"@sveltejs/kit": "^3.0.0",
+		"@sveltejs/vite-plugin-svelte": "^7.2.0",
+		"svelte": "^5.57.1",
+		"svelte-check": "^4.6.0",
+		"typescript": "^6.0.3",
+		"vite": "^8.3.0",
+		"wrangler": "^4.149.0",
+		"prettier": "^3.8.3",
+		"prettier-plugin-svelte": "^4.1.0"
+	},
+	"imports": {
+		"#lib/*": "./src/lib/*"
+	},
+	"dependencies": {
+		"zod": "^4.6.6"
+	}
+}

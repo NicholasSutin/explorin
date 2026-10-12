@@ -1,0 +1,61 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"account_id": "94015fdd2754ebfbcb440e274d9f62c8", // Cloudflare account "explorin"
+	"name": "explorin-app",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	// Public hostname. A Custom Domain needs the explorin.app zone in this account; Cloudflare creates the DNS
+	// record and certificate on deploy. explorin.app itself is the marketing site (apps/marketing).
+	"routes": [{ "pattern": "app.explorin.app", "custom_domain": true }],
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+	"observability": { "enabled": true },
+	// Photos live in R2. Create once: npx wrangler r2 bucket create explorin-photos
+	"r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "explorin-photos" }],
+	// Rate limits for the account endpoints (src/lib/server/rate-limit.ts), one binding per budget. Cloudflare's
+	// limiter is global across isolates, unlike better-auth's in-memory one, which is disabled. Each request is
+	// counted twice: once per client (IPv6 /64) and once per target email, so neither a proxy pool nor one host can
+	// hammer an account. `period` is 10 or 60 seconds only. namespace_id is unique per account.
+	// https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+	"ratelimits": [
+		{
+			"name": "RATE_LIMITER_SIGN_IN",
+			"namespace_id": "2001",
+			"simple": { "limit": 10, "period": 60 }
+		},
+		{
+			"name": "RATE_LIMITER_SIGN_UP",
+			"namespace_id": "2002",
+			"simple": { "limit": 5, "period": 60 }
+		},
+		// Anything that sends an email: verification resend, password-reset request.
+		{
+			"name": "RATE_LIMITER_EMAIL_SEND",
+			"namespace_id": "2003",
+			"simple": { "limit": 3, "period": 60 }
+		},
+		// Anything that consumes a token: password reset with a token.
+		{
+			"name": "RATE_LIMITER_TOKEN_VERIFY",
+			"namespace_id": "2004",
+			"simple": { "limit": 10, "period": 60 }
+		}
+	],
+	// Secrets (GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY, optional GOOGLE_MAPS_MAP_ID,
+	// BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY, RESEND_API_KEY) go in: npx wrangler secret put <NAME>.
+	// Defaults for the optional vars live in src/env.ts; override here with "vars" if needed.
+	// Accounts: the Turnstile widget below must belong to a Turnstile site that lists app.explorin.app.
+	"vars": {
+		"BETTER_AUTH_URL": "https://app.explorin.app",
+		"TURNSTILE_SITE_KEY": "0x4AAAAAAFUppmWr4tQ59Tnr",
+		"TURNSTILE_HOSTNAMES": "app.explorin.app",
+		"AUTH_FROM_EMAIL": "Explorin <hello@explorin.app>"
+	},
+	// Hyperdrive pools connections to the Tiger Data Postgres at the edge; every request opens its own connection
+	// (db.ts), so without it each one would pay a full TCP + TLS handshake to the database. Created once with:
+	//   npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL"
+	// Rotate the database password with: npx wrangler hyperdrive update <id> --connection-string=...
+	// Local `wrangler dev` needs WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=<DATABASE_URL> in the shell.
+	// Without the binding (or outside Workers) db.ts falls back to DATABASE_URL directly.
+	"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "95a3d14afca04acbb1274df67aff62eb" }]
+}
