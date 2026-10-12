@@ -37,16 +37,31 @@
 	</header>
 
 	<section class="hero" id="top">
-		<p class="eyebrow">Less scrolling. More stories.</p>
-		<h1>Your next adventure<br />is closer than <em>you think.</em></h1>
-		<p class="lede">
-			A quiet corner. A new favorite. A day that feels like you. Tell us what you're craving, and
-			let curiosity do the rest.
-		</p>
-		<div class="actions">
-			<a class="button" href="#waitlist">Join the waitlist &#8600;</a>
-			<a class="button ghost" href="#how">How it works</a>
+		<div class="hero-copy">
+			<p class="eyebrow">Less scrolling. More stories.</p>
+			<h1>Your next adventure<br />is closer than <em>you think.</em></h1>
+			<p class="lede">
+				A quiet corner. A new favorite. A day that feels like you. Tell us what you're craving, and
+				let curiosity do the rest.
+			</p>
+			<div class="actions">
+				<a class="button" href="#waitlist">Join the waitlist &#8600;</a>
+				<a class="button ghost" href="#how">How it works</a>
+			</div>
 		</div>
+		<figure class="hero-video postcard" style="--tilt: 1.5deg">
+			<video
+				src="https://cdn.explorin.app/brag.mp4"
+				autoplay
+				muted
+				loop
+				playsinline
+				controls
+				preload="metadata"
+				aria-label="A quick look at Explorin"
+			></video>
+			<figcaption>explorin, in sixty seconds</figcaption>
+		</figure>
 	</section>
 
 	<section class="postcards" aria-label="Postcards">

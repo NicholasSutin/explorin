@@ -137,6 +137,24 @@ em {
 
 .hero {
 	padding: 48px 0 40px;
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+	gap: 40px;
+	align-items: center;
+}
+
+.hero-video {
+	justify-self: end;
+	width: 100%;
+	max-width: 420px;
+}
+
+.hero-video video {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 3px;
+	background: var(--ink);
 }
 
 .hero .actions {
@@ -319,5 +337,12 @@ footer {
 
 	.hero {
 		padding-top: 24px;
+		grid-template-columns: 1fr;
+		gap: 28px;
+	}
+
+	.hero-video {
+		justify-self: stretch;
+		max-width: none;
 	}
 }
