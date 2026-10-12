@@ -50,7 +50,12 @@
 		"TURNSTILE_SITE_KEY": "0x4AAAAAAFUppmWr4tQ59Tnr",
 		"TURNSTILE_HOSTNAMES": "app.explorin.app,localhost",
 		"AUTH_FROM_EMAIL": "Explorin <hello@explorin.app>"
-	}
-	// Optional: Hyperdrive in front of Postgres for connection pooling at the edge.
-	// "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id>" }]
+	},
+	// Hyperdrive pools connections to the Tiger Data Postgres at the edge; every request opens its own connection
+	// (db.ts), so without it each one would pay a full TCP + TLS handshake to the database. Created once with:
+	//   npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL"
+	// Rotate the database password with: npx wrangler hyperdrive update <id> --connection-string=...
+	// Local `wrangler dev` needs WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=<DATABASE_URL> in the shell.
+	// Without the binding (or outside Workers) db.ts falls back to DATABASE_URL directly.
+	"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "95a3d14afca04acbb1274df67aff62eb" }]
 }

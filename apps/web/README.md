@@ -30,6 +30,7 @@ The default build uses adapter-node and local-disk photos. Set `DEPLOY_TARGET=cl
 ```bash
 npx wrangler login
 npx wrangler r2 bucket create explorin-photos
+npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL"   # once; id goes in wrangler.jsonc
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put NIMBLE_API_KEY

@@ -1,32 +1,51 @@
 import postgres, { type Sql } from 'postgres';
 import { getRequestEvent } from '$app/server';
 import { DATABASE_URL } from '$app/env/private';
-import { onWorkers } from '#bindings';
+import { bindings, onWorkers } from '#bindings';
 import type { Place, Profile, Traits } from '#lib/types';
 
-const options = { max: onWorkers ? 1 : 5, idle_timeout: 20, prepare: false } as const;
+/**
+ * On Workers the connection goes through Hyperdrive (wrangler.jsonc), which keeps a warm pool next to the
+ * database so each request's fresh connection is a local handshake instead of a TLS round trip to Tiger Data.
+ * Falls back to DATABASE_URL when the binding is absent. Resolved on first use, never at import: the build
+ * analyses routes with the bindings unavailable. Hyperdrive's docs suggest `fetch_types: false`, but postgres.js
+ * `reserve()` (which Kysely, and so better-auth, uses) never resolves with it off, so types stay on.
+ */
+function connect(): Sql {
+	const hyperdrive = onWorkers
+		? (bindings.HYPERDRIVE as { connectionString?: string } | undefined)?.connectionString
+		: undefined;
+	return postgres(hyperdrive ?? DATABASE_URL, {
+		max: onWorkers ? 1 : 5,
+		idle_timeout: 20,
+		prepare: false
+	});
+}
 
-/** One shared pool on Node. On Workers it only serves work that runs outside any request. */
-const shared: Sql = postgres(DATABASE_URL, options);
+/** The dev server's shared pool. On Workers it only serves work that runs outside any request. */
+let shared: Sql | undefined;
+const sharedSql = () => (shared ??= connect());
 
 /**
  * The connection for the current request. Workers forbid using a socket opened by one request from
  * another, so there each request gets its own single-connection instance, created on first use and
- * closed by hooks.server.ts when the response body finishes. On Node the shared pool is returned.
+ * closed by hooks.server.ts when the response body finishes. The dev server returns its shared pool.
  */
 export function requestSql(): Sql {
-	if (!onWorkers) return shared;
+	if (!onWorkers) return sharedSql();
 	let locals: App.Locals;
 	try {
 		locals = getRequestEvent().locals;
 	} catch {
-		return shared; // not inside a request (build analysis, background work)
+		return sharedSql(); // not inside a request (build analysis, background work)
 	}
-	return (locals.sql ??= postgres(DATABASE_URL, options));
+	return (locals.sql ??= connect());
 }
 
 /** Tagged-template client that always resolves to `requestSql()`; use it like a plain postgres.js `sql`. */
-export const sql: Sql = new Proxy(shared, {
+export const sql: Sql = new Proxy((() => {}) as unknown as Sql, {
+	// `has` matters too: kysely-postgres-js tells an instance from a factory by `'reserve' in sql`.
+	has: (_t, key) => Reflect.has(requestSql(), key),
 	get: (_t, key) => Reflect.get(requestSql(), key),
 	apply: (_t, thisArg, args) =>
 		Reflect.apply(requestSql() as unknown as (...a: unknown[]) => unknown, thisArg, args)
