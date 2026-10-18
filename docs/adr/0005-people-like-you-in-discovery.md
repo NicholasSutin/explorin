@@ -1,6 +1,6 @@
 # ADR-0005: "People like you" quotes inside discovery
 
-**Status:** Accepted (step 1 implemented; step 2 planned)
+**Status:** Superseded in part by [ADR-0007](0007-sign-in-first-single-flow.md) (was Accepted; step 1 implemented, step 2 planned)
 **Update (2026-10-17):** Superseded in part by [ADR-0007](0007-sign-in-first-single-flow.md): the same retrieval now runs inside the planner, weighted by the taste embedding.
 **Date:** 2026-10-11
 **Deciders:** Nick Sutin

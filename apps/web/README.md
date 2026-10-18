@@ -9,7 +9,7 @@ Sign up, tell Explorin what you like (a few words and a quick tier list), plan a
 ```bash
 cp .env.example .env     # fill in keys (each one is explained there)
 npm install              # from the repo root
-npm run db:migrate       # applies scripts/schema.sql (idempotent)
+npm run db:migrate       # dry run: lists pending migrations (ADR-0009); add -- --apply to run them
 npm run db:seed          # optional: curated places
 npm run db:seed-reflections   # optional: seed "people like you" quotes
 npm run dev              # http://localhost:5173
@@ -44,15 +44,14 @@ node ../../node_modules/@playwright/test/cli.js test tests/auth.spec.ts   # guar
 
 ## Layout
 
-| Path | What |
-|---|---|
-| `src/routes/welcome` | guest landing |
-| `src/routes/(auth)` | sign-up link, password, sign-in, reset |
-| `src/routes/(onboarding)` | about you, tier list |
-| `src/routes/(app)` | home (plan), scrapbook, settings, with the tab bar |
-| `src/routes/(trip)` | trip map and the end-of-day reflection |
-| `src/lib/server` | plan, taste, trips, keepsake, account, usage, happenings, geocode, places, nimble, gemini |
-| `src/lib/scrapbook`, `src/lib/components/scrapbook` | page layout, SVG pages, book, export |
-| `src/lib/gmaps.ts`, `src/lib/components/trip` | trip map, sheet, hand-off |
-| `static/taste` | tier-list photos (Unsplash License; credits in `src/lib/taste-credits.json`) |
-| `legacy/` | the hackathon flows, not built; delete when no longer needed |
+| Path                                                | What                                                                                      |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `src/routes/welcome`                                | guest landing                                                                             |
+| `src/routes/(auth)`                                 | sign-up link, password, sign-in, reset                                                    |
+| `src/routes/(onboarding)`                           | about you, tier list                                                                      |
+| `src/routes/(app)`                                  | home (plan), scrapbook, settings, with the tab bar                                        |
+| `src/routes/(trip)`                                 | trip map and the end-of-day reflection                                                    |
+| `src/lib/server`                                    | plan, taste, trips, keepsake, account, usage, happenings, geocode, places, nimble, gemini |
+| `src/lib/scrapbook`, `src/lib/components/scrapbook` | page layout, SVG pages, book, export                                                      |
+| `src/lib/gmaps.ts`, `src/lib/components/trip`       | trip map, sheet, hand-off                                                                 |
+| `static/taste`                                      | tier-list photos (Unsplash License; credits in `src/lib/taste-credits.json`)              |

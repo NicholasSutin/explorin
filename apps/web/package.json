@@ -17,7 +17,7 @@
 		"db:seed-reflections": "node --env-file=.env --import tsx scripts/seed-reflections.ts",
 		"ingest": "node --env-file=.env --import tsx scripts/ingest-reviews.ts",
 		"nimble:smoke": "node --env-file=.env --import tsx scripts/nimble-smoke.ts",
-		"setup": "npm run db:migrate && npm run db:seed",
+		"setup": "npm run db:migrate -- --apply && npm run db:seed",
 		"deploy": "DEPLOY_TARGET=cloudflare vite build && wrangler deploy",
 		"cf:types": "wrangler types",
 		"build:cf": "DEPLOY_TARGET=cloudflare vite build",

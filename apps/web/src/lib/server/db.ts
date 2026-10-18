@@ -18,6 +18,9 @@ function connect(): Sql {
 	return postgres(hyperdrive ?? DATABASE_URL, {
 		max: onWorkers ? 1 : 5,
 		idle_timeout: 20,
+		// Also what keeps Hyperdrive's query cache (60 s + 15 s stale by default) away from session and onboarding
+		// reads: it cannot cache postgres.js queries sent unprepared. With `prepare: true` a sign-out or an
+		// `onboardedAt` change could take over a minute to show.
 		prepare: false
 	});
 }
@@ -73,7 +76,7 @@ export function sqlFor(locals: App.Locals): Sql {
 	return onWorkers ? (locals.sql ??= connect()) : sharedSql();
 }
 
-/** Upsert a Maps-grounded place by google_place_id. Returns the row. */
+/** The places row for a Google place: matched by place id, else by name, else created. Returns the row. */
 export async function upsertGroundedPlace(p: {
 	placeId: string;
 	title: string;
@@ -87,7 +90,7 @@ export async function upsertGroundedPlace(p: {
 			await sql`UPDATE places SET google_place_id = ${p.placeId}, maps_url = COALESCE(maps_url, ${p.uri}) WHERE id = ${existing[0].id}`;
 		return existing[0];
 	}
-	// Another request (or the background Maps enrichment) may insert the same name first: merge instead of failing.
+	// Another request may insert the same name first: merge instead of failing.
 	const rows = await sql<Place[]>`
 		INSERT INTO places (google_place_id, name, maps_url, tags) VALUES (${p.placeId}, ${p.title}, ${p.uri}, '{}')
 		ON CONFLICT (name) DO UPDATE SET google_place_id = COALESCE(places.google_place_id, EXCLUDED.google_place_id),

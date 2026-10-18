@@ -10,7 +10,8 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
 	const taste = await getTaste(user.id);
-	if (!taste) redirect(303, '/onboarding?back');
+	// No blurb means About-you is not done yet. `?edit` lets onboarded accounts (Settings → Re-grade) through the guard.
+	if (!taste?.blurb) redirect(303, '/onboarding?edit');
 	let ids = taste.offered;
 	if (!ids.length) {
 		ids = await nextCategories(taste, [], FIRST_ROUND);

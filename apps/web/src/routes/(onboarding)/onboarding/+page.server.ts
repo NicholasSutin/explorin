@@ -21,8 +21,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = locals.user!;
 	const taste = await getTaste(user.id);
 	const homeCity = (user.homeCity as string | null | undefined) ?? '';
-	// Step 1 already done and they did not come back on purpose: resume at the tier list.
-	if (taste && homeCity && !url.searchParams.has('back')) redirect(303, '/onboarding/taste');
+	// Step 1 already done and they did not come back on purpose: resume at the tier list. A taste row without a
+	// blurb is an account from the old onboarding (migration 0001): it still has About-you to fill in.
+	if (taste?.blurb && homeCity && !url.searchParams.has('back')) redirect(303, '/onboarding/taste');
 	return {
 		name: user.name ?? '',
 		homeCity: homeCity || 'New York City',

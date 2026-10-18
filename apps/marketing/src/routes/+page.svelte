@@ -101,8 +101,8 @@
 			<li>
 				<h3>Keep the feeling</h3>
 				<p>
-					Your notes and photos become a scrapbook you can download or share. Photos stay on your
-					device.
+					Your notes and photos become a scrapbook you can download or share. Your photos are
+					private to your account until you share them.
 				</p>
 			</li>
 		</ol>

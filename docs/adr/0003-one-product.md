@@ -1,6 +1,6 @@
 # ADR-0003: Explorin is one product; the profile flow is part of it
 
-**Status:** Accepted (supersedes the "keep isolated, decide later" proposal of the same day)
+**Status:** Superseded in part by [ADR-0007](0007-sign-in-first-single-flow.md) (was Accepted; it superseded the "keep isolated, decide later" proposal of the same day)
 **Update (2026-10-17):** Superseded in part by [ADR-0007](0007-sign-in-first-single-flow.md): one flow, sign-in first, taste from a tier list instead of photos.
 **Date:** 2026-10-11
 **Deciders:** Nick Sutin

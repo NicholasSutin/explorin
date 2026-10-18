@@ -161,7 +161,7 @@ Upstream wrappers return `null`/`[]` and never cache failures. `adventureAI` is 
 | Sign-in first ([ADR-0007](adr/0007-sign-in-first-single-flow.md)) | one flow, accounts required | guest demo beside it | a public "try it" is wanted (needs its own budget) |
 | Trip map ([ADR-0008](adr/0008-trip-map-on-google-maps.md)) | Google Maps JS, JSON style, overlay markers | MapLibre + OSM | Places stops being the data source |
 | Happenings | NYC Open Data permitted events | event APIs (Ticketmaster, Eventbrite) | a second city launches |
-| Migrations | one idempotent `schema.sql` | a migration tool | the first destructive change |
+| Migrations ([ADR-0009](adr/0009-versioned-migrations.md)) | idempotent `schema.sql` + numbered SQL files, dry run by default | a migration tool with down-migrations | dev and prod stop sharing one database, or migrations need to run from CI |
 | Caches | in-process `ttlCache` | Cache API / KV | traffic spans many isolates (photo and map proxies first) |
 | Credits | soft per-person monthly cap | per-plan pricing, paid tiers | costs or abuse show up in `usage_events` |
 | Scrapbook export | SVG layers + canvas | server-side rendering | a format needs fonts or images the browser can't embed |
