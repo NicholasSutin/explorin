@@ -401,9 +401,11 @@ export function layoutPage(trip: Trip, format: Format, pageNumber?: number): Pag
 					ring: `${trip.city.toUpperCase()} · ${shortDate(trip.finishedAt ?? trip.createdAt)} · `
 				}
 			: null,
+		// The list keeps its place even when the map grows into the photo area: below the grown stamp is where
+		// the note goes, and the spot the small stamp would have taken stays free.
 		stops: {
-			x: n || !map ? p.stops.x : p.m,
-			y: n || !map ? p.stops.y : R.y + R.h + p.stops.lineH,
+			x: p.stops.x,
+			y: p.stops.y,
 			size: p.stops.size,
 			lineH: p.stops.lineH,
 			items: planned.slice(0, p.stops.max).map((s, i) => ({
