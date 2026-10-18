@@ -3,7 +3,7 @@
 	 * The scrapbook: every finished day as a page in a cloth-bound book. /scrapbook/<trip id> opens at that day;
 	 * right after saving a day (?new=1) the book turns to it and opens the share sheet.
 	 */
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { page as appPage } from '$app/state';
 	import { goto } from '$app/navigation';
 	import Share from '@lucide/svelte/icons/share';
@@ -56,10 +56,8 @@
 		const target = pageOf(id);
 		const fresh = appPage.url.searchParams.has('new');
 		if (fresh) {
-			// Start one page early so the new day turns into view, then offer to share it.
-			current = Math.max(0, target - 1);
-			await tick();
-			setTimeout(() => book?.jump(target), 350);
+			// The new day turns into view, then the share sheet offers it.
+			await book?.reveal(target);
 			setTimeout(() => openShare(trips.find((t) => t.id === id) ?? null), 1300);
 			goto(`/scrapbook/${id}`, { state: {}, shallow: true, replace: true });
 		} else current = target;
@@ -125,4 +123,4 @@
 	{/if}
 </div>
 
-{#if sharing}<ShareDialog trip={sharing} bind:open={shareOpen} />{/if}
+{#if sharing}{#key sharing.id}<ShareDialog trip={sharing} bind:open={shareOpen} />{/key}{/if}

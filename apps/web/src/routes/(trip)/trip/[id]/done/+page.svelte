@@ -104,7 +104,7 @@
 			});
 			title = draft.title;
 			story = draft.story;
-			picked = draft.bestForOptions.slice(0, 2);
+			picked = [];
 			learned = [];
 			step = 2;
 			window.scrollTo({ top: 0 });
@@ -113,6 +113,17 @@
 		} finally {
 			busy = '';
 		}
+	}
+
+	/** Grow a text box with what is in it, so the title and story are never cut off. */
+	function autosize(el: HTMLTextAreaElement) {
+		const fit = () => {
+			el.style.height = 'auto';
+			el.style.height = `${el.scrollHeight}px`;
+		};
+		fit();
+		el.addEventListener('input', fit);
+		return { destroy: () => el.removeEventListener('input', fit) };
 	}
 
 	function pick(b: string) {
@@ -221,7 +232,9 @@
 					: 'From your note'}
 			</p>
 			<h1 class="mt-1 font-serif text-4xl leading-tight font-semibold">Who’s this day best for?</h1>
-			<p class="mt-2 text-ink/70">Pick up to {BEST_FOR_MAX}. They become stickers on your page.</p>
+			<p class="mt-2 text-ink/70">
+				Pick up to {BEST_FOR_MAX}, or none. They become stickers on your page.
+			</p>
 			<div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Best for">
 				{#each draft.bestForOptions as b (b)}
 					{@const on = picked.includes(b)}
@@ -243,12 +256,15 @@
 				<label for="title" class="text-xs font-semibold tracking-wide text-ink/55 uppercase"
 					>Page title</label
 				>
-				<input
+				<textarea
 					id="title"
 					bind:value={title}
+					use:autosize
 					maxlength="80"
-					class="mt-1 w-full border-b border-ink/15 bg-transparent pb-1 font-serif text-2xl font-semibold outline-none focus:border-green"
-				/>
+					rows="1"
+					onkeydown={(e) => e.key === 'Enter' && e.preventDefault()}
+					class="mt-1 w-full resize-none border-b border-ink/15 bg-transparent pb-1 font-serif text-2xl leading-tight font-semibold outline-none focus:border-green"
+				></textarea>
 				<label
 					for="story"
 					class="mt-5 block text-xs font-semibold tracking-wide text-ink/55 uppercase"
@@ -257,9 +273,11 @@
 				<textarea
 					id="story"
 					bind:value={story}
+					use:autosize
 					maxlength="900"
-					rows="4"
+					rows="3"
 					class="mt-1 w-full resize-none bg-transparent text-ink/85 outline-none"></textarea>
+				<p class="text-xs text-ink/45">This goes on your page, in your handwriting.</p>
 				{#if draft.emotions.length}
 					<div class="mt-3 flex flex-wrap gap-1.5">
 						{#each draft.emotions as e (e)}<span class="rounded-full bg-moss px-2.5 py-1 text-xs"

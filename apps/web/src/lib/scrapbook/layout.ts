@@ -201,7 +201,10 @@ export function wrap(
 	if (line && lines.length < maxLines) lines.push(line);
 	const used = lines.join(' ').length;
 	if (used < words.join(' ').length - 1 && lines.length) {
-		const last = lines[lines.length - 1];
+		// Make room for the ellipsis by dropping whole words; only a lone over-long word is cut.
+		const kept = lines[lines.length - 1].split(' ');
+		while (kept.length > 1 && kept.join(' ').length > per - 1) kept.pop();
+		const last = kept.join(' ');
 		lines[lines.length - 1] =
 			(last.length > per - 1 ? last.slice(0, per - 1) : last).replace(/[,.;:!?\s]+$/, '') + '…';
 	}
@@ -220,11 +223,14 @@ export function shortDate(iso: string | null) {
 		.toUpperCase();
 }
 
-/** The static paper-style map behind the stamp: a Google map, as Places-derived coordinates require. */
+/**
+ * The static paper-style map behind the stamp: a Google map, as Places-derived coordinates require. Pins sit on the
+ * places; where a check-in was tapped is only a fallback for a stop without coordinates.
+ */
 export function stampMap(trip: Trip, px: number): string | null {
 	const pts = trip.stops
-		.filter((s) => s.inPlan && (s.visitedFrom || s.coords))
-		.map((s) => s.visitedFrom ?? s.coords!)
+		.filter((s) => s.inPlan && (s.coords || s.visitedFrom))
+		.map((s) => s.coords ?? s.visitedFrom!)
 		.slice(0, 12);
 	if (!pts.length) return null;
 	const size = Math.min(640, Math.round(px));
@@ -342,7 +348,8 @@ export function layoutPage(trip: Trip, format: Format, pageNumber?: number): Pag
 			rot: 0
 		});
 
-	const noteText = trip.note || trip.story || '';
+	// The story they reviewed on the last step; their raw note if they cleared it.
+	const noteText = trip.story || trip.note || '';
 	const noteW = p.w - 2 * p.m;
 	const note = {
 		x: p.m,
@@ -354,25 +361,41 @@ export function layoutPage(trip: Trip, format: Format, pageNumber?: number): Pag
 		ruled: p.note.lines
 	};
 
-	// Stickers: up to three, left to right with a little tilt each.
+	// Stickers: up to three, left to right with a little tilt each, shrunk (to 70% at most) to fit one row.
+	const labels = trip.bestFor.slice(0, 3).map((text) => text.toUpperCase());
+	const rowAt = (size: number) =>
+		labels.reduce((m, label) => m + label.length * size * 0.66 + size * 2.2, 0) +
+		Math.max(0, labels.length - 1) * size * 1.1;
+	const room = (p.w - 2 * p.m) * 0.97;
+	const size = Math.max(
+		p.stickerSize * 0.7,
+		Math.min(p.stickerSize, (p.stickerSize * room) / (rowAt(p.stickerSize) || 1))
+	);
 	const stickers: Sticker[] = [];
 	let sx = p.m;
-	trip.bestFor.slice(0, 3).forEach((text, i) => {
-		const label = text.toUpperCase();
-		const w = label.length * p.stickerSize * 0.66 + p.stickerSize * 2.2;
-		const h = p.stickerSize * 2.5;
+	labels.forEach((label, i) => {
+		const w = label.length * size * 0.66 + size * 2.2;
+		const h = size * 2.5;
 		if (sx + w > p.w - p.m) return;
 		stickers.push({
 			x: sx,
-			y: p.stickersY + jitter(p.stickerSize * 0.4),
+			y: p.stickersY + (p.stickerSize - size) * 1.25 + jitter(size * 0.4),
 			w,
 			h,
 			rot: jitter(5),
 			text: label,
 			...STICKERS[i % 3]
 		});
-		sx += w + p.stickerSize * 1.1;
+		sx += w + size * 1.1;
 	});
+
+	// The stop list: the first few, and the highlight in its own numbered place when it falls past them.
+	const listed = planned.map((s, i) => ({ s, n: i + 1 }));
+	const starAt = listed.findIndex(({ s }) => s.id === trip.highlightStopId);
+	const shown =
+		listed.length <= p.stops.max || starAt < p.stops.max
+			? listed.slice(0, p.stops.max)
+			: [...listed.slice(0, p.stops.max - 1), listed[starAt]];
 
 	const highlight = trip.highlightStopId;
 	return {
@@ -408,8 +431,8 @@ export function layoutPage(trip: Trip, format: Format, pageNumber?: number): Pag
 			y: p.stops.y,
 			size: p.stops.size,
 			lineH: p.stops.lineH,
-			items: planned.slice(0, p.stops.max).map((s, i) => ({
-				n: i + 1,
+			items: shown.map(({ s, n }) => ({
+				n,
 				name: wrap(s.place, p.stops.w - p.stops.size * 2, p.stops.size, 0.5, 1)[0] ?? s.place,
 				visited: Boolean(s.visitedAt),
 				star: s.id === highlight

@@ -14,7 +14,7 @@
 	 * previous leaf's back on the left); phones show one page and turn it away to the left. Swipe, arrow keys or
 	 * the buttons turn pages; `flip` off (or reduced motion) swaps pages without the animation.
 	 */
-	import { onMount, type Snippet } from 'svelte';
+	import { onMount, tick, type Snippet } from 'svelte';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
@@ -87,8 +87,18 @@
 		}
 		page = wide ? target * 2 : target;
 	}
+	/** Show page `p`, turning leaves as needed; `page` is then exactly `p`, even within the open spread. */
 	export function jump(p: number) {
-		go(wide ? Math.ceil(p / 2) : p);
+		const target = Math.max(0, Math.min(list.length - 1, p));
+		go(wide ? Math.ceil(target / 2) : target);
+		page = target;
+	}
+	/** Open the book one leaf before page `p`, then turn to it, so a new page arrives with a turn. */
+	export async function reveal(p: number) {
+		const leaf = wide ? Math.ceil(p / 2) : p;
+		page = Math.max(0, wide ? (leaf - 1) * 2 : leaf - 1);
+		await tick();
+		setTimeout(() => jump(p), 350);
 	}
 	const next = () => go(turned + 1);
 	const prev = () => go(turned - 1);
@@ -118,9 +128,12 @@
 	bind:clientWidth={width}
 	bind:clientHeight={height}
 >
+	<!-- A closed book (cover only) slides to the centre on wide screens instead of showing an empty left page. -->
 	<div
 		class="book relative touch-pan-y select-none {wide ? '' : 'overflow-hidden rounded-r-md'}"
-		style="width: {wide ? pw * 2 : pw}px; height: {ph}px; perspective: {pw * 4}px"
+		class:closed={wide && turned === 0}
+		style="width: {wide ? pw * 2 : pw}px; height: {ph}px; perspective: {pw * 4}px; --shift: {-pw /
+			2}px"
 		onpointerdown={down}
 		onpointerup={up}
 		role="region"
@@ -129,10 +142,10 @@
 	>
 		{#if wide}
 			<!-- page edges under the spread -->
-			<div
-				class="absolute inset-y-1 left-0 w-1/2 rounded-l-md bg-[#e9e1c9] shadow-[0_18px_40px_-16px_rgba(32,61,50,0.55)]"
-				style="transform: translateX(-4px)"
-			></div>
+			{#if turned > 0}<div
+					class="absolute inset-y-1 left-0 w-1/2 rounded-l-md bg-[#e9e1c9] shadow-[0_18px_40px_-16px_rgba(32,61,50,0.55)]"
+					style="transform: translateX(-4px)"
+				></div>{/if}
 			<div
 				class="absolute inset-y-1 right-0 w-1/2 rounded-r-md bg-[#e9e1c9] shadow-[0_18px_40px_-16px_rgba(32,61,50,0.55)]"
 				style="transform: translateX(4px)"
@@ -162,7 +175,7 @@
 				</div>
 			</div>
 		{/each}
-		{#if wide}<div
+		{#if wide && turned > 0}<div
 				class="pointer-events-none absolute inset-y-0 left-1/2 z-[900] w-8 -translate-x-1/2 bg-gradient-to-r from-transparent via-ink/15 to-transparent"
 			></div>{/if}
 	</div>
@@ -193,6 +206,12 @@
 </div>
 
 <style>
+	.book {
+		transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+	}
+	.book.closed {
+		transform: translateX(var(--shift));
+	}
 	.leaf {
 		transform-style: preserve-3d;
 		transform-origin: left center;

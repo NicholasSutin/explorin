@@ -63,6 +63,11 @@
 		const f = format;
 		render(f);
 	});
+	// "Image saved." belongs to the image it was said about.
+	$effect(() => {
+		void format;
+		if (open) status = '';
+	});
 	$effect(() => {
 		const file = files[format];
 		if (!file) return;
@@ -111,7 +116,7 @@
 			class="max-h-[94dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-paper p-5 sm:rounded-3xl"
 			role="dialog"
 			aria-modal="true"
-			aria-label="Share this page"
+			aria-labelledby="share-heading"
 			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.key === 'Escape' && close()}
@@ -119,7 +124,7 @@
 			style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom))"
 		>
 			<div class="flex items-center justify-between">
-				<h2 class="font-serif text-2xl font-semibold">Share this day</h2>
+				<h2 id="share-heading" class="font-serif text-2xl font-semibold">Share this day</h2>
 				<button
 					type="button"
 					onclick={close}
