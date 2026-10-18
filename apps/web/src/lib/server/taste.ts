@@ -9,6 +9,9 @@ import {
 	FIRST_ROUND,
 	GRADES,
 	isCategory,
+	LEARNED_CHARS,
+	LEARNED_MAX,
+	LEARNED_PER_TRIP,
 	rankCategories,
 	tasteSummary,
 	type Grades
@@ -25,6 +28,10 @@ export interface Taste {
 	offered: string[];
 	summary: string | null;
 	flipAnimations: boolean;
+	/** Phrases kept from trip notes, newest first. */
+	learned: string[];
+	/** Phrases removed in Settings; drafts never suggest them again. */
+	forgotten: string[];
 	updatedAt: string | null;
 }
 
@@ -36,6 +43,8 @@ const EMPTY: Taste = {
 	offered: [],
 	summary: null,
 	flipAnimations: true,
+	learned: [],
+	forgotten: [],
 	updatedAt: null
 };
 
@@ -49,9 +58,11 @@ export async function getTaste(uid: string): Promise<Taste | null> {
 			offered: string[];
 			summary: string | null;
 			flip_animations: boolean;
+			learned: string[];
+			forgotten: string[];
 			updated_at: Date;
 		}[]
-	>`SELECT blurb, interests, audience, grades, offered, summary, flip_animations, updated_at
+	>`SELECT blurb, interests, audience, grades, offered, summary, flip_animations, learned, forgotten, updated_at
 	  FROM taste WHERE user_id = ${uid}`;
 	if (!row) return null;
 	return {
@@ -62,6 +73,8 @@ export async function getTaste(uid: string): Promise<Taste | null> {
 		offered: row.offered,
 		summary: row.summary,
 		flipAnimations: row.flip_animations,
+		learned: row.learned,
+		forgotten: row.forgotten,
 		updatedAt: row.updated_at.toISOString()
 	};
 }
@@ -119,6 +132,77 @@ export async function saveGrades(
 
 export async function setFlipAnimations(uid: string, on: boolean) {
 	await sql`UPDATE taste SET flip_animations = ${on}, updated_at = now() WHERE user_id = ${uid}`;
+}
+
+/** One learned phrase as stored: single-spaced, no control characters, within the length cap. */
+function cleanPhrase(p: string): string {
+	return p
+		.replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.replace(/[.;]+$/, '')
+		.slice(0, LEARNED_CHARS)
+		.trim();
+}
+
+/**
+ * Topics a learned phrase must never carry: health and bodies, beliefs, sexuality and relationships, politics,
+ * ethnicity, money trouble. The draft prompt already says so; this is the server-side backstop for when the model
+ * does not listen, applied to the draft's suggestions and again to whatever /finish is sent.
+ */
+const SENSITIVE =
+	/\b(health\w*|ill|illness|injur\w*|surger\w*|disab\w*|wheelchair|pregnan\w*|diabet\w*|allerg\w*|medic\w*|therap\w*|depress\w*|anxi\w*|adhd|autis\w*|sober|alcoholi\w*|religio\w*|pray\w*|faith|god|muslim|christian|catholic|jewish|hindu|buddhis\w*|gay|lesbian|queer|bisexual|trans|transgender|sexual\w*|girlfriend|boyfriend|husband|wife|politic\w*|democrat\w*|republican\w*|vot(e|es|ing)|ethnic\w*|racial|immigra\w*|broke|debt\w*|unemploy\w*|salary|income)\b/i;
+
+/**
+ * The phrases worth offering or keeping, in order: cleaned, at least 3 characters, no sensitive topic, none
+ * already in `exclude` (case-insensitive), at most LEARNED_PER_TRIP.
+ */
+export function keepablePhrases(phrases: string[], exclude: string[] = []): string[] {
+	const skip = new Set(exclude.map((p) => p.toLowerCase()));
+	const out: string[] = [];
+	for (const p of phrases.map(cleanPhrase)) {
+		if (p.length < 3 || SENSITIVE.test(p) || skip.has(p.toLowerCase())) continue;
+		skip.add(p.toLowerCase());
+		out.push(p);
+	}
+	return out.slice(0, LEARNED_PER_TRIP);
+}
+
+/**
+ * Remember phrases the person kept from a trip note (newest first, case-insensitive duplicates dropped, at most
+ * LEARNED_MAX), then refresh the summary so the planner and "people like you" use them. A repeated finish
+ * request finds nothing new and does no work. The merge is one UPDATE, so concurrent requests cannot lose a phrase.
+ */
+export async function addLearned(uid: string, name: string | null, phrases: string[]) {
+	const current = await getTaste(uid);
+	if (!current) return;
+	const fresh = keepablePhrases(phrases, current.learned);
+	if (!fresh.length) return;
+	await sql`
+		UPDATE taste SET learned = ARRAY(
+		    SELECT p FROM (
+		      SELECT DISTINCT ON (lower(p)) p, ord
+		      FROM unnest(${fresh}::text[] || learned) WITH ORDINALITY AS x(p, ord)
+		      ORDER BY lower(p), ord
+		    ) d
+		    ORDER BY ord LIMIT ${LEARNED_MAX}),
+		  updated_at = now()
+		WHERE user_id = ${uid}`;
+	await refreshSummary(uid, name);
+}
+
+/**
+ * Forget one learned phrase (Settings) and refresh the summary. It is also added to `forgotten` (newest first,
+ * at most 50) so later drafts don't suggest it again.
+ */
+export async function forgetLearned(uid: string, name: string | null, phrase: string) {
+	const [row] = await sql`
+		UPDATE taste SET learned = array_remove(learned, ${phrase}),
+		  forgotten = (ARRAY[${phrase}::text] || array_remove(forgotten, ${phrase}))[1:50],
+		  updated_at = now()
+		WHERE user_id = ${uid} AND ${phrase} = ANY(learned)
+		RETURNING 1`;
+	if (row) await refreshSummary(uid, name);
 }
 
 const pickSchema = z.object({ ids: z.array(z.string()).max(20) });

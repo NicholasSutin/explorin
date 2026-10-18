@@ -1,9 +1,13 @@
 <script lang="ts">
-	/** Settings: profile, what you like, taste, scrapbook motion, usage, password, sign out, delete everything. */
+	/**
+	 * Settings: profile, what you like, taste, what trips taught Explorin, scrapbook motion, usage, password,
+	 * sign out, delete everything.
+	 */
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import Check from '@lucide/svelte/icons/check';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import X from '@lucide/svelte/icons/x';
 	import { AUDIENCES, INTERESTS } from '#lib/taste';
 	import TierBoard from '#lib/components/TierBoard.svelte';
 	import UsageCard from '#lib/components/UsageCard.svelte';
@@ -160,6 +164,41 @@
 				<Check size={15} aria-hidden="true" />Taste saved; your next plan uses it.
 			</p>{/if}
 		<div class="mt-4"><TierBoard grades={data.taste.grades} compact /></div>
+	</section>
+
+	<section class={card} aria-labelledby="s-learned">
+		<h2 id="s-learned" class={h2}>Learned from your trips</h2>
+		<p class="mt-1 text-sm text-ink/60">
+			Phrases you kept from your trip notes. Your plans take them into account.
+		</p>
+		{#if data.taste.learned.length}
+			<ul class="mt-4 flex flex-wrap gap-2">
+				{#each data.taste.learned as phrase (phrase)}
+					<li class="flex items-center gap-1 rounded-full bg-moss py-1 pr-1 pl-3 text-sm">
+						{phrase}
+						<form
+							method="POST"
+							action="?/forget"
+							use:enhance={() =>
+								async ({ update }) =>
+									update({ reset: false })}
+						>
+							<input type="hidden" name="phrase" value={phrase} />
+							<button
+								aria-label="Forget “{phrase}”"
+								class="grid h-8 w-8 place-items-center rounded-full hover:bg-ink/10"
+								><X size={14} aria-hidden="true" /></button
+							>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="mt-4 text-sm text-ink/50">
+				Nothing yet. After a trip, Explorin may suggest a phrase or two from your note, and you
+				choose what it keeps.
+			</p>
+		{/if}
 	</section>
 
 	<section class={card} aria-labelledby="s-book">

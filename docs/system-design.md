@@ -8,16 +8,16 @@ Explorin learns what someone likes, plans a day of real places around it, walks 
 
 ### Functional
 
-| Flow       | What it does                                                                                                                                                                                                                           | Where                                                              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Account    | Email-link sign-up, password, sign-in, reset. Every page needs an account ([ADR-0007](adr/0007-sign-in-first-single-flow.md)).                                                                                                         | `(auth)/*`, `/api/auth/*`, `hooks.server.ts`                       |
-| Onboarding | Name, home city, a free-text blurb, interests, who they plan for; then a tier list (S+, A+, A, B, C, NO) over ~10 photo cards that Gemini picks from a 31-card catalog.                                                                | `/onboarding`, `/onboarding/taste`, `/api/taste`                   |
-| Plan       | Today's request + taste → Nimble search ×2 → Gemini picks 5–7 real places → Places verifies → walking order → NYC happenings → "people like you" quotes → a saved trip. Streams its progress.                                          | `/` (home), `POST /api/plan`                                       |
-| Trip       | Interactive Google map (paper style): stop pins, trail, happenings, tappable landmarks, live position, check-in (auto-prompted within 70 m), hand-off to Apple or Google Maps per stop, on-demand Google reviews.                      | `/trip/[id]`, `/api/trip/*`, `/api/place/*`                        |
-| Reflect    | Note (typed or dictated), up to 4 photos, highlight stop; Gemini drafts title, story, emotions, a quotable line and six "best for" tags; keep up to 3. The note becomes a "people like you" reflection (one line shared with consent). | `/trip/[id]/done`, `/api/trip/[id]/draft`, `/api/trip/[id]/finish` |
-| Scrapbook  | Finished days as SVG pages in a cloth-bound book with 3D page turns (optional). Share as Story 9:16, Post 4:5 or Page 3:4 PNG through the native share sheet, or download.                                                             | `/scrapbook/[[id]]`                                                |
-| Settings   | Edit profile and taste, re-grade, page-flip toggle, usage this month (credits by service and by day), change password, sign out, delete everything.                                                                                    | `/settings`                                                        |
-| Marketing  | Landing page and waitlist (D1, Turnstile, Resend).                                                                                                                                                                                     | `apps/marketing`                                                   |
+| Flow       | What it does                                                                                                                                                                                                                                                                                                                                                                                 | Where                                                              |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Account    | Email-link sign-up, password, sign-in, reset. Every page needs an account ([ADR-0007](adr/0007-sign-in-first-single-flow.md)).                                                                                                                                                                                                                                                               | `(auth)/*`, `/api/auth/*`, `hooks.server.ts`                       |
+| Onboarding | Name, home city, a free-text blurb, interests, who they plan for; then a tier list (S+, A+, A, B, C, NO) over ~10 photo cards that Gemini picks from a 31-card catalog.                                                                                                                                                                                                                      | `/onboarding`, `/onboarding/taste`, `/api/taste`                   |
+| Plan       | Today's request + taste → Nimble search ×2 → Gemini picks 5–7 real places → Places verifies → walking order → NYC happenings → "people like you" quotes → a saved trip. Streams its progress.                                                                                                                                                                                                | `/` (home), `POST /api/plan`                                       |
+| Trip       | Interactive Google map (paper style): stop pins, trail, happenings, tappable landmarks, live position, check-in (auto-prompted within 70 m), hand-off to Apple or Google Maps per stop, on-demand Google reviews.                                                                                                                                                                            | `/trip/[id]`, `/api/trip/*`, `/api/place/*`                        |
+| Reflect    | Note (typed or dictated), up to 4 photos, highlight stop; Gemini drafts title, story, emotions, a quotable line and six "best for" tags; keep up to 3. It may also suggest up to two phrases the note reveals about the person ("Explorin can remember"), kept only if tapped and never on sensitive topics. The note becomes a "people like you" reflection (one line shared with consent). | `/trip/[id]/done`, `/api/trip/[id]/draft`, `/api/trip/[id]/finish` |
+| Scrapbook  | Finished days as SVG pages in a cloth-bound book with 3D page turns (optional). Share as Story 9:16, Post 4:5 or Page 3:4 PNG through the native share sheet, or download.                                                                                                                                                                                                                   | `/scrapbook/[[id]]`                                                |
+| Settings   | Edit profile and taste, re-grade, forget learned phrases, page-flip toggle, usage this month (credits by service and by day), change password, sign out, delete everything.                                                                                                                                                                                                                  | `/settings`                                                        |
+| Marketing  | Landing page and waitlist (D1, Turnstile, Resend).                                                                                                                                                                                                                                                                                                                                           | `apps/marketing`                                                   |
 
 ### Non-functional
 
@@ -73,44 +73,46 @@ UI ── POST /api/plan {prompt, city, window, origin?} (NDJSON) ──► cred
 
 ### Data flow: trip → keepsake → scrapbook
 
-The trip page loads the trip with fresh photos (Place Details Essentials by place id). Check-ins `PATCH` a stop with the person's own GPS fix when they are within 400 m. Finishing uploads photos, asks `/draft` for the AI keepsake, then `/finish` writes the trip fields and a `reflections` row for the highlight place (embedding of the note, author's taste embedding, `consent_share` only when they agreed and there is a quote). The scrapbook renders each finished trip with `layoutPage` → `Page.svelte`; sharing rasterises the same layout (`export.ts`).
+The trip page loads the trip with fresh photos (Place Details Essentials by place id). Check-ins `PATCH` a stop with the person's own GPS fix when they are within 400 m. Finishing uploads photos, asks `/draft` for the AI keepsake, then `/finish` writes the trip fields and the trip's one `reflections` row for the highlight place (upserted by `trip_id`; its Google place id, embedding of the note, author's taste embedding, `consent_share` only when they agreed and there is a quote). Learned phrases the person kept are merged into `taste.learned` after the response, and the summary and embedding are rebuilt. Quotes match a plan's stops by the Google place id stored with the quote, by name only when one side has none, at most one per author per stop. Trip pages show a copied quote only while its reflection still exists and is shared. The scrapbook renders each finished trip with `layoutPage` → `Page.svelte`; sharing rasterises the same layout (`export.ts`).
 
 ### API contracts
 
 All JSON routes validate with zod via `parseBody` and fail with `error(status, message)`. Guests get 401 JSON from every `/api/*` except `/api/auth/*`.
 
-| Route                                       | Body / query                                                                                        | Success                                                                                            |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `POST /api/plan`                            | `{prompt, city, window, origin?}`                                                                   | NDJSON `step` events, then `{type:'result', tripId}` or `{type:'error'}`; 429 past the monthly cap |
-| `GET /api/taste?count=` · `POST /api/taste` | `{grades, offered, finish}`                                                                         | next card ids · `{ok}` (finish marks onboarded)                                                    |
-| `PATCH /api/trip/:id/stops/:stopId`         | `{inPlan?, visited?, at?}`                                                                          | `{ok}`                                                                                             |
-| `POST /api/trip/:id/stops`                  | `{placeId}`                                                                                         | `{stop}` (landmark added from the map)                                                             |
-| `POST /api/trip/:id/draft`                  | `{note}`                                                                                            | `{title, story, emotions, quote, bestForOptions, aiGenerated}`                                     |
-| `POST /api/trip/:id/finish`                 | `{note, photoUrls, highlightStopId, bestFor, bestForOptions, title, story, emotions, quote, share}` | `{ok}`                                                                                             |
-| `DELETE /api/trip/:id`                      |                                                                                                     | `{ok}`                                                                                             |
-| `GET /api/place/:placeId` · `/reviews`      |                                                                                                     | landmark card · rating + up to 5 reviews                                                           |
-| `GET /api/map` · `GET /api/photo`           | static map params · photo name                                                                      | PNG · 302 to Google's image                                                                        |
-| `POST /api/upload`                          | multipart `files`                                                                                   | `{urls[]}` under `/photos/<user id>/`                                                              |
+| Route                                       | Body / query                                                                                                  | Success                                                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `POST /api/plan`                            | `{prompt, city, window, origin?}`                                                                             | NDJSON `step` events, then `{type:'result', tripId}` or `{type:'error'}`; 429 past the monthly cap |
+| `GET /api/taste?count=` · `POST /api/taste` | `{grades, offered, finish}`                                                                                   | next card ids · `{ok}` (finish marks onboarded)                                                    |
+| `PATCH /api/trip/:id/stops/:stopId`         | `{inPlan?, visited?, at?}`                                                                                    | `{ok}`                                                                                             |
+| `POST /api/trip/:id/stops`                  | `{placeId}`                                                                                                   | `{stop}` (landmark added from the map)                                                             |
+| `POST /api/trip/:id/draft`                  | `{note}`                                                                                                      | `{title, story, emotions, quote, bestForOptions, learned, aiGenerated}`                            |
+| `POST /api/trip/:id/finish`                 | `{note, photoUrls, highlightStopId, bestFor, bestForOptions, title, story, emotions, quote, share, learned?}` | `{ok}`                                                                                             |
+| `DELETE /api/trip/:id`                      |                                                                                                               | `{ok}`                                                                                             |
+| `GET /api/place/:placeId` · `/reviews`      |                                                                                                               | landmark card · rating + up to 5 reviews                                                           |
+| `GET /api/map` · `GET /api/photo`           | static map params · photo name                                                                                | PNG · 302 to Google's image                                                                        |
+| `POST /api/upload`                          | multipart `files`                                                                                             | `{urls[]}` under `/photos/<user id>/`                                                              |
 
 ### Storage
 
-| Data               | Store                                                              | Notes                                                                   |
-| ------------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| Accounts, sessions | Postgres (`user`, `session`, `account`, `verification`)            | better-auth; mirrored into `users(id, name)`                            |
-| Taste              | `taste`                                                            | blurb, interests, audience, grades, summary, embedding, flip preference |
-| Trips              | `trips`, `trip_stops`                                              | stops: place id, own text, coordinates with `coords_at`, check-in GPS   |
-| Evidence           | `places`, `reflections`                                            | "people like you": two embeddings per reflection                        |
-| Usage              | `usage_events`                                                     | one row per billed call, micro-dollars                                  |
-| Geocodes           | `geocode_cache`                                                    | shared, 30 days, misses included                                        |
-| Photos             | R2 `explorin-photos` (`<user id>/<uuid>.jpg`) or `.photos/` in dev | owner-only route                                                        |
-| Upstream responses | in-process `ttlCache`                                              | Places lookups, photo URIs, reviews, static maps: 1 day                 |
+| Data               | Store                                                              | Notes                                                                                               |
+| ------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Accounts, sessions | Postgres (`user`, `session`, `account`, `verification`)            | better-auth; mirrored into `users(id, name)`                                                        |
+| Taste              | `taste`                                                            | blurb, interests, audience, grades, phrases learned from trips, summary, embedding, flip preference |
+| Trips              | `trips`, `trip_stops`                                              | stops: place id, own text, coordinates with `coords_at`, check-in GPS                               |
+| Evidence           | `places`, `reflections`                                            | "people like you": two embeddings per reflection                                                    |
+| Usage              | `usage_events`                                                     | one row per billed call, micro-dollars                                                              |
+| Geocodes           | `geocode_cache`                                                    | shared, 30 days, misses included                                                                    |
+| Photos             | R2 `explorin-photos` (`<user id>/<uuid>.jpg`) or `.photos/` in dev | owner-only route                                                                                    |
+| Upstream responses | in-process `ttlCache`                                              | Places lookups, photo URIs, reviews, static maps: 1 day                                             |
 
 ## 3. Deep dive
 
 ### Data model (v1 additions)
 
 ```
-taste(user_id → users, blurb, interests[], audience[], grades jsonb, offered[], summary, embedding vector(768), flip_animations)
+taste(user_id → users, blurb, interests[], audience[], grades jsonb, offered[], summary, embedding vector(768), flip_animations,
+      learned[])
+reflections(…, google_place_id)   -- the exact place a member wrote about
 trips(id, user_id → users, prompt, city, day_window, title, status, happenings jsonb, note, photo_urls[],
       best_for[], best_for_options[], story_title, story, emotions[], highlight_stop_id, created/started/finished_at)
 trip_stops(id, trip_id → trips, position, google_place_id, data jsonb, lat, lng, coords_at, in_plan, added_by,
@@ -119,7 +121,7 @@ usage_events(id, user_id → users, service, operation, units, cost_micros, crea
 geocode_cache(query, lat, lng, source, fetched_at)
 ```
 
-All personal tables cascade from `users(id)`; `account.ts` deletes the legacy ones (`reflections`, `experiences`, `profiles`) explicitly, then R2 photos, then the better-auth user.
+All personal tables cascade from `users(id)` except `reflections`, which `account.ts` deletes explicitly; it removes R2 photos first and the better-auth user last.
 
 ### Tier-list narrowing
 

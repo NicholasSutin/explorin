@@ -4,7 +4,8 @@ import { test, expect, type Page } from '@playwright/test';
 /**
  * The whole product, signed up from scratch: email link -> password -> about you -> tier list -> plan a day
  * (real Nimble, Gemini and Places calls) -> map -> check in -> finish with a note, photo and "best for" tags ->
- * scrapbook -> share image -> settings usage -> delete the account (which also cleans up after the test).
+ * scrapbook -> share image -> settings usage and learned phrases -> delete the account (which also cleans up
+ * after the test).
  *
  * Needs a dev server started with Cloudflare's Turnstile test keys and no RESEND_API_KEY, its output in a file
  * (the sign-up link is printed there), and E2E_SERVER_LOG pointing at that file:
@@ -170,7 +171,7 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	await page
 		.getByLabel('Your note')
 		.fill(
-			'The croissant was flaky perfection. Got a little lost by the river and didn’t mind at all.'
+			'The croissant was flaky perfection. Got a little lost by the river and didn’t mind at all. I always pick walking over the subway.'
 		);
 	const png = await page.evaluate(() => {
 		const c = document.createElement('canvas');
@@ -198,6 +199,17 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	});
 	const options = page.getByRole('group', { name: 'Best for' }).getByRole('button');
 	expect(await options.count()).toBe(6);
+	// Phrases the note reveals about them (AI output, so possibly none). Opt-in: keep the first, skip the rest.
+	const remember = page.getByRole('region', { name: 'Explorin can remember' });
+	const offered = (await remember.isVisible())
+		? (await remember.getByRole('button').allInnerTexts()).map((t) => t.trim())
+		: [];
+	console.log('[journey] the note suggested:', offered);
+	if (offered.length) {
+		const first = remember.getByRole('button', { name: offered[0], exact: true });
+		await first.click();
+		await expect(first).toHaveAttribute('aria-pressed', 'true');
+	}
 	await page.screenshot({ path: shot('11-bestfor.png'), fullPage: true });
 	await page.getByRole('button', { name: 'Save to my scrapbook' }).click();
 
@@ -229,6 +241,23 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	await page.goto('/settings');
 	await expect(page.getByText('Credits used in')).toBeVisible();
 	await expect(page.getByText(/Nimble web search|Google Places|Gemini/).first()).toBeVisible();
+	const learnedList = page.getByRole('region', { name: 'Learned from your trips' });
+	if (offered.length) {
+		const [phrase, skipped] = offered;
+		// The kept phrase is merged after the finish response; reload until it has landed.
+		await expect
+			.poll(
+				async () => {
+					await page.reload();
+					return learnedList.getByText(phrase, { exact: true }).count();
+				},
+				{ timeout: 20_000 }
+			)
+			.toBe(1);
+		if (skipped) await expect(learnedList.getByText(skipped, { exact: true })).toHaveCount(0);
+		await learnedList.getByRole('button', { name: `Forget “${phrase}”` }).click();
+		await expect(learnedList.getByText(phrase, { exact: true })).toHaveCount(0);
+	} else await expect(learnedList.getByText(/Nothing yet/)).toBeVisible();
 	await page.screenshot({ path: shot('15-settings.png'), fullPage: true });
 	await page.getByLabel('Type DELETE to confirm').fill('DELETE');
 	await page.getByRole('button', { name: 'Delete my account' }).click();

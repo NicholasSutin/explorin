@@ -47,5 +47,7 @@ export interface KeepsakeDraft {
 	/** One sentence from the note, close to verbatim, that someone like them could read later. */
 	quote: string;
 	bestForOptions: string[];
+	/** Up to two phrases the note reveals about their taste; remembered only if the person keeps them. */
+	learned: string[];
 	aiGenerated: boolean;
 }

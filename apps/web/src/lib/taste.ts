@@ -234,12 +234,18 @@ export function rankCategories(interests: string[], exclude: string[] = []): str
 
 export type Grades = Partial<Record<string, Grade>>;
 
+/** Short phrases kept from trip notes ("likes long walks between stops"): caps per trip, overall and per phrase. */
+export const LEARNED_PER_TRIP = 2;
+export const LEARNED_MAX = 8;
+export const LEARNED_CHARS = 60;
+
 export interface TasteInput {
 	name?: string | null;
 	blurb: string;
 	interests: string[];
 	audience: string[];
 	grades: Grades;
+	learned?: string[];
 }
 
 /**
@@ -258,7 +264,8 @@ export function tasteSummary(t: TasteInput): string {
 		by(['S+', 'A+']).length && `Loves: ${by(['S+', 'A+']).join(', ')}.`,
 		by(['A', 'B']).length && `Likes: ${by(['A', 'B']).join(', ')}.`,
 		by(['C']).length && `Lukewarm on: ${by(['C']).join(', ')}.`,
-		by(['NO']).length && `Avoid: ${by(['NO']).join(', ')}.`
+		by(['NO']).length && `Avoid: ${by(['NO']).join(', ')}.`,
+		t.learned?.length && `Learned from their trips: ${t.learned.join('; ')}.`
 	];
 	return parts.filter(Boolean).join(' ');
 }

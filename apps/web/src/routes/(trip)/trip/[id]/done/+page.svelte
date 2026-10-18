@@ -2,6 +2,7 @@
 	/**
 	 * End of the day, two short steps. 1: a note (typed or spoken), up to four photos, the highlight stop.
 	 * 2: AI drafts a title and story and suggests six "best for" tags; keep up to three, tweak, save to scrapbook.
+	 * It may also suggest a phrase or two the note reveals about their taste ("Explorin can remember"), kept only if tapped.
 	 */
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -36,6 +37,7 @@
 	let title = $state('');
 	let story = $state('');
 	let share = $state(true);
+	let learned = $state<string[]>([]);
 
 	type Recognition = {
 		lang: string;
@@ -103,6 +105,7 @@
 			title = draft.title;
 			story = draft.story;
 			picked = draft.bestForOptions.slice(0, 2);
+			learned = [];
 			step = 2;
 			window.scrollTo({ top: 0 });
 		} catch (e) {
@@ -137,7 +140,8 @@
 					story: story.trim(),
 					emotions: draft.emotions,
 					quote: draft.quote,
-					share
+					share,
+					learned
 				}
 			});
 			await goto(`/scrapbook/${trip.id}?new=1`);
@@ -275,6 +279,34 @@
 						>
 					</span>
 				</label>
+			{/if}
+
+			{#if draft.learned.length}
+				<section
+					class="mt-6 rounded-2xl bg-white p-4 ring-1 ring-ink/10"
+					aria-labelledby="learned-heading"
+				>
+					<h2 id="learned-heading" class="text-sm font-medium">Explorin can remember</h2>
+					<p class="mt-0.5 text-sm text-ink/60">
+						From your note, for your next plans. Tap the ones that sound like you; nothing is kept
+						unless you pick it, and Settings can forget it later.
+					</p>
+					<div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Phrases to remember">
+						{#each draft.learned as phrase (phrase)}
+							{@const on = learned.includes(phrase)}
+							<button
+								type="button"
+								onclick={() =>
+									(learned = on ? learned.filter((p) => p !== phrase) : [...learned, phrase])}
+								aria-pressed={on}
+								class="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm ring-1 transition {on
+									? 'bg-moss text-ink ring-green'
+									: 'bg-paper text-ink/80 ring-ink/15'}"
+								>{#if on}<Check size={14} aria-hidden="true" />{/if}{phrase}</button
+							>
+						{/each}
+					</div>
+				</section>
 			{/if}
 		</div>
 	{/if}
