@@ -5,7 +5,8 @@
  *    "CARROLL STREET between SMITH STREET and COURT STREET", which GeoSearch cannot place. Needs the
  *    Geocoding API enabled on GOOGLE_MAPS_API_KEY; without it those events are simply left off the map.
  * Results (including misses) are shared across people in `geocode_cache` for 30 days, which is also the
- * longest Google allows geocoded coordinates to be kept.
+ * longest Google allows geocoded coordinates to be kept. Each call is capped at a few Google lookups; the rest
+ * wait for a later plan, by which time the cache has usually filled in.
  */
 import { GOOGLE_MAPS_API_KEY } from '$app/env/private';
 import { fetchJson } from './http';
@@ -63,11 +64,16 @@ async function google(text: string): Promise<LatLng | null> {
 
 /**
  * Coordinates for each query (null when it could not be placed), resolving at most `budget` uncached
- * queries within `timeoutMs` so a slow geocoder never holds up a plan. Misses are cached too.
+ * queries, `googleBudget` of them through Google, within `timeoutMs` so a slow geocoder never holds up a
+ * plan. Misses are cached too, except ones that never reached Google because the budget ran out.
  */
 export async function geocodeAll(
 	queries: GeoQuery[],
-	{ budget = 30, timeoutMs = 5000 }: { budget?: number; timeoutMs?: number } = {}
+	{
+		budget = 30,
+		googleBudget = 8,
+		timeoutMs = 5000
+	}: { budget?: number; googleBudget?: number; timeoutMs?: number } = {}
 ): Promise<Map<string, LatLng | null>> {
 	const out = new Map<string, LatLng | null>();
 	const keys = [...new Set(queries.map((q) => q.text))];
@@ -82,6 +88,7 @@ export async function geocodeAll(
 	const fresh: { query: string; lat: number | null; lng: number | null; source: string }[] = [];
 	const deadline = Date.now() + timeoutMs;
 	let next = 0;
+	let googleLeft = googleBudget;
 	async function worker() {
 		while (next < todo.length && Date.now() < deadline) {
 			const q = todo[next++];
@@ -91,7 +98,9 @@ export async function geocodeAll(
 				hit = await geosearch(q.text);
 				if (hit) source = 'geosearch';
 			}
+			if (!hit && googleLeft <= 0) continue; // not tried: leave it uncached for a later plan
 			if (!hit) {
+				googleLeft--;
 				hit = await google(q.text);
 				if (hit) source = 'google';
 			}

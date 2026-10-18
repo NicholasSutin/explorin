@@ -3,12 +3,16 @@
  * (dataset tvpp-9vvx, free and keyless, updated daily by the Street Activity Permit Office). It lists every
  * permitted event, so most rows are private field bookings ("Sport - Youth", "Party"); only public-facing
  * types with real names are kept. Locations are text, so they are geocoded (geocode.ts) and kept when within
- * walking distance of a stop. NYC only; other cities get none.
+ * walking distance of a stop. Before any geocoding, rows are narrowed by the community boards the dataset tags
+ * them with: a board whose every point is too far from the stops cannot hold a nearby event. Board centres and
+ * radii come from NYC Planning's community district boundaries (community-boards.json, BoroCD -> [lat, lng, m]).
+ * NYC only; other cities get none.
  */
 import type { DayWindow, Happening, LatLng } from '#lib/adventure';
 import { distanceM } from '#lib/geo';
 import { fetchJson } from './http';
 import { geocodeAll, type GeoQuery } from './geocode';
+import boards from './community-boards.json';
 
 const DATASET = 'https://data.cityofnewyork.us/resource/tvpp-9vvx.json';
 
@@ -49,6 +53,32 @@ const BOROUGHS: Record<string, [number, number, number, number]> = {
 	Bronx: [40.785, 40.917, -73.933, -73.765],
 	'Staten Island': [40.496, 40.649, -74.255, -74.052]
 };
+const BOARDS: Record<string, number[]> = boards;
+const BOROUGH_CODE: Record<string, number> = {
+	Manhattan: 1,
+	Bronx: 2,
+	Brooklyn: 3,
+	Queens: 4,
+	'Staten Island': 5
+};
+
+/**
+ * Whether a row's community boards ("04, 05," in borough Manhattan) could hold a point within `radiusM` of a
+ * stop. Unknown or missing boards are kept, so a gap in the data never hides an event.
+ */
+function boardsNear(row: Row, stops: LatLng[], radiusM: number): boolean {
+	const borough = BOROUGH_CODE[row.event_borough];
+	const codes = (row.community_board ?? '').match(/\d+/g) ?? [];
+	const known = codes.flatMap((c) => {
+		const b: number[] | undefined = BOARDS[String(borough * 100 + Number(c))];
+		return b ? [b] : [];
+	});
+	if (!borough || !known.length) return true;
+	return known.some(([lat, lng, r]) =>
+		stops.some((s) => distanceM(s, { lat, lng }) <= r + radiusM)
+	);
+}
+
 const boroughsFor = (points: LatLng[]) =>
 	Object.entries(BOROUGHS)
 		.filter(([, [s, n, w, e]]) =>
@@ -102,6 +132,7 @@ interface Row {
 	event_location: string;
 	start_date_time: string;
 	end_date_time: string;
+	community_board?: string;
 }
 
 const tidy = (s: string) =>
@@ -159,7 +190,7 @@ export async function findHappenings(
 		const hours = (Date.parse(r.end_date_time) - Date.parse(r.start_date_time)) / 3_600_000;
 		if (hours >= 20 && !/Market|Festival/.test(r.event_type)) return [];
 		const key = `${name.toLowerCase()}|${r.event_location}`;
-		if (seen.has(key)) return [];
+		if (seen.has(key) || !boardsNear(r, stops, radiusM)) return [];
 		seen.add(key);
 		const q = geoQuery(r.event_location ?? '', r.event_borough);
 		return q ? [{ r, q }] : [];

@@ -17,7 +17,8 @@
  * rest through `placeBasics` when shown (trips.ts).
  */
 import { GOOGLE_MAPS_API_KEY } from '$app/env/private';
-import type { Experience } from '#lib/adventure';
+import type { Experience, LatLng } from '#lib/adventure';
+import { distanceM } from '#lib/geo';
 import { DAY, fetchJson, ttlCache } from './http';
 import { trackCall } from './usage';
 
@@ -32,6 +33,8 @@ export interface PlaceLookup {
 	photo?: Experience['photo'];
 	coords?: Experience['coords'];
 	mapsUrl?: string;
+	/** Other branches of the same name from the same search (chains), for `enrichPlaces` to choose from. */
+	branches?: PlaceLookup[];
 }
 
 export interface PlaceReview {
@@ -104,19 +107,42 @@ const headers = (fieldMask: string) => ({
 	'X-Goog-FieldMask': fieldMask
 });
 
-interface TextSearchResponse {
-	places?: {
-		id: string;
-		location?: { latitude?: number; longitude?: number };
-		googleMapsUri?: string;
-		photos?: { name: string; authorAttributions?: { displayName?: string; uri?: string }[] }[];
-	}[];
+interface TextSearchPlace {
+	id: string;
+	displayName?: { text?: string };
+	location?: { latitude?: number; longitude?: number };
+	googleMapsUri?: string;
+	photos?: { name: string; authorAttributions?: { displayName?: string; uri?: string }[] }[];
 }
+interface TextSearchResponse {
+	places?: TextSearchPlace[];
+}
+
+function toLookup(place: TextSearchPlace): PlaceLookup {
+	const value: PlaceLookup = {
+		placeId: place.id,
+		photo: toPhoto(place.id, place.photos?.[0]),
+		coords: toCoords(place.location)
+	};
+	if (
+		place.googleMapsUri &&
+		/^https:\/\/(www\.google\.com\/maps|maps\.google\.com\/)/.test(place.googleMapsUri)
+	)
+		value.mapsUrl = place.googleMapsUri;
+	return value;
+}
+
+const nameKey = (name?: string) => (name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+/** "Los Tacos No. 1" and "Los Tacos No.1 - Chelsea Market" are branches of one chain. */
+const sameChain = (a: string, b: string) =>
+	a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a));
 
 /**
  * Find a place by free-text query, e.g. "The High Line, New York City": ID, first photo,
- * coordinates and Google Maps link. `location` and `googleMapsUri` are Essentials fields, so
- * they add nothing to the Pro SKU that `places.photos` already triggers.
+ * coordinates and Google Maps link, plus other same-named branches among the first five results.
+ * `location` and `googleMapsUri` are Essentials fields and `displayName` is Pro, so none of them
+ * add to the Pro SKU that `places.photos` already triggers; the price is per request, whatever
+ * the page size.
  */
 export async function findPlace(query: string): Promise<PlaceLookup | null> {
 	if (!placesEnabled() || !query.trim()) return null;
@@ -128,24 +154,21 @@ export async function findPlace(query: string): Promise<PlaceLookup | null> {
 		'https://places.googleapis.com/v1/places:searchText',
 		{
 			method: 'POST',
-			headers: headers('places.id,places.photos,places.location,places.googleMapsUri'),
-			body: JSON.stringify({ textQuery: query, pageSize: 1 })
+			headers: headers(
+				'places.id,places.displayName,places.photos,places.location,places.googleMapsUri'
+			),
+			body: JSON.stringify({ textQuery: query, pageSize: 5 })
 		}
 	);
 	if (!data) return null; // request failed: do not remember that for a day
-	const place = data.places?.[0];
-	if (!place || !PLACE_ID.test(place.id)) return placeCache.set(key, null);
-	const value: PlaceLookup = {
-		placeId: place.id,
-		photo: toPhoto(place.id, place.photos?.[0]),
-		coords: toCoords(place.location)
-	};
-	if (
-		place.googleMapsUri &&
-		/^https:\/\/(www\.google\.com\/maps|maps\.google\.com\/)/.test(place.googleMapsUri)
-	)
-		value.mapsUrl = place.googleMapsUri;
-	return placeCache.set(key, value);
+	const [place, ...others] = (data.places ?? []).filter((p) => PLACE_ID.test(p.id));
+	if (!place) return placeCache.set(key, null);
+	const name = nameKey(place.displayName?.text);
+	const branches = others
+		.filter((p) => sameChain(name, nameKey(p.displayName?.text)))
+		.map(toLookup)
+		.filter((b) => b.coords);
+	return placeCache.set(key, { ...toLookup(place), ...(branches.length ? { branches } : {}) });
 }
 
 /** Resolve a photo resource name to a Google-hosted image URL (lh3.googleusercontent.com). */
@@ -264,24 +287,38 @@ type Enrichable = Pick<
 	'photo' | 'coords' | 'mapsUrl' | 'placeQuery' | 'location' | 'title' | 'placeId'
 >;
 
+const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+
 /**
- * Attach place id, photo, coordinates and Maps link to each item with one Text Search apiece.
- * Never throws; items pass through untouched on failure or without a Places key. Reviews are not
- * fetched here (they are the expensive SKU); the trip page loads them when a stop is opened.
+ * Attach place id, photo, coordinates and Maps link to each item with one Text Search apiece. For a chain, the
+ * branch nearest the other items wins (the middle of the rest of the day), not Google's first hit, which for
+ * "Los Tacos No.1" is Times Square even when every other stop is in Chelsea. Never throws; items pass through
+ * untouched on failure or without a Places key. Reviews are not fetched here (they are the expensive SKU); the
+ * trip page loads them when a stop is opened.
  */
 export async function enrichPlaces<T extends Enrichable>(items: T[]): Promise<T[]> {
 	if (!placesEnabled()) return items;
-	return Promise.all(
-		items.map(async (item) => {
-			const place = await findPlace(item.placeQuery || `${item.title} ${item.location}`);
-			if (!place) return item;
-			return {
-				...item,
-				placeId: item.placeId ?? place.placeId,
-				photo: item.photo ?? place.photo,
-				coords: item.coords ?? place.coords,
-				mapsUrl: item.mapsUrl ?? place.mapsUrl
-			};
-		})
+	const found = await Promise.all(
+		items.map((item) => findPlace(item.placeQuery || `${item.title} ${item.location}`))
 	);
+	return items.map((item, i) => {
+		let place = found[i];
+		if (!place) return item;
+		const others = found.flatMap((f, j) => (j !== i && f?.coords ? [f.coords] : []));
+		if (place.branches?.length && others.length >= 2) {
+			const middle: LatLng = {
+				lat: median(others.map((c) => c.lat)),
+				lng: median(others.map((c) => c.lng))
+			};
+			const away = (p: PlaceLookup) => (p.coords ? distanceM(middle, p.coords) : Infinity);
+			place = [place, ...place.branches].reduce((a, b) => (away(b) < away(a) ? b : a));
+		}
+		return {
+			...item,
+			placeId: item.placeId ?? place.placeId,
+			photo: item.photo ?? place.photo,
+			coords: item.coords ?? place.coords,
+			mapsUrl: item.mapsUrl ?? place.mapsUrl
+		};
+	});
 }
