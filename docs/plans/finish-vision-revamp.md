@@ -1,6 +1,6 @@
 # Finish the feat/vision revamp: old accounts, legacy code, legacy tables
 
-Status: proposed 2026-10-17, approved, not started. Release A ships with the feat/vision deploy; B and C follow.
+Status: built and rehearsed on a Tiger fork, 2026-10-18. Shipping order is **A → C → B**: A ships with the feat/vision deploy (PR #2), C is additive and can follow as soon as A is verified, and B (the point of no return) goes last after a soak. See "Build notes" at the end for where the build differs from the plan below.
 
 ## Context
 
@@ -31,6 +31,7 @@ Commit `eeef15d` on `feat/vision` turned Explorin into one sign-in-first flow. T
 ## Release A: ships together with the feat/vision deploy
 
 ### A1. Versioned migrations (the first destructive change needs them)
+
 - **`apps/web/scripts/migrate.ts`** should:
   - Print the database host and the list of pending migrations, and be a **dry run by default**. `--apply` executes.
   - Take `pg_advisory_lock` so two runs can't overlap.
@@ -45,7 +46,9 @@ Commit `eeef15d` on `feat/vision` turned Explorin into one sign-in-first flow. T
 - **Docs:** new `docs/adr/0009-versioned-migrations.md`, and update the "Migrations" row in `docs/system-design.md` §5.
 
 ### A2. `scripts/migrations/0001-legacy-taste.sql`
+
 This targets every account with `onboardedAt` set and no `taste` row. It's idempotent: once an account has a taste row, it no longer matches.
+
 ```sql
 INSERT INTO users (id, name) SELECT id, name FROM "user" ON CONFLICT (id) DO NOTHING;
 WITH legacy AS (
@@ -64,15 +67,18 @@ WITH legacy AS (
   FROM legacy l ON CONFLICT (user_id) DO NOTHING RETURNING user_id)
 UPDATE "user" SET "onboardedAt" = NULL, "updatedAt" = now() WHERE id IN (SELECT user_id FROM ins);
 ```
+
 - The interest list is a snapshot of `INTERESTS` in `src/lib/taste.ts`.
 - The AI-written `profiles` summary is **not** copied. It isn't the person's own words, and `tasteSummary` quotes the blurb as "In their words".
 - The guard then routes these accounts through onboarding again. Their session and password are untouched.
 
 ### A3. Onboarding fixes
+
 - **`src/routes/(onboarding)/onboarding/+page.server.ts:25`:** resume only when step 1 is really done. `taste && homeCity` becomes `taste?.blurb && homeCity`. Migrated accounts then see About-you with their interests already filled in. New accounts always have a blurb, so nothing changes for them.
 - **`src/routes/(onboarding)/onboarding/taste/+page.server.ts:13`:** `if (!taste?.blurb) redirect(303, '/onboarding?edit')`. This fixes the Re-grade dead end, and nobody can reach the tier list without writing a blurb. `?edit` makes no difference for accounts that aren't onboarded.
 
 ### A4. User-facing copy that becomes false on deploy (or already is)
+
 - **Web app:** remove the "NYC demo works without an account" lines in `src/routes/(auth)/login/+page.svelte:63` and `signup/+page.svelte:90-91`.
 - **Marketing site (deploy it too):**
   - `apps/marketing/src/routes/+page.svelte:104-105`: "Photos stay on your device" becomes copy saying photos are private to your account.
@@ -81,6 +87,7 @@ UPDATE "user" SET "onboardedAt" = NULL, "updatedAt" = now() WHERE id IN (SELECT 
 - **ADR status lines:** ADR-0003 and ADR-0005 become "Superseded in part by ADR-0007".
 
 ### A5. Retire the legacy code (separate commit, same PR; touches no data)
+
 - **Folder:** delete `apps/web/legacy/`. It can't run anyway: it imports `getProfile`, `upsertProfile`, `groundedPlaces` and `Traits`, which no longer exist.
 - **Dead server code:**
   - `src/lib/server/validate.ts`
@@ -103,6 +110,7 @@ UPDATE "user" SET "onboardedAt" = NULL, "updatedAt" = now() WHERE id IN (SELECT 
 - **Decided not to do:** dropping `export` from symbols that are only used inside their own file, and type-checking `tests/`. Both would add churn without fixing anything.
 
 ### Deploy sequence (Nick)
+
 1. Merge feat/vision to main and deploy the `explorin-app` and `explorin-marketing` Workers.
 2. **Right after that**, run `npm run db:migrate` (dry run, should list 0001), then `npm run db:migrate -- --apply`.
    - Don't run 0001 before the deploy: main's old onboarding would set `onboardedAt` again.
@@ -113,12 +121,14 @@ UPDATE "user" SET "onboardedAt" = NULL, "updatedAt" = now() WHERE id IN (SELECT 
 ## Release B: drop the legacy data (after a few days of soak; this is the point where rolling back to main stops being possible)
 
 ### B1. Code first (deploy before 0002 runs)
+
 - **`scripts/schema.sql`:** remove `profiles` (9-15), the `places.live` and `live_at` columns and ALTERs (27-31), `experiences` (33-41), `reflections.experience_id` (46), `experiences_user_idx` (61), `response_cache` (63-67), `"user".interests` (78) and the mirror comment (70).
   - Every one of these has to go. A leftover `CREATE INDEX` on `experiences` would make every later migrate fail.
 - **`src/lib/server/account.ts` `deleteAccount`:** remove the `experiences` and `profiles` deletes. The reflections delete becomes `WHERE author_id = ${userId}`. Update the header comment.
   - Without this change, dropping the tables makes account deletion return a 500.
 
 ### B2. `scripts/migrations/0002-drop-legacy.sql`
+
 ```sql
 ALTER TABLE reflections DROP COLUMN IF EXISTS experience_id;      -- drops the foreign key with it
 DROP TABLE IF EXISTS experiences, profiles, response_cache;
@@ -131,6 +141,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
   AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.user_id = x.id)
   AND NOT EXISTS (SELECT 1 FROM usage_events e WHERE e.user_id = x.id);
 ```
+
 - The 2 guest-written reflections and their `users` rows stay.
 - Their R2 photos can't be served any more, but they're harmless. Leave them.
 - **Before applying:** rehearse on a Tiger fork, then back up with `pg_dump -t experiences -t profiles -t response_cache` or keep the fork as a snapshot.
@@ -140,6 +151,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
 ## Release C: "people like you" loose ends
 
 ### C1. Match quotes by place id (ADR-0005 step 2)
+
 - **`scripts/migrations/0003-reflection-place-id.sql`:** `ALTER TABLE reflections ADD COLUMN IF NOT EXISTS google_place_id text`, backfilled from `places.google_place_id`. Mirror the column in `schema.sql`.
 - **`src/lib/server/keepsake.ts` `saveKeepsake`:** write `highlight.placeId` into the new column.
 - **`src/lib/server/evidence.ts` `attachVoices`:** match a stop's `placeId` against `r.google_place_id`. Use the fuzzy name match only when one side has no id.
@@ -147,6 +159,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
 - **Docs:** tick the ADR-0005 action items.
 
 ### C2. Learn from trip notes (brings back the old profile update)
+
 1. **Additive migration first:**
    - `0004-taste-learned.sql`: `ALTER TABLE taste ADD COLUMN IF NOT EXISTS learned text[] NOT NULL DEFAULT '{}'`.
    - Add the same column to the `taste` table in `schema.sql`.
@@ -166,6 +179,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
 6. **Settings:** `src/routes/(app)/settings/` lists the learned phrases next to the tier list, each with a remove button.
 
 ### C3. Update `scripts/seed-persona.ts` to the new taste shape (low priority)
+
 - Persona files become `{ name, blurb, interests, grades, reflections }`.
 - The author vector becomes `embedDoc(tasteSummary(...))`. `src/lib/taste.ts` has no imports, so the script can import it directly. That puts seeded quotes in the same vector space as real askers.
 - Update `data/personas/README.md` and the example file to match.
@@ -173,6 +187,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
 ---
 
 ## Verification
+
 - **Every release:**
   - `npm run check`. Ignore errors under `.svelte-kit/`, which appear after any build.
   - `npm run lint`.
@@ -189,7 +204,64 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
   - Finishing a trip with a note fills `taste.learned`. Removing a phrase in Settings rewrites `taste.summary`.
   - A plan that includes a place with a matching quote shows it when matched by `placeId`.
 
+## Build notes (2026-10-18)
+
+### Where the build differs from the plan
+
+- **Order and numbering.** C ships before B, because C only adds things and B has to wait for a soak anyway.
+  - The migrations are `0001-legacy-taste.sql` (A) and `0002-drop-legacy.sql` (B).
+  - C needs no migration file. `taste.learned` and `reflections.google_place_id` are `ADD COLUMN IF NOT EXISTS` in `schema.sql`, the same as other additive columns (ADR-0009 rule).
+  - There is no backfill. The quote query uses `COALESCE(reflections.google_place_id, places.google_place_id)`, so old rows match through their places row.
+- **The runner** uses one reserved postgres.js connection with explicit `BEGIN`/`COMMIT`, because `sql.begin()` on a reserved connection would go through the pool. That one connection holds the advisory lock. The check that refuses unknown migrations runs before `schema.sql` is applied.
+- **0001** keeps the person's interest order (`WITH ORDINALITY`) and treats a value that isn't an array as empty.
+- **Static maps.** `/api/map` dropped the `style` parameter entirely, since paper is the only style. `scrapbook/layout.ts` no longer sends it, and old URLs that still do get the same image.
+- **`SIGNUP_PASSWORD_PATH` was deleted.** The signup page is client code and can't import a server module.
+- **Also fixed in C:**
+  - A place whose name normalised to an empty string matched every stop. Both SQL and JS now skip empty names.
+  - The SQL name normalisation now collapses spaces the same way the JS does.
+- **Learned phrases.** The draft holds at most 2 phrases of up to 60 characters, and the store keeps the 8 newest.
+  - Phrases that differ only in case are merged in a single `UPDATE`, so concurrent requests can't lose one.
+  - A finish request sent twice does no extra work.
+  - Settings lists the phrases under "Learned from your trips", each with a remove button.
+- **The persona seed** validates interests, audience and grade keys against `src/lib/taste.ts` before writing anything.
+
+### Rehearsal on fork `cv3h3xpi70` (deleted afterwards)
+
+- **A:**
+  - The dry run listed 0001. `--apply` gave the 3 accounts taste rows with their old interests and cleared `onboardedAt`, and a second run did nothing.
+  - A new account was given the old shape with SQL. Re-grade landed on About-you before the migration. After 0001, About-you showed the old interests, with `Food` mapped to `Food & drink` and an unknown value dropped. After the tier list, `onboardedAt`, `summary` and `embedding` were all set, and deleting the account through Settings worked.
+  - `auth.spec` and `journey.spec`: 8 passed.
+- **C:**
+  - `schema.sql` added both columns.
+  - `journey.spec`: 8 passed. The note produced 2 learned phrases, Settings listed them, and removing one there worked.
+  - The quote-matching rules were checked in SQL:
+    - an id match wins even when the names differ;
+    - another branch with the same name is excluded;
+    - the name fallback works for a quote without an id;
+    - a stop without an id matches by name;
+    - a quote's own id beats its places row's id.
+- **B:**
+  - The dry run listed 0002, and `--apply` dropped everything listed.
+  - `users` went from 13 rows to 6 (4 accounts and the 2 quote authors). Both `source='user'` quotes were kept.
+  - The C checkout then refused to migrate ("the database has applied 0002-drop-legacy.sql…").
+  - `journey.spec`: 8 passed, and account deletion works without the old tables.
+- **Empty database:** Tiger doesn't allow `CREATE DATABASE`, so the app's tables on the fork were dropped instead. Migrate then applied `schema.sql` and recorded both migrations as baseline without running them, and a second run found nothing pending.
+
+### Deploy sequence (Nick)
+
+1. **A.** Merge PR #2 (feat/vision → main) and let Workers Builds deploy `explorin-app` and `explorin-marketing`. Then, from `apps/web` on an up-to-date main:
+   - run `npm run db:migrate` (it should list 0001);
+   - run `npm run db:migrate -- --apply`;
+   - sign in and check that About-you shows your old interests.
+2. **C.** Any time after A is verified, merge the C PR. It needs no migration file, but run `npm run db:migrate -- --apply` once so `schema.sql` adds the two columns. The finish and Settings code reads them, so do this right after the deploy.
+3. **B.** After a few days of soak:
+   - fork the Tiger service as a snapshot;
+   - merge the B PR and deploy;
+   - right after the deploy, run `npm run db:migrate -- --apply`.
+     Between that deploy and the migration, deleting the one old account that still has `experiences` rows would fail and could be retried, so keep that gap short. Delete the snapshot fork once you're satisfied.
+
 ## Nick's actions
+
 - Approve each release PR, merge and deploy (web and marketing).
 - Run `db:migrate -- --apply` against production at the points marked above.
 - Sign in afterwards to check.
