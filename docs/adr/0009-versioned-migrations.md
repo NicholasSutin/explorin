@@ -15,10 +15,11 @@ Two constraints shape it. Local development, production and Hyperdrive share one
 `scripts/migrate.ts`, about 80 lines on the existing postgres.js client, with no new dependency.
 
 - **Dry run by default.** It prints the database host and the pending migrations. Only `npm run db:migrate -- --apply` changes anything.
+- **Holding migrations back.** `--through NNNN` applies `schema.sql` and only the pending migrations numbered `NNNN` or lower; `--through 0000` is `schema.sql` alone. One release can then carry migrations meant for different moments, such as a backfill right after the deploy and a drop after a soak.
 - **Two layers:**
   - `schema.sql` is the whole current shape and is applied first on every run.
   - `scripts/migrations/NNNN-name.sql` holds only what `schema.sql` can't say: backfills, data fixes and drops. Each file runs once, in name order, inside its own transaction together with its `schema_migrations` row. Migration files therefore contain no `BEGIN`/`COMMIT` and no `CREATE INDEX CONCURRENTLY`.
-- **New database.** The runner checks for `"user"` before it applies `schema.sql`. If that table is missing, it applies `schema.sql` and records every migration as already applied without running it. `schema.sql` is already their combined result, so no migration needs a guard for an empty database.
+- **New database.** The runner checks for the `users` table before it applies `schema.sql`. If that table is missing, it applies `schema.sql` and records every migration as already applied without running it. `schema.sql` is already their combined result, so no migration needs a guard for an empty database.
 - **Unknown migration means a hard stop.** If the database records a migration that the checkout lacks, the runner exits before touching anything. This keeps an older branch's `schema.sql` from re-creating dropped tables.
 - **Overlapping runs are serialised** with `pg_advisory_lock` on one reserved connection. Each transaction sets `lock_timeout = 5s`, so a run that would queue behind a busy production table fails (and can be retried) instead of stalling every session lookup behind its `ALTER TABLE`.
 - **Mistakes in the folder are stopped early.** A `.sql` file that doesn't match `NNNN-lowercase-words.sql`, or two files with the same number, stop the run. On a new database, `schema.sql` and the baseline rows commit together.
@@ -58,4 +59,4 @@ Two constraints shape it. Local development, production and Hyperdrive share one
 - Every destructive change gets a rehearsal on a fork of the Tiger service, and the fork is deleted afterwards because it is billed while it exists.
 - `npm run setup` applies migrations (`db:migrate -- --apply && db:seed`).
 - Timing matters while dev and production share a database: a migration whose effect the deployed code would undo waits until after the deploy (see `0001-legacy-taste.sql`).
-- The refusal check only protects checkouts that have this runner. Branches cut before it still have the old `migrate.ts`, which applies their `schema.sql` blindly and would re-create dropped tables. After `0002-drop-legacy.sql` has run, never run `db:migrate` from such a branch; rebase it first.
+- The refusal check only protects checkouts that have this runner. Branches cut before it still have the old `migrate.ts`, which applies their `schema.sql` blindly and would re-create dropped tables. After `0003-drop-legacy.sql` has run, never run `db:migrate` from such a branch; rebase it first.

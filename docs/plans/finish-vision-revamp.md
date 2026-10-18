@@ -1,6 +1,6 @@
 # Finish the feat/vision revamp: old accounts, legacy code, legacy tables
 
-Status: built and rehearsed on a Tiger fork, 2026-10-18. Shipping order is **A → C → B**: A ships with the feat/vision deploy (PR #2), C is additive and can follow as soon as A is verified, and B (the point of no return) goes last after a soak. See "Build notes" at the end for where the build differs from the plan below.
+Status: built and rehearsed on Tiger forks, 2026-10-18. A, C and B were built as stacked PRs, then merged into one release on 2026-10-18 (PR #2, `feat/vision` → `main`). The migrations still run at three moments, held apart with `db:migrate --through`; see "Combined release" and the deploy sequence at the end. "Build notes" record where the build differs from the plan below.
 
 ## Context
 
@@ -275,26 +275,35 @@ A correctness review, a security review of these commits and a security pass ove
   - **B:** 0002, then `auth.spec` plus `journey.spec` (8 passed).
   - **Empty database:** baseline only.
 
+### Combined release (2026-10-18)
+
+- PRs #3 (C) and #4 (B) were merged into `feat/vision`, so PR #2 ships A, C and B in one deploy. The B code no longer reads the legacy tables, so deploying it early is safe; only the drop has to wait for the soak.
+- `db:migrate --through NNNN` (ADR-0009) holds back later migrations, so the three moments stay apart within one release.
+- With B's code live for the whole soak, account deletion would fail for the one old account that still has `experiences` and `profiles` rows: B's `deleteAccount` no longer deletes them, and their foreign keys to `users` block the delete. New `0002-detach-legacy.sql` drops those two keys right after the deploy, and the drop moved to `0003-drop-legacy.sql`.
+- Production has no `taste` or `trips` tables yet, so `schema.sql` must run before the merge; the new code reads them on every signed-in page.
+- **Rehearsed on fork `xiw1gyombb`, deleted afterwards:**
+  - `--through 0000` applied `schema.sql` only and held back all three migrations.
+  - `--through 0002` ran 0001 and 0002. The old account's deletion statements then succeeded (rolled back), leaving its 3 `experiences` rows orphaned until 0003.
+  - A plain `--apply` ran 0003: the legacy tables were gone, both member quotes remained, and the 3 old accounts had taste rows.
+- Fork `fuygwusnh0` ran the same stages and served as the local dev database for three agent-created test users and the recorded demo.
+
 ### Deploy sequence (Nick)
 
-1. **A.** Merge PR #2 (feat/vision → main) and let Workers Builds deploy `explorin-app` and `explorin-marketing`. Then, from `apps/web` on an up-to-date main:
-   - run `npm run db:migrate` (it should list 0001);
-   - run `npm run db:migrate -- --apply`;
-   - sign in and check that About-you shows your old interests.
-2. **C.** Any time after A is verified. **Migrate first, then merge:** C's code reads `taste.learned` on nearly every signed-in page, so the columns must exist before it deploys.
-   - From `apps/web`, check out the C branch (`git switch feat/people-like-you`) and run `npm run db:migrate -- --apply`. It has no migration file, but `schema.sql` adds `taste.learned`, `taste.forgotten`, `reflections.google_place_id` and `reflections.trip_id`. The A code running in production ignores them.
-   - Then merge the C PR and let it deploy.
-3. **B.** After a few days of soak:
+Run every command from `apps/web` on an up-to-date `feat/vision` (step 1) or `main` (steps 3 and 4).
+
+1. **Before merging:** `npm run db:migrate -- --apply --through 0000`. This applies `schema.sql` only: it creates `taste`, `trips` and the other v1 tables and adds C's columns. The `main` code running in production ignores them.
+2. **Merge PR #2** and let Workers Builds deploy `explorin-app` and `explorin-marketing`.
+3. **Right after the deploy:** `npm run db:migrate -- --apply --through 0002`. 0001 moves the 3 old accounts onto the taste profile; it waits for the deploy because the old onboarding would undo it. 0002 detaches the legacy tables so account deletion keeps working. Then sign in and check that About-you shows your old interests.
+4. **After a few days of soak:**
    - fork the Tiger service as a snapshot;
-   - merge the B PR and deploy;
-   - right after the deploy, run `npm run db:migrate -- --apply`.
-     Between that deploy and the migration, deleting the one old account that still has `experiences` and `profiles` rows would fail (its photos would already be gone, and a retry after the migration works), so keep that gap short. Delete the snapshot fork once you're satisfied.
+   - run `npm run db:migrate -- --apply` (0003 drops the legacy tables and columns; after this, redeploying the old `main` no longer works);
+   - delete the snapshot fork once you're satisfied.
    - Don't run `db:migrate` from any branch cut before Release A after this: its old runner would re-create the dropped tables (ADR-0009).
 
 ## Nick's actions
 
-- Approve each release PR, merge and deploy (web and marketing).
-- Run `db:migrate -- --apply` against production at the points marked above.
+- Merge PR #2 and deploy (web and marketing).
+- Run `db:migrate` against production at the three points marked above.
 - Sign in afterwards to check.
 - Delete the `GOOGLE_MAPS_MAP_ID` secret if it exists.
 - Delete the rehearsal forks.

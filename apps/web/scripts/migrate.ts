@@ -1,8 +1,9 @@
 /**
  * Database migrations (ADR-0009). Dry run by default: prints the target and what would run.
  *
- *   npm run db:migrate                 # dry run
- *   npm run db:migrate -- --apply      # apply
+ *   npm run db:migrate                            # dry run
+ *   npm run db:migrate -- --apply                 # apply
+ *   npm run db:migrate -- --apply --through 0001  # apply, but hold back migrations numbered after 0001
  *
  * 1. schema.sql is the whole current shape, written to be idempotent, and is applied on every run.
  * 2. migrations/NNNN-name.sql holds what schema.sql cannot say (backfills, drops). Each runs once, in name order,
@@ -12,6 +13,9 @@
  * their end result. A run refuses to start when the database has applied a migration this checkout lacks: an
  * older branch's schema.sql would re-create what that migration dropped. Every step waits at most LOCK_TIMEOUT for
  * a table lock, so a busy production table makes the run fail (retry it) instead of stalling the site behind it.
+ *
+ * `--through NNNN` lets one release ship migrations meant for different moments: schema.sql still runs, and only
+ * pending migrations numbered NNNN or lower do (`--through 0000` is schema.sql alone).
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { env, sql } from './_shared';
@@ -20,6 +24,10 @@ const LOCK_TIMEOUT = '5s';
 const NAME = /^(\d{4})-[a-z0-9-]+\.sql$/;
 
 const apply = process.argv.includes('--apply');
+const throughAt = process.argv.indexOf('--through');
+const through = throughAt === -1 ? null : (process.argv[throughAt + 1] ?? '');
+if (through !== null && !/^\d{4}$/.test(through))
+	fail('--through takes a migration number, e.g. --through 0001 (0000 for schema.sql alone)');
 const dir = new URL('./migrations/', import.meta.url);
 const files = readdirSync(dir).filter((f) => f.endsWith('.sql'));
 const misnamed = files.filter((f) => !NAME.test(f));
@@ -75,7 +83,9 @@ try {
 		throw new Error(
 			`the database has applied ${unknown.join(', ')}, which this checkout does not have. Update the checkout first.`
 		);
-	const pending = state.fresh ? [] : migrations.filter((m) => !applied.includes(m));
+	const unapplied = state.fresh ? [] : migrations.filter((m) => !applied.includes(m));
+	const pending = unapplied.filter((m) => through === null || m.slice(0, 4) <= through);
+	const held = unapplied.filter((m) => !pending.includes(m));
 
 	if (state.fresh)
 		console.log(
@@ -83,7 +93,8 @@ try {
 		);
 	else
 		console.log(
-			`schema.sql (idempotent)\npending: ${pending.length ? pending.join(', ') : 'none'}`
+			`schema.sql (idempotent)\npending: ${pending.length ? pending.join(', ') : 'none'}` +
+				(held.length ? `\nheld back by --through ${through}: ${held.join(', ')}` : '')
 		);
 	if (!apply) {
 		console.log('nothing changed; pass --apply to run it');
