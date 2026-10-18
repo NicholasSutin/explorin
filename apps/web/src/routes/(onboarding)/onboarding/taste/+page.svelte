@@ -68,10 +68,12 @@
 	}
 
 	function grade(g: Grade) {
-		if (!current) return;
+		// Read once: `current` moves on to the next ungraded card as soon as `grades` changes.
+		const id = current;
+		if (!id) return;
 		direction = g === 'NO' || g === 'C' ? -1 : 1;
-		grades = { ...grades, [current]: g };
-		pending[current] = g;
+		grades = { ...grades, [id]: g };
+		pending[id] = g;
 		focus = null;
 		err = '';
 		save();

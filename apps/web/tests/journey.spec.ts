@@ -93,15 +93,29 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	await expect(page).toHaveURL(/\/onboarding\/taste$/, { timeout: 30_000 });
 	await expect(page.getByRole('heading', { name: 'Grade what you love.' })).toBeVisible();
 	await page.screenshot({ path: shot('03-tierlist.png'), fullPage: true });
+	// Every grade must be saved on the card it was given to, not the next one in the queue.
+	const sent: Record<string, string>[] = [];
+	const onTaste = (r: import('@playwright/test').Request) => {
+		if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/taste')
+			sent.push(r.postDataJSON().grades);
+	};
+	page.on('request', onTaste);
+	const graded: string[] = [];
 	const grades = ['S+', 'A+', 'NO', 'A', 'B', 'S+', 'C'];
 	for (const g of grades) {
 		const group = page.getByRole('group', { name: /^Grade / });
 		if (!(await group.isVisible())) break;
+		graded.push((await group.getAttribute('aria-label'))!.replace(/^Grade /, ''));
 		await group.getByRole('button', { name: new RegExp(`^${g.replace('+', '\\+')},`) }).click();
 		await page.waitForTimeout(260);
 	}
 	await page.screenshot({ path: shot('04-tierboard.png'), fullPage: true });
 	await page.getByRole('button', { name: 'Start planning →' }).click();
+	await expect(page).toHaveURL(/\/$/);
+	page.off('request', onTaste);
+	const saved = Object.assign({}, ...sent) as Record<string, string>;
+	expect(Object.keys(saved)).not.toContain('null');
+	expect(Object.keys(saved)).toHaveLength(graded.length);
 
 	// 4. Plan a day.
 	await expect(page).toHaveURL(/\/$/);
