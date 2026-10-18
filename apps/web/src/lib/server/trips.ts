@@ -175,9 +175,24 @@ export async function getTrip(uid: string, id: string, { photos = false } = {}):
 	const rows = await sql<
 		StopRow[]
 	>`SELECT * FROM trip_stops WHERE trip_id = ${id} ORDER BY position`;
+	// Quotes are copied into the stops when the day is planned. Show only those still shared, so a deleted account,
+	// trip or quote disappears from everyone's trips too.
+	const voiceIds = [...new Set(rows.flatMap((r) => r.data.voices?.map((v) => v.id) ?? []))];
+	const shared = voiceIds.length
+		? new Set(
+				(
+					await sql<{ id: string }[]>`
+						SELECT id::text FROM reflections WHERE id::text = ANY(${voiceIds}::text[]) AND consent_share`
+				).map((r) => r.id)
+			)
+		: null;
 	const stops = await Promise.all(
 		rows.map(async (r) => {
 			const stop = toStop(r);
+			if (shared && stop.voices) {
+				const voices = stop.voices.filter((v) => shared.has(v.id));
+				stop.voices = voices.length ? voices : undefined;
+			}
 			if (r.added_by === 'user' && r.google_place_id) return withCard(stop, r.google_place_id);
 			const stale = !r.coords_at || Date.now() - r.coords_at.getTime() > STALE_MS;
 			if (!r.google_place_id || (!photos && !stale)) return stop;

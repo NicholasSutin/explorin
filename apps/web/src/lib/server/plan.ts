@@ -188,7 +188,7 @@ From the search results below, pick 5 to 7 specific, real, named places (parks, 
 Skip anything in a category they graded NO. Lean toward categories graded S+ and A+. Give the day rhythm (for example a walk, a bite, a sight, a sit-down) and keep places close enough to walk between unless the request says otherwise. Respect who they plan for and the time of day.
 Return JSON {"title":"a 3-7 word name for the day","picks":[{"sourceId":"id of the result","place":"the venue's proper name","placeQuery":"venue name, ${city}","title":"short evocative 3-6 word headline, not the venue name","description":"one sentence on what to do there","category":"2-3 word category","reason":"one sentence in second person on why it fits them, referencing their taste or request","tags":["2 or 3 of: ${TAGS.join(', ')}"]}]}.
 Time of day: ${windowLabel}.
-The person: ${taste?.summary ?? 'No taste profile yet.'}
+The person: ${JSON.stringify(taste?.summary ?? 'No taste profile yet.')}
 Today's request: ${JSON.stringify(prompt)} in ${city}.
 Search results: ${JSON.stringify(candidates)}`,
 				'plan.pick'

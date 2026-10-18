@@ -16,11 +16,11 @@ ADR-0002 chose a zero-dependency static page because the site was one page with 
 
 ### Option A: SvelteKit + adapter-cloudflare + D1 (chosen)
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Low for this repo: identical toolchain and versions to `apps/web` |
-| Cost | Workers free tier; D1 free tier covers a waitlist many times over |
-| Scalability | Edge-served; D1 is single-region but a waitlist is write-light |
+| Dimension        | Assessment                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| Complexity       | Low for this repo: identical toolchain and versions to `apps/web`                    |
+| Cost             | Workers free tier; D1 free tier covers a waitlist many times over                    |
+| Scalability      | Edge-served; D1 is single-region but a waitlist is write-light                       |
 | Team familiarity | Highest: Svelte 5 runes and Kit 3 are already in use, Svelte skills live in the repo |
 
 **Pros:** one framework to know; form actions give a waitlist that works without JavaScript and is enhanced with it; `wrangler types` types the bindings; moving components between the two apps is trivial later.
@@ -28,11 +28,11 @@ ADR-0002 chose a zero-dependency static page because the site was one page with 
 
 ### Option B: Astro + Cloudflare adapter + D1
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Medium: a third toolchain in the repo |
-| Cost | Same |
-| Scalability | Same |
+| Dimension        | Assessment                                                              |
+| ---------------- | ----------------------------------------------------------------------- |
+| Complexity       | Medium: a third toolchain in the repo                                   |
+| Cost             | Same                                                                    |
+| Scalability      | Same                                                                    |
 | Team familiarity | Lower; Astro's islands and content collections are new to this codebase |
 
 **Pros:** built for content sites, zero JS by default, Markdown pages for free. **Cons:** a different mental model from the app; sharing components later means rewriting them; no form-action equivalent, so the waitlist is a hand-rolled endpoint.

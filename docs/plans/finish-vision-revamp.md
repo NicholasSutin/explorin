@@ -253,12 +253,15 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
    - run `npm run db:migrate` (it should list 0001);
    - run `npm run db:migrate -- --apply`;
    - sign in and check that About-you shows your old interests.
-2. **C.** Any time after A is verified, merge the C PR. It needs no migration file, but run `npm run db:migrate -- --apply` once so `schema.sql` adds the two columns. The finish and Settings code reads them, so do this right after the deploy.
+2. **C.** Any time after A is verified. **Migrate first, then merge:** C's code reads `taste.learned` on nearly every signed-in page, so the columns must exist before it deploys.
+   - From `apps/web`, check out the C branch (`git switch feat/people-like-you`) and run `npm run db:migrate -- --apply`. It has no migration file, but `schema.sql` adds `taste.learned`, `taste.forgotten`, `reflections.google_place_id` and `reflections.trip_id`. The A code running in production ignores them.
+   - Then merge the C PR and let it deploy.
 3. **B.** After a few days of soak:
    - fork the Tiger service as a snapshot;
    - merge the B PR and deploy;
    - right after the deploy, run `npm run db:migrate -- --apply`.
-     Between that deploy and the migration, deleting the one old account that still has `experiences` rows would fail and could be retried, so keep that gap short. Delete the snapshot fork once you're satisfied.
+     Between that deploy and the migration, deleting the one old account that still has `experiences` and `profiles` rows would fail (its photos would already be gone, and a retry after the migration works), so keep that gap short. Delete the snapshot fork once you're satisfied.
+   - Don't run `db:migrate` from any branch cut before Release A after this: its old runner would re-create the dropped tables (ADR-0009).
 
 ## Nick's actions
 

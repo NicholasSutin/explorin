@@ -22,11 +22,11 @@ The stops come from Google Places (place id, coordinates, photos). Google Maps P
 
 ### Option A: MapLibre with free OpenStreetMap tiles (OpenFreeMap)
 
-| Dimension | Assessment |
-|---|---|
-| Cost | $0, no key |
-| Look | Full control over every layer |
-| Data | Cannot show Google Places photos, coordinates or names on it (§14.2) |
+| Dimension | Assessment                                                           |
+| --------- | -------------------------------------------------------------------- |
+| Cost      | $0, no key                                                           |
+| Look      | Full control over every layer                                        |
+| Data      | Cannot show Google Places photos, coordinates or names on it (§14.2) |
 
 Would mean replacing Places as the source of place data (OSM/Overture for coordinates, Wikimedia for photos) and losing Google's verification of AI-picked places.
 

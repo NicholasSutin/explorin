@@ -18,8 +18,9 @@ function connect(): Sql {
 	return postgres(hyperdrive ?? DATABASE_URL, {
 		max: onWorkers ? 1 : 5,
 		idle_timeout: 20,
-		// Also what keeps Hyperdrive's query cache (60 s + 15 s stale by default) away from session and onboarding
-		// reads: it cannot cache postgres.js queries sent unprepared. With `prepare: true` a sign-out or an
+		// Side effect worth knowing: Hyperdrive's query cache (60 s + 15 s stale by default) cannot cache postgres.js
+		// queries sent unprepared, so session and onboarding reads are always fresh today. Before turning this on,
+		// give those reads a cache-disabled Hyperdrive config (Cloudflare's advice for auth), or a sign-out or an
 		// `onboardedAt` change could take over a minute to show.
 		prepare: false
 	});

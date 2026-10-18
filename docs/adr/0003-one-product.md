@@ -24,12 +24,12 @@ The second surface carried the internal working name "Felt" in its package name,
 
 ### Option A: keep two unlinked flows under one name
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Lowest now |
-| Cost | The differentiator stays invisible to anyone who opens `/` |
-| Scalability | Unaffected |
-| Team familiarity | High |
+| Dimension        | Assessment                                                 |
+| ---------------- | ---------------------------------------------------------- |
+| Complexity       | Lowest now                                                 |
+| Cost             | The differentiator stays invisible to anyone who opens `/` |
+| Scalability      | Unaffected                                                 |
+| Team familiarity | High                                                       |
 
 **Pros:** no new code paths. **Cons:** two products in one app; the evidence idea only reachable by URL.
 
@@ -39,12 +39,12 @@ The second surface carried the internal working name "Felt" in its package name,
 
 ### Option C: one product, evidence flows into discovery (chosen)
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Medium: one new server module, one pipeline step, one card section |
-| Cost | One embedding call and one indexed query per discovery run when the database is on |
-| Scalability | Same query shape as the profile flow; scoped to a handful of place names |
-| Team familiarity | Reuses the retrieval that already exists |
+| Dimension        | Assessment                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| Complexity       | Medium: one new server module, one pipeline step, one card section                 |
+| Cost             | One embedding call and one indexed query per discovery run when the database is on |
+| Scalability      | Same query shape as the profile flow; scoped to a handful of place names           |
+| Team familiarity | Reuses the retrieval that already exists                                           |
 
 **Pros:** the differentiator shows up on the first screen; both surfaces share one retrieval and one data model; the profile side becomes the way to make discovery more personal rather than a parallel app. **Cons:** discovery gains an optional database dependency; place matching is by name until discovered places are upserted with their Google place IDs.
 

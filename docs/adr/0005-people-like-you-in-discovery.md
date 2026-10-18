@@ -25,12 +25,12 @@ Upsert discovered places into `places` with their `google_place_id` during enric
 
 ### Option A: name-scoped retrieval inside discovery (chosen for step 1)
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Low: ~80 lines, no schema change |
-| Cost | One embedding call plus one query per run with the database on |
-| Scalability | Query is bounded by place names, not table size |
-| Team familiarity | Same SQL shape as `recommend.ts` |
+| Dimension        | Assessment                                                     |
+| ---------------- | -------------------------------------------------------------- |
+| Complexity       | Low: ~80 lines, no schema change                               |
+| Cost             | One embedding call plus one query per run with the database on |
+| Scalability      | Query is bounded by place names, not table size                |
+| Team familiarity | Same SQL shape as `recommend.ts`                               |
 
 **Pros:** ships today; works for the curated set and the demo places, which overlap. **Cons:** name matching misses places that are not in `places` yet, and could match a same-named place elsewhere once cities multiply.
 

@@ -71,7 +71,7 @@ Use only details actually given: never invent events, people or feelings.
 Return JSON {"title":"an evocative 3-7 word title","story":"2-4 warm sentences in second person, built from their note and the places","emotions":["up to 3 of: ${EMOTIONS.join(', ')}"],"quote":"one sentence from their note, nearly verbatim, that would help someone similar decide to go; empty if the note has none","bestFor":["exactly ${BEST_FOR_SUGGESTED} of: ${BEST_FOR.join('; ')}"]}.
 Choose bestFor from what the places and the note suggest about who would enjoy this day most.
 Day: ${JSON.stringify({ planned: trip.title, request: trip.prompt, city: trip.city, places, note })}
-About them: ${taste?.summary ?? 'unknown'}`,
+About them: ${JSON.stringify(taste?.summary ?? 'unknown')}`,
 			'keepsake.draft'
 		)
 	);

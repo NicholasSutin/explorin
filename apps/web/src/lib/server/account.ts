@@ -1,8 +1,8 @@
 /**
  * Account-level operations for settings: profile edits, password change, usage summary and full deletion.
  * Deletion removes everything the person created: photos in storage, trips and stops, taste, usage, their
- * reflections (shared quotes included), legacy experiences and profiles, the app's users row, and finally the
- * better-auth user (sessions and accounts cascade from it).
+ * reflections (shared quotes included, also the copies planned into other people's trips), legacy experiences
+ * and profiles, the app's users row, and finally the better-auth user (sessions and accounts cascade from it).
  */
 import { auth } from './auth';
 import { sql } from './db';
@@ -79,8 +79,18 @@ export async function creditsThisMonth(userId: string): Promise<number> {
 export async function deleteAccount(userId: string): Promise<{ photos: number }> {
 	const photos = await deletePhotos(userId);
 	await sql.begin(async (tx) => {
-		await tx`DELETE FROM reflections WHERE author_id = ${userId}
-		         OR experience_id IN (SELECT id FROM experiences WHERE user_id = ${userId})`;
+		const quotes = await tx<{ id: string }[]>`
+			DELETE FROM reflections WHERE author_id = ${userId}
+			OR experience_id IN (SELECT id FROM experiences WHERE user_id = ${userId}) RETURNING id::text`;
+		// Planning copies matched quotes into each stop (trip_stops.data.voices); remove theirs from everyone's trips.
+		const ids = quotes.map((q) => q.id);
+		if (ids.length)
+			await tx`
+				UPDATE trip_stops SET data = jsonb_set(data, '{voices}', COALESCE(
+				  (SELECT jsonb_agg(v) FROM jsonb_array_elements(data->'voices') v WHERE NOT (v->>'id' = ANY(${ids}::text[]))),
+				  '[]'::jsonb))
+				WHERE jsonb_typeof(data->'voices') = 'array'
+				  AND EXISTS (SELECT 1 FROM jsonb_array_elements(data->'voices') v WHERE v->>'id' = ANY(${ids}::text[]))`;
 		await tx`DELETE FROM experiences WHERE user_id = ${userId}`;
 		await tx`DELETE FROM trips WHERE user_id = ${userId}`;
 		await tx`DELETE FROM usage_events WHERE user_id = ${userId}`;
@@ -89,9 +99,11 @@ export async function deleteAccount(userId: string): Promise<{ photos: number }>
 		const [u] = await tx<
 			{ email: string }[]
 		>`DELETE FROM "user" WHERE id = ${userId} RETURNING email`;
-		// Pending sign-up links and resets for this address (magic-link rows keep the email in `value`).
+		// Pending sign-up links and resets: magic-link rows keep {"email": …} as JSON in `value`, reset rows the user id.
 		if (u)
-			await tx`DELETE FROM verification WHERE identifier = ${u.email} OR value LIKE ${'%' + u.email + '%'}`;
+			await tx`DELETE FROM verification
+			         WHERE identifier = ${u.email} OR value = ${userId}
+			            OR CASE WHEN pg_input_is_valid(value, 'jsonb') THEN lower(value::jsonb->>'email') END = lower(${u.email})`;
 		await tx`DELETE FROM users WHERE id = ${userId}`;
 	});
 	return { photos };
