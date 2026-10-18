@@ -22,7 +22,7 @@
 	import { formatLatLng } from '#lib/adventure';
 	import { api, watchLocation, type Fix } from '#lib/client';
 	import { distanceM, formatDistance } from '#lib/geo';
-	import { sourceLabel } from '#lib/types';
+	import { sourceLabel, voiceName } from '#lib/types';
 	import { happeningTime, leg, type Selection } from '#lib/trip-ui';
 	import TripMap from '#lib/components/trip/TripMap.svelte';
 	import Sheet from '#lib/components/trip/Sheet.svelte';
@@ -104,6 +104,11 @@
 		const i = inPlan.indexOf(s);
 		const from = fix && s === next ? fix : i > 0 ? inPlan[i - 1].coords : (fix ?? undefined);
 		return leg(from, s.coords);
+	};
+	/** The list's "↓ 6 min" between two stops: always stop to stop, wherever you are. */
+	const legBetween = (s: Stop) => {
+		const i = inPlan.indexOf(s);
+		return i > 0 ? leg(inPlan[i - 1].coords, s.coords) : null;
 	};
 
 	const TARGET_KEY = $derived(`explorin.target.${trip.id}`);
@@ -386,8 +391,10 @@
 	{/if}
 
 	{#if toast}
+		<!-- Below the map buttons, and never in the way of a tap. -->
 		<p
-			class="fixed inset-x-4 top-4 z-40 mx-auto max-w-sm rounded-full bg-ink px-4 py-2.5 text-center text-sm text-cream shadow-lg"
+			class="pointer-events-none fixed inset-x-4 z-40 mx-auto max-w-sm rounded-full bg-ink px-4 py-2.5 text-center text-sm text-cream shadow-lg md:left-[440px]"
+			style="top: calc(max(0.75rem, env(safe-area-inset-top)) + 3.5rem)"
 			role="status"
 			transition:fly={{ y: -8 }}
 		>
@@ -495,7 +502,9 @@
 						<p class="text-xs tracking-wide text-ink/55 uppercase">
 							{trip.city} · {visited} of {inPlan.length} stops
 						</p>
-						<h1 class="truncate font-serif text-xl font-semibold">{trip.title ?? 'Your day'}</h1>
+						<h1 class="line-clamp-2 font-serif text-xl leading-snug font-semibold">
+							{trip.title ?? 'Your day'}
+						</h1>
 					</div>
 					<a
 						href="/"
@@ -576,7 +585,7 @@
 					{#each selStop.voices as v (v.id)}
 						<blockquote class="rounded-2xl bg-white p-3 text-sm ring-1 ring-ink/10">
 							“{v.quote}”<cite class="mt-1 block text-xs text-ink/55 not-italic"
-								>{v.who} · {sourceLabel(v.source)}</cite
+								>{voiceName(v.who, v.source)} · {sourceLabel(v.source)}</cite
 							>
 						</blockquote>
 					{/each}
@@ -698,7 +707,7 @@
 		{:else}
 			<ol class="space-y-2">
 				{#each stops as s (s.id)}
-					{@const l = s.inPlan ? legTo(s) : null}
+					{@const l = s.inPlan ? legBetween(s) : null}
 					<li>
 						{#if l && s.inPlan && number(s) > 1}<p class="py-1 pl-12 text-xs text-ink/45">
 								↓ {l.label}

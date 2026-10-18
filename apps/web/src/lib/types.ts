@@ -14,6 +14,16 @@ export interface Place {
 	maps_url: string | null;
 }
 
+/**
+ * Who a quote is credited to. Curated notes were stored as "Seed note, early-morning runner" (and trips keep a copy
+ * of their quotes), so they are tidied here to "Early-morning runner".
+ */
+export function voiceName(who: string, source: Source): string {
+	if (source !== 'seed') return who;
+	const persona = who.replace(/^seed note,?\s*/i, '').trim();
+	return persona ? persona[0].toUpperCase() + persona.slice(1) : 'Explorin field note';
+}
+
 export function sourceLabel(s: Source): string {
 	switch (s) {
 		case 'user':
@@ -25,6 +35,6 @@ export function sourceLabel(s: Source): string {
 		case 'public_review':
 			return 'From public reviews';
 		case 'seed':
-			return 'From seed notes';
+			return 'Explorin field notes';
 	}
 }

@@ -62,10 +62,10 @@
 		a.left < b.right + 2 && b.left < a.right + 2 && a.top < b.bottom + 2 && b.top < a.bottom + 2;
 
 	/**
-	 * Keeps the map readable at any zoom: stops that land on one spot (two places in the same building) stack
-	 * into a short column instead of hiding each other, a label that would run off the right edge flips to the
-	 * pin's left, and a label that would cover another pin or label is dropped. The selected stop's label always
-	 * shows; otherwise earlier stops win.
+	 * Keeps the map readable at any zoom: stops whose pins would touch (two places in the same building, or a
+	 * block apart when zoomed out) stack into a short column instead of hiding each other, a label that would run
+	 * off the right edge flips to the pin's left, and a label that would cover another pin or label is dropped.
+	 * The selected stop's or happening's label always shows; otherwise earlier stops win.
 	 */
 	function declutter() {
 		const els = stopMarkers.map((m) => m.element);
@@ -74,7 +74,8 @@
 			el.classList.remove('is-crowded', 'is-flipped');
 			const x = parseFloat(el.style.left);
 			const y = parseFloat(el.style.top);
-			const near = anchors.find((a) => Math.hypot(a.x - x, a.y - y) < 30);
+			// 38px: a pin is 32px plus its 3px ring on each side.
+			const near = anchors.find((a) => Math.hypot(a.x - x, a.y - y) < 38);
 			if (near) {
 				near.n++;
 				el.style.setProperty('--dx', `${near.x - x}px`);
@@ -88,6 +89,11 @@
 		const taken = [...els, ...happeningMarkers.map((m) => m.element)].map((el) =>
 			el.firstElementChild!.getBoundingClientRect()
 		);
+		for (const m of happeningMarkers)
+			if (m.element.classList.contains('is-selected')) {
+				const label = m.element.querySelector('.xm-label')?.getBoundingClientRect();
+				if (label?.width) taken.push(label);
+			}
 		const selectedFirst = [...els].sort(
 			(a, b) => +b.classList.contains('is-selected') - +a.classList.contains('is-selected')
 		);

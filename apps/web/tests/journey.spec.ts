@@ -92,6 +92,10 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	// 3. Tier list: grade the cards it chose for us.
 	await expect(page).toHaveURL(/\/onboarding\/taste$/, { timeout: 30_000 });
 	await expect(page.getByRole('heading', { name: 'Grade what you love.' })).toBeVisible();
+	// The grade buttons sit above the fixed bottom bar without scrolling, at phone and laptop size.
+	const gradeBox = await page.getByRole('group', { name: /^Grade / }).boundingBox();
+	const barBox = await page.getByRole('button', { name: /^Grade \d+ more/ }).boundingBox();
+	expect(gradeBox!.y + gradeBox!.height).toBeLessThanOrEqual(barBox!.y - 40);
 	await page.screenshot({ path: shot('03-tierlist.png'), fullPage: true });
 	// Every grade must be saved on the card it was given to, not the next one in the queue.
 	const sent: Record<string, string>[] = [];
@@ -213,6 +217,12 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	});
 	const options = page.getByRole('group', { name: 'Best for' }).getByRole('button');
 	expect(await options.count()).toBe(6);
+	// Nothing is picked for them; the first tap picks.
+	await expect(page.getByText('0 of 3 picked')).toBeVisible();
+	await options.nth(0).click();
+	await options.nth(2).click();
+	await expect(options.nth(0)).toHaveAttribute('aria-pressed', 'true');
+	await expect(page.getByText('2 of 3 picked')).toBeVisible();
 	// Phrases the note reveals about them (AI output, so possibly none). Opt-in: keep the first, skip the rest.
 	const remember = page.getByRole('region', { name: 'Explorin can remember' });
 	const offered = (await remember.isVisible())
@@ -229,7 +239,7 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 
 	// 7. Scrapbook opens at the new page with the share sheet.
 	await expect(page).toHaveURL(/\/scrapbook\/[0-9a-f-]{36}/);
-	const dialog = page.getByRole('dialog', { name: 'Share this page' });
+	const dialog = page.getByRole('dialog', { name: 'Share this day' });
 	await expect(dialog).toBeVisible({ timeout: 10_000 });
 	await expect(dialog.getByAltText('Your page as it will be shared')).toBeVisible({
 		timeout: 30_000
@@ -246,10 +256,19 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	await dialog.getByRole('button', { name: /Download image|Save to Files/ }).click();
 	await (await pageDownload).saveAs(shot('page.png'));
 	await dialog.getByRole('button', { name: 'Close' }).click();
+	// The new day is the one in view: its Share button and map link are there without turning a page.
+	await expect(page.getByRole('button', { name: 'Share' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'See this day on the map' })).toHaveAttribute(
+		'href',
+		new URL(tripUrl).pathname
+	);
 	await page.screenshot({ path: shot('13-book.png') });
+	// Back one: the contents on a phone; on a laptop, with one day saved, the closed book. Closed, it is just
+	// its cover, centred, with no empty left page beside it.
 	await page.getByRole('button', { name: 'Previous page' }).click();
+	if (process.env.E2E_DESKTOP) await expect(page.getByText(/^Cover \//)).toBeVisible();
 	await page.waitForTimeout(900);
-	await page.screenshot({ path: shot('14-contents.png') });
+	await page.screenshot({ path: shot('14-back.png') });
 
 	// 8. Settings: usage was recorded; then delete everything.
 	await page.goto('/settings');

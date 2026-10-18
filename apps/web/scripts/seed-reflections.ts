@@ -1,5 +1,5 @@
 /**
- * Curated seed reflections (source = 'seed', labeled "From seed notes" in the UI). Honest, short, feeling-first.
+ * Curated seed reflections (source = 'seed', labeled "Explorin field notes" in the UI). Honest, short, feeling-first.
  * The baseline "people like you" set; real public reviews from ingest-reviews.ts and members' trip notes add to it.
  * Idempotent: skips quotes that already exist.
  */
@@ -236,7 +236,7 @@ for (const [name, list] of Object.entries(seeds)) {
 			await sql`SELECT 1 FROM reflections WHERE place_id = ${p.id} AND quote = ${s.quote}`;
 		if (dup.length) continue;
 		const emb = await embedDoc(s.quote);
-		const display = s.who ? `Seed note, ${s.who}` : 'Seed note';
+		const display = s.who ?? 'Explorin field note';
 		await sql`INSERT INTO reflections (place_id, source, display_name, body, quote, emotions, themes, consent_share, embedding)
 		          VALUES (${p.id}, 'seed', ${display}, ${s.quote}, ${s.quote}, ${s.emotions}, ${s.themes}, true, ${vec(emb)}::vector)`;
 		n++;

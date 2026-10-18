@@ -21,6 +21,9 @@ export const INTERESTS = [
 export type Interest = (typeof INTERESTS)[number];
 
 export const AUDIENCES = [
+	'Just me',
+	'A date',
+	'Friends',
 	'Teens',
 	'Families with kids',
 	'Young adults',

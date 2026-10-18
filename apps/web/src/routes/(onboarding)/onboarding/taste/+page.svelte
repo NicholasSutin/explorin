@@ -150,7 +150,10 @@
 			<strong>S+</strong>.
 		</p>
 
-		<div class="relative mt-4 h-[min(44dvh,420px)] sm:mt-6 md:h-[min(60vh,520px)]">
+		<!-- On laptops the card gives way so the grade buttons stay above the fixed bar at the bottom. -->
+		<div
+			class="relative mt-4 h-[min(44dvh,420px)] sm:mt-6 md:h-[clamp(220px,calc(100dvh-31rem),520px)]"
+		>
 			{#key current}
 				{#if current}
 					{@const c = CATEGORY.get(current)}
