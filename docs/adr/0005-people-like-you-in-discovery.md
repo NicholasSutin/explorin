@@ -55,5 +55,5 @@ A is the smallest change that puts the differentiator on the main screen, and it
 ## Action items
 
 1. [x] `evidence.ts`, `people` step, `voices` on `Experience`, card section (2026-10-11).
-2. [x] Step 2: match on `google_place_id` (2026-10-17). Trip notes store the highlight's place id on the reflection itself (`reflections.google_place_id`), since `places.name` is unique and folds same-name branches into one row; older rows fall back to their `places` row's id, and the name match only runs when a stop or a quote has no id.
+2. [x] Step 2: match on `google_place_id` (2026-10-17). Trip notes store the highlight's place id on the reflection itself (`reflections.google_place_id`), since `places.name` is unique and folds same-name branches into one row; older quotes have no id of their own and match by name (their `places` row's id isn't used: a row matched by name may carry another branch's id). The name match only runs when a stop or a quote has no id, and a stop shows at most one quote per author.
 3. [x] Reflections from planned days feed the table (2026-10-17, ADR-0007): the end-of-day note on a trip becomes a quote on its highlight stop.

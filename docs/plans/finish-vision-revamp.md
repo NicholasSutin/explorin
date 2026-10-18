@@ -171,7 +171,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
    - Add `learned` to `KeepsakeDraft` in `src/lib/keepsake.ts`.
    - Add `learned` to `keepsakeInput`, using `.default([])` so pages opened before the deploy still save.
 4. **Saving:**
-   - The done page (`src/routes/(trip)/trip/[id]/done/+page.svelte`) shows the phrases as removable chips under the heading "Explorin will remember".
+   - The done page (`src/routes/(trip)/trip/[id]/done/+page.svelte`) shows the phrases as chips under the heading "Explorin will remember". (Built as opt-in "Explorin can remember" after the security review; see Build notes.)
    - The finish endpoint (`src/routes/api/trip/[id]/finish/+server.ts`) calls a new `addLearned(uid, name, phrases)` in `src/lib/server/taste.ts` through `background()` (`src/lib/server/background.ts`). That keeps usage counted and the response fast.
    - Call it from the endpoint, not inside `saveKeepsake`, because `saveKeepsake` returns early in several cases.
    - `addLearned` checks each phrase on the server, removes duplicates ignoring case (the finish request can be sent twice), keeps the newest 8, and calls `refreshSummary`.
@@ -211,7 +211,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
 - **Order and numbering.** C ships before B, because C only adds things and B has to wait for a soak anyway.
   - The migrations are `0001-legacy-taste.sql` (A) and `0002-drop-legacy.sql` (B).
   - C needs no migration file. `taste.learned` and `reflections.google_place_id` are `ADD COLUMN IF NOT EXISTS` in `schema.sql`, the same as other additive columns (ADR-0009 rule).
-  - There is no backfill. The quote query uses `COALESCE(reflections.google_place_id, places.google_place_id)`, so old rows match through their places row.
+  - There is no backfill. Older quotes match by name, as before: after the correctness review the query no longer borrows `places.google_place_id`, which can belong to another branch when `upsertGroundedPlace` matched the row by name.
 - **The runner** uses one reserved postgres.js connection with explicit `BEGIN`/`COMMIT`, because `sql.begin()` on a reserved connection would go through the pool. That one connection holds the advisory lock. The check that refuses unknown migrations runs before `schema.sql` is applied.
 - **0001** keeps the person's interest order (`WITH ORDINALITY`) and treats a value that isn't an array as empty.
 - **Static maps.** `/api/map` dropped the `style` parameter entirely, since paper is the only style. `scrapbook/layout.ts` no longer sends it, and old URLs that still do get the same image.

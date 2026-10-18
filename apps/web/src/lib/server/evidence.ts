@@ -4,8 +4,10 @@
  * (two-axis retrieval scoped to a known list of places, ADR-0005). Needs DATABASE_URL and a Gemini key;
  * otherwise the step reports itself skipped and the plan goes on.
  *
- * A quote matches a stop by Google place id: the one stored with the quote, else its places row's. The fuzzy
- * name match is the fallback for when either side has no id, so two branches of a chain stay apart.
+ * A quote matches a stop by the Google place id stored with the quote (members' trip notes have one). The fuzzy
+ * name match is the fallback for when either side has no id, so two branches of a chain stay apart. Older quotes
+ * deliberately don't borrow their places row's id: rows matched by name may carry another branch's id. Each stop
+ * shows at most one quote per author.
  */
 import { DATABASE_URL, GEMINI_API_KEY } from '$app/env/private';
 import type { Experience, PlaceVoice } from '#lib/adventure';
@@ -15,6 +17,7 @@ export const evidenceEnabled = () => Boolean(DATABASE_URL && GEMINI_API_KEY);
 interface VoiceRow extends PlaceVoice {
 	place: string;
 	gid: string | null;
+	author: string | null;
 }
 
 const norm = (s: string) =>
@@ -50,11 +53,12 @@ export async function attachVoices<T extends Pick<Experience, 'place' | 'placeId
 	const profileVec = taste ? vec(taste) : null;
 	const rows = await sql<VoiceRow[]>`
 		SELECT r.id, r.quote, r.display_name AS who, r.source, r.emotions, p.name AS place, k.gid,
+		       r.author_id::text AS author,
 		       0.6 * (1 - (r.embedding <=> ${vec(promptVec)}::vector))
 		     + 0.4 * COALESCE(1 - (r.author_profile_embedding <=> ${profileVec}::vector), 0.5)
 		     + CASE WHEN r.source = 'user' THEN 0.05 ELSE 0 END AS score
 		FROM reflections r JOIN places p ON p.id = r.place_id,
-		  LATERAL (SELECT COALESCE(r.google_place_id, p.google_place_id) AS gid,
+		  LATERAL (SELECT r.google_place_id AS gid,
 		                  btrim(regexp_replace(lower(regexp_replace(p.name, '[^A-Za-z0-9 ]', ' ', 'g')), ' +', ' ', 'g')) AS name) k
 		WHERE r.consent_share AND r.quote IS NOT NULL AND r.embedding IS NOT NULL
 		  AND (k.gid = ANY(${ids}::text[])
@@ -67,8 +71,15 @@ export async function attachVoices<T extends Pick<Experience, 'place' | 'placeId
 	let total = 0;
 	const out = experiences.map((e) => {
 		const key = norm(e.place);
+		const authors = new Set<string>();
 		const voices = rows
 			.filter((r) => (e.placeId && r.gid ? r.gid === e.placeId : sameName(key, norm(r.place))))
+			.filter((r) => {
+				if (!r.author) return true; // seed notes and public reviews have no member behind them
+				if (authors.has(r.author)) return false;
+				authors.add(r.author);
+				return true;
+			})
 			.slice(0, 2)
 			.map(({ id, quote, who, source, emotions }) => ({
 				id,

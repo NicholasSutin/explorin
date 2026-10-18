@@ -60,7 +60,6 @@ CREATE TABLE IF NOT EXISTS reflections (
 ALTER TABLE reflections ADD COLUMN IF NOT EXISTS google_place_id text;
 
 CREATE INDEX IF NOT EXISTS reflections_place_idx ON reflections(place_id);
-CREATE INDEX IF NOT EXISTS reflections_google_place_idx ON reflections(google_place_id);
 CREATE INDEX IF NOT EXISTS experiences_user_idx ON experiences(user_id);
 
 CREATE TABLE IF NOT EXISTS response_cache (
@@ -131,7 +130,8 @@ CREATE INDEX IF NOT EXISTS verification_identifier_idx ON verification(identifie
 -- What onboarding learns: the free-text blurb, broad interests, who they plan for, and the tier-list grades
 -- ({ "<category id>": "S+" | "A+" | "A" | "B" | "C" | "NO" }). `summary` is a plain-language digest of all of it,
 -- embedded so "people like you" can weigh quotes by taste. `offered` is which cards the tier list showed.
--- `learned` holds short phrases drawn from trip notes that the person kept (newest first, at most 8).
+-- `learned` holds short phrases drawn from trip notes that the person kept (newest first, at most 8); `forgotten`
+-- the ones they removed in Settings, so drafts don't suggest them again (at most 50).
 CREATE TABLE IF NOT EXISTS taste (
   user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   blurb text NOT NULL DEFAULT '',
@@ -143,9 +143,11 @@ CREATE TABLE IF NOT EXISTS taste (
   embedding vector(768),
   flip_animations boolean NOT NULL DEFAULT true,
   learned text[] NOT NULL DEFAULT '{}',
+  forgotten text[] NOT NULL DEFAULT '{}',
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE taste ADD COLUMN IF NOT EXISTS learned text[] NOT NULL DEFAULT '{}';
+ALTER TABLE taste ADD COLUMN IF NOT EXISTS forgotten text[] NOT NULL DEFAULT '{}';
 
 -- One planned day. Stops live in trip_stops; happenings (NYC permitted events near the stops) are a snapshot.
 CREATE TABLE IF NOT EXISTS trips (
@@ -191,6 +193,11 @@ CREATE TABLE IF NOT EXISTS trip_stops (
   visited_lng double precision
 );
 CREATE INDEX IF NOT EXISTS trip_stops_trip_idx ON trip_stops(trip_id, position);
+
+-- The reflection a finished trip's note became: one per trip (finishing again updates it), gone with the trip.
+-- Declared here rather than in `reflections` above because it references trips.
+ALTER TABLE reflections ADD COLUMN IF NOT EXISTS trip_id uuid REFERENCES trips(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX IF NOT EXISTS reflections_trip_idx ON reflections(trip_id);
 
 -- Event-location text -> coordinates, shared across people (greenmarkets repeat weekly). Rows older than 30 days
 -- are ignored and overwritten, which also keeps Google-geocoded coordinates inside their caching window.

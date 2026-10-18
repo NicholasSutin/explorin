@@ -2,7 +2,7 @@
 	/**
 	 * End of the day, two short steps. 1: a note (typed or spoken), up to four photos, the highlight stop.
 	 * 2: AI drafts a title and story and suggests six "best for" tags; keep up to three, tweak, save to scrapbook.
-	 * It may also suggest a phrase or two the note reveals about their taste ("Explorin will remember"), each removable.
+	 * It may also suggest a phrase or two the note reveals about their taste ("Explorin can remember"), kept only if tapped.
 	 */
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -12,7 +12,6 @@
 	import MicOff from '@lucide/svelte/icons/mic-off';
 	import Check from '@lucide/svelte/icons/check';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
-	import X from '@lucide/svelte/icons/x';
 	import PhotoPicker from '#lib/components/PhotoPicker.svelte';
 	import { api, uploadPhotos } from '#lib/client';
 	import { BEST_FOR_MAX, type KeepsakeDraft } from '#lib/keepsake';
@@ -106,7 +105,7 @@
 			title = draft.title;
 			story = draft.story;
 			picked = draft.bestForOptions.slice(0, 2);
-			learned = [...draft.learned];
+			learned = [];
 			step = 2;
 			window.scrollTo({ top: 0 });
 		} catch (e) {
@@ -287,28 +286,26 @@
 					class="mt-6 rounded-2xl bg-white p-4 ring-1 ring-ink/10"
 					aria-labelledby="learned-heading"
 				>
-					<h2 id="learned-heading" class="text-sm font-medium">Explorin will remember</h2>
+					<h2 id="learned-heading" class="text-sm font-medium">Explorin can remember</h2>
 					<p class="mt-0.5 text-sm text-ink/60">
-						{learned.length
-							? 'From your note, for your next plans. Remove anything that isn’t you; Settings has the full list.'
-							: 'Nothing from this note will be remembered.'}
+						From your note, for your next plans. Tap the ones that sound like you; nothing is kept
+						unless you pick it, and Settings can forget it later.
 					</p>
-					{#if learned.length}
-						<ul class="mt-3 flex flex-wrap gap-2">
-							{#each learned as phrase (phrase)}
-								<li class="flex items-center gap-1 rounded-full bg-moss py-1 pr-1 pl-3 text-sm">
-									{phrase}
-									<button
-										type="button"
-										onclick={() => (learned = learned.filter((p) => p !== phrase))}
-										aria-label="Don’t remember “{phrase}”"
-										class="grid h-8 w-8 place-items-center rounded-full hover:bg-ink/10"
-										><X size={14} aria-hidden="true" /></button
-									>
-								</li>
-							{/each}
-						</ul>
-					{/if}
+					<div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Phrases to remember">
+						{#each draft.learned as phrase (phrase)}
+							{@const on = learned.includes(phrase)}
+							<button
+								type="button"
+								onclick={() =>
+									(learned = on ? learned.filter((p) => p !== phrase) : [...learned, phrase])}
+								aria-pressed={on}
+								class="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm ring-1 transition {on
+									? 'bg-moss text-ink ring-green'
+									: 'bg-paper text-ink/80 ring-ink/15'}"
+								>{#if on}<Check size={14} aria-hidden="true" />{/if}{phrase}</button
+							>
+						{/each}
+					</div>
 				</section>
 			{/if}
 		</div>

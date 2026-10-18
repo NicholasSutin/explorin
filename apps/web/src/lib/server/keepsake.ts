@@ -16,7 +16,7 @@ import { CATEGORY, GRADE_WEIGHT, LEARNED_CHARS, LEARNED_PER_TRIP } from '#lib/ta
 import type { Trip } from '#lib/adventure';
 import { adventureAI, embed } from './gemini';
 import { getTasteEmbedding, sql, upsertGroundedPlace, vec } from './db';
-import { cleanPhrase, getTaste } from './taste';
+import { getTaste, keepablePhrases } from './taste';
 import { GEMINI_API_KEY } from '$app/env/private';
 
 const draftSchema = z.object({
@@ -82,7 +82,6 @@ About them: ${JSON.stringify(taste?.summary ?? 'unknown')}`,
 		)
 	);
 	if (!out.success) return fallback;
-	const known = new Set((taste?.learned ?? []).map((p) => p.toLowerCase()));
 	const options = [
 		...new Set(out.data.bestFor.filter((b) => (BEST_FOR as readonly string[]).includes(b)))
 	];
@@ -96,9 +95,10 @@ About them: ${JSON.stringify(taste?.summary ?? 'unknown')}`,
 			.slice(0, 3),
 		quote: out.data.quote,
 		bestForOptions: options.slice(0, BEST_FOR_SUGGESTED),
-		learned: [...new Set(out.data.learned.map(cleanPhrase))]
-			.filter((p) => p.length >= 3 && !known.has(p.toLowerCase()))
-			.slice(0, LEARNED_PER_TRIP),
+		learned: keepablePhrases(out.data.learned, [
+			...(taste?.learned ?? []),
+			...(taste?.forgotten ?? [])
+		]),
 		aiGenerated: true
 	};
 }
@@ -147,8 +147,12 @@ export async function saveKeepsake(uid: string, name: string | null, trip: Trip,
 		  story = ${k.story || null}, emotions = ${k.emotions}, highlight_stop_id = ${highlight?.id ?? null}
 		WHERE id = ${trip.id} AND user_id = ${uid}`;
 
-	// The note becomes evidence for people like them, attached to the highlight place.
-	if (!highlight || !k.note || k.note.length < 12 || !GEMINI_API_KEY) return;
+	// The note becomes evidence for people like them, attached to the highlight place: one reflection per trip,
+	// so finishing again replaces it rather than adding another quote to the same place.
+	if (!highlight || !k.note || k.note.length < 12 || !GEMINI_API_KEY) {
+		await sql`DELETE FROM reflections WHERE trip_id = ${trip.id} AND author_id = ${uid}`;
+		return;
+	}
 	try {
 		const place = highlight.placeId
 			? await upsertGroundedPlace({
@@ -167,11 +171,17 @@ export async function saveKeepsake(uid: string, name: string | null, trip: Trip,
 			displayName(uid, name)
 		]);
 		await sql`
-			INSERT INTO reflections (place_id, google_place_id, author_id, source, display_name, body, quote, emotions,
-			                         themes, photo_urls, consent_share, embedding, author_profile_embedding)
-			VALUES (${place.id}, ${highlight.placeId ?? null}, ${uid}, 'user', ${who}, ${k.note}, ${k.quote || null},
-			        ${k.emotions}, ${k.bestFor}, '{}', ${k.share && Boolean(k.quote)}, ${vec(bodyVec)}::vector,
-			        ${authorVec ? vec(authorVec) : null}::vector)`;
+			INSERT INTO reflections (trip_id, place_id, google_place_id, author_id, source, display_name, body, quote,
+			                         emotions, themes, photo_urls, consent_share, embedding, author_profile_embedding)
+			VALUES (${trip.id}, ${place.id}, ${highlight.placeId ?? null}, ${uid}, 'user', ${who}, ${k.note},
+			        ${k.quote || null}, ${k.emotions}, ${k.bestFor}, '{}', ${k.share && Boolean(k.quote)},
+			        ${vec(bodyVec)}::vector, ${authorVec ? vec(authorVec) : null}::vector)
+			ON CONFLICT (trip_id) DO UPDATE SET
+			  place_id = EXCLUDED.place_id, google_place_id = EXCLUDED.google_place_id,
+			  display_name = EXCLUDED.display_name, body = EXCLUDED.body, quote = EXCLUDED.quote,
+			  emotions = EXCLUDED.emotions, themes = EXCLUDED.themes, consent_share = EXCLUDED.consent_share,
+			  embedding = EXCLUDED.embedding, author_profile_embedding = EXCLUDED.author_profile_embedding
+			WHERE reflections.author_id = EXCLUDED.author_id`;
 	} catch (e) {
 		console.warn('[keepsake] reflection not stored', (e as Error).message);
 	}

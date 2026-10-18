@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
-import { AUDIENCES, INTERESTS } from '#lib/taste';
+import { AUDIENCES, INTERESTS, LEARNED_CHARS } from '#lib/taste';
 import { forgetLearned, getTaste, saveAboutYou, setFlipAnimations } from '#lib/server/taste';
 import { changePassword, deleteAccount, updateAccount, usageSummary } from '#lib/server/account';
 import { hasPassword } from '#lib/server/auth';
@@ -73,7 +73,8 @@ export const actions: Actions = {
 	forget: async ({ request, locals }) => {
 		const form = await request.formData();
 		const phrase = String(form.get('phrase') ?? '');
-		if (phrase) await forgetLearned(locals.uid, locals.user?.name ?? null, phrase);
+		if (phrase && phrase.length <= LEARNED_CHARS)
+			await forgetLearned(locals.uid, locals.user?.name ?? null, phrase);
 		return { section: 'learned', saved: true };
 	},
 	flip: async ({ request, locals }) => {

@@ -199,12 +199,17 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	});
 	const options = page.getByRole('group', { name: 'Best for' }).getByRole('button');
 	expect(await options.count()).toBe(6);
-	// Phrases the note reveals about them (AI output, so possibly none); kept ones show up in Settings.
-	const remember = page.getByRole('region', { name: 'Explorin will remember' });
-	const learned = (await remember.isVisible())
-		? await remember.getByRole('listitem').allInnerTexts()
+	// Phrases the note reveals about them (AI output, so possibly none). Opt-in: keep the first, skip the rest.
+	const remember = page.getByRole('region', { name: 'Explorin can remember' });
+	const offered = (await remember.isVisible())
+		? (await remember.getByRole('button').allInnerTexts()).map((t) => t.trim())
 		: [];
-	console.log('[journey] learned from the note:', learned);
+	console.log('[journey] the note suggested:', offered);
+	if (offered.length) {
+		const first = remember.getByRole('button', { name: offered[0], exact: true });
+		await first.click();
+		await expect(first).toHaveAttribute('aria-pressed', 'true');
+	}
 	await page.screenshot({ path: shot('11-bestfor.png'), fullPage: true });
 	await page.getByRole('button', { name: 'Save to my scrapbook' }).click();
 
@@ -237,9 +242,19 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	await expect(page.getByText('Credits used in')).toBeVisible();
 	await expect(page.getByText(/Nimble web search|Google Places|Gemini/).first()).toBeVisible();
 	const learnedList = page.getByRole('region', { name: 'Learned from your trips' });
-	if (learned.length) {
-		const phrase = learned[0].trim();
-		await expect(learnedList.getByText(phrase, { exact: true })).toBeVisible();
+	if (offered.length) {
+		const [phrase, skipped] = offered;
+		// The kept phrase is merged after the finish response; reload until it has landed.
+		await expect
+			.poll(
+				async () => {
+					await page.reload();
+					return learnedList.getByText(phrase, { exact: true }).count();
+				},
+				{ timeout: 20_000 }
+			)
+			.toBe(1);
+		if (skipped) await expect(learnedList.getByText(skipped, { exact: true })).toHaveCount(0);
 		await learnedList.getByRole('button', { name: `Forget “${phrase}”` }).click();
 		await expect(learnedList.getByText(phrase, { exact: true })).toHaveCount(0);
 	} else await expect(learnedList.getByText(/Nothing yet/)).toBeVisible();
