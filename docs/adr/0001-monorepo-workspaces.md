@@ -16,24 +16,24 @@ Reorganise into `apps/web`, `apps/marketing`, `packages/brand`, `docs/`, `media/
 
 ### Option A: npm workspaces monorepo (chosen)
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Low: one `package.json` field, no extra tooling |
-| Cost | None |
-| Scalability | Fine for a handful of apps; Turborepo or pnpm can be added later without moving files |
-| Team familiarity | npm is already in use |
+| Dimension        | Assessment                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| Complexity       | Low: one `package.json` field, no extra tooling                                       |
+| Cost             | None                                                                                  |
+| Scalability      | Fine for a handful of apps; Turborepo or pnpm can be added later without moving files |
+| Team familiarity | npm is already in use                                                                 |
 
 **Pros:** one checkout, one history, brand assets next to their consumers, shared agent skills and MCP config at the root.
 **Cons:** `npm install` at the root hoists dependencies and creates a root lockfile, making `apps/web/package-lock.json` stale; mixed concerns in one repo.
 
 ### Option B: separate repositories
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Medium: brand kit must be published or vendored |
-| Cost | More CI and permission surface |
-| Scalability | Scales to many teams, which this is not |
-| Team familiarity | Fine |
+| Dimension        | Assessment                                      |
+| ---------------- | ----------------------------------------------- |
+| Complexity       | Medium: brand kit must be published or vendored |
+| Cost             | More CI and permission surface                  |
+| Scalability      | Scales to many teams, which this is not         |
+| Team familiarity | Fine                                            |
 
 **Pros:** independent release cadence, smaller clones.
 **Cons:** brand drift between repos, two places to update docs and skills, overhead for a single developer.

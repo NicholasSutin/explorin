@@ -5,6 +5,7 @@
 ### Essential Information to Gather
 
 **1. Entry Requirements**
+
 - Visa requirements and processing time
 - Passport validity requirements (usually 6 months)
 - Vaccination requirements
@@ -12,6 +13,7 @@
 - Customs regulations
 
 **2. Best Time to Visit**
+
 - Peak season vs off-season
 - Weather patterns by month
 - Local festivals and events
@@ -19,6 +21,7 @@
 - Monsoon/hurricane seasons
 
 **3. Safety & Health**
+
 - Current travel advisories
 - Common scams targeting tourists
 - Safe neighborhoods vs areas to avoid
@@ -27,6 +30,7 @@
 - Travel insurance recommendations
 
 **4. Cultural Norms**
+
 - Dress codes (especially for religious sites)
 - Tipping customs
 - Greetings and basic etiquette
@@ -35,6 +39,7 @@
 - Dining etiquette
 
 **5. Practical Information**
+
 - Currency and exchange rates
 - ATM availability and fees
 - Credit card acceptance
@@ -47,16 +52,19 @@
 ### Budget Categories
 
 **Accommodation (30-45% of budget)**
+
 - Budget: Hostels, guesthouses ($20-50/night)
 - Mid-range: 3-star hotels, Airbnb ($50-150/night)
 - Luxury: 4-5 star hotels, resorts ($150+/night)
 
 **Food (20-30% of budget)**
+
 - Budget: Street food, local eateries ($10-20/day)
 - Mid-range: Mix of local and tourist restaurants ($30-60/day)
 - Luxury: Fine dining experiences ($100+/day)
 
 **Activities & Attractions (15-25% of budget)**
+
 - Entry fees to attractions
 - Tours and experiences
 - Adventure activities
@@ -64,6 +72,7 @@
 - Shopping budget
 
 **Transportation (10-20% of budget)**
+
 - International flights
 - Local transportation (taxi, metro, bus)
 - Inter-city travel
@@ -71,6 +80,7 @@
 - Airport transfers
 
 **Miscellaneous (5-10% of budget)**
+
 - Travel insurance
 - Visa fees
 - Tips and gratuities
@@ -93,6 +103,7 @@
 ### Pacing Your Trip
 
 **Relaxed Pace (2-3 activities/day)**
+
 - Best for: First-time travelers, families, longer trips
 - Morning: One major attraction/activity
 - Afternoon: Leisurely exploration or rest
@@ -101,6 +112,7 @@
 - Cons: See fewer things
 
 **Moderate Pace (3-4 activities/day)**
+
 - Best for: Most travelers, 1-2 week trips
 - Morning: Major attraction
 - Afternoon: Secondary attraction or activity
@@ -109,6 +121,7 @@
 - Cons: Requires some planning
 
 **Fast Pace (4-5 activities/day)**
+
 - Best for: Experienced travelers, short trips, high energy
 - Morning: Early start, major attraction
 - Midday: Quick lunch, second attraction
@@ -131,6 +144,7 @@
 ## Pre-Departure Checklist Timeline
 
 ### 3 Months Before
+
 - [ ] Research destination thoroughly
 - [ ] Check passport expiration
 - [ ] Research visa requirements
@@ -139,6 +153,7 @@
 - [ ] List must-see attractions
 
 ### 2 Months Before
+
 - [ ] Book flights
 - [ ] Book accommodation
 - [ ] Apply for visa if needed
@@ -148,6 +163,7 @@
 - [ ] Research local customs
 
 ### 1 Month Before
+
 - [ ] Book popular activities/tours
 - [ ] Make restaurant reservations
 - [ ] Notify bank of travel plans
@@ -158,6 +174,7 @@
 - [ ] Register with embassy if advised
 
 ### 2 Weeks Before
+
 - [ ] Confirm all reservations
 - [ ] Print/save confirmation documents
 - [ ] Exchange some currency
@@ -168,6 +185,7 @@
 - [ ] Download offline maps
 
 ### 1 Week Before
+
 - [ ] Check in for flights
 - [ ] Pack luggage
 - [ ] Charge all electronics
@@ -178,6 +196,7 @@
 - [ ] Set home security
 
 ### Day Before
+
 - [ ] Re-check flight time
 - [ ] Prepare carry-on essentials
 - [ ] Take out trash
@@ -189,7 +208,9 @@
 ## Packing Strategies
 
 ### The Rule of Three
+
 Pack items you can wear multiple times:
+
 - 3 bottoms (pants, shorts, skirts)
 - 6-7 tops (mix and match)
 - 1-2 outfits for special occasions
@@ -198,6 +219,7 @@ Pack items you can wear multiple times:
 ### Universal Packing List Categories
 
 **Documents & Money**
+
 - Passport (check validity)
 - Visa (if required)
 - Travel insurance papers
@@ -209,6 +231,7 @@ Pack items you can wear multiple times:
 - Emergency contact list
 
 **Electronics**
+
 - Phone and charger
 - Power bank
 - Universal adapter
@@ -218,6 +241,7 @@ Pack items you can wear multiple times:
 - Charging cables
 
 **Health & Hygiene**
+
 - Prescription medications
 - Basic first aid kit
 - Pain relievers
@@ -228,6 +252,7 @@ Pack items you can wear multiple times:
 - Any personal care items
 
 **Clothing (adjust for climate)**
+
 - Underwear and socks (7 days worth)
 - Comfortable walking shoes
 - Sandals/flip-flops
@@ -238,6 +263,7 @@ Pack items you can wear multiple times:
 - Light jacket or sweater
 
 **Accessories**
+
 - Day backpack
 - Reusable water bottle
 - Sunglasses
@@ -248,6 +274,7 @@ Pack items you can wear multiple times:
 - Ziplock bags
 
 ### Packing Tips
+
 1. **Roll, Don't Fold**: Saves space, reduces wrinkles
 2. **Wear Bulkiest Items**: On the plane
 3. **Pack Multipurpose Items**: Scarf can be blanket, pillow, cover-up
@@ -258,6 +285,7 @@ Pack items you can wear multiple times:
 ## Safety Tips
 
 ### General Safety
+
 - Keep copies of documents separately from originals
 - Share itinerary with someone at home
 - Register with your embassy
@@ -270,6 +298,7 @@ Pack items you can wear multiple times:
 - Research common scams in the area
 
 ### Money Safety
+
 - Use ATMs inside banks during business hours
 - Carry only what you need for the day
 - Split money between different locations
@@ -278,6 +307,7 @@ Pack items you can wear multiple times:
 - Avoid exchanging money on the street
 
 ### Health Safety
+
 - Wash hands frequently
 - Use hand sanitizer
 - Drink bottled water if tap water unsafe

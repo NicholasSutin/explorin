@@ -33,18 +33,18 @@ One-off changes still work with `npx wrangler secret put NAME`.
 
 Non-secret settings (`TURNSTILE_SITE_KEY`, `TURNSTILE_HOSTNAMES`, `APP_URL`, `WAITLIST_FROM_EMAIL`) go in `wrangler.jsonc` under `vars`; defaults and descriptions live in `src/env.ts`. Export the list with `npm run waitlist:export`.
 
-`APP_URL` points at the app's public hostname (`https://app.explorin.app`) so the header shows "Open the app" and the welcome email carries the demo link. A value whose hostname is this site's own is ignored with a warning in the Worker logs, since a link there would only reload the landing page; leaving it unset hides both links.
+`APP_URL` points at the app's public hostname (`https://app.explorin.app`) so the header shows "Open the app" and the welcome email carries the sign-up link. A value whose hostname is this site's own is ignored with a warning in the Worker logs, since a link there would only reload the landing page; leaving it unset hides both links.
 
 ## Domain and zone settings
 
 Everything the `explorin.app` zone needs beyond the Workers themselves. These live in the Cloudflare dashboard, not in any config file, so this is the record of them (set 2026-10-12).
 
-| Hostname | Served by | Created by |
-|---|---|---|
-| `explorin.app` | this Worker (`explorin-marketing`) | Custom Domain in `wrangler.jsonc`; deploy creates the DNS record and certificate |
-| `www.explorin.app` | redirect to the apex | manual proxied placeholder record `AAAA www 100::` plus the Redirect Rule below |
-| `app.explorin.app` | the app Worker (`explorin-app`, `apps/web`) | Custom Domain in `apps/web/wrangler.jsonc` |
-| `cdn.explorin.app` | R2 bucket custom domain | R2 bucket settings; the root path returns 404 because no object lives at `/` |
+| Hostname           | Served by                                   | Created by                                                                       |
+| ------------------ | ------------------------------------------- | -------------------------------------------------------------------------------- |
+| `explorin.app`     | this Worker (`explorin-marketing`)          | Custom Domain in `wrangler.jsonc`; deploy creates the DNS record and certificate |
+| `www.explorin.app` | redirect to the apex                        | manual proxied placeholder record `AAAA www 100::` plus the Redirect Rule below  |
+| `app.explorin.app` | the app Worker (`explorin-app`, `apps/web`) | Custom Domain in `apps/web/wrangler.jsonc`                                       |
+| `cdn.explorin.app` | R2 bucket custom domain                     | R2 bucket settings; the root path returns 404 because no object lives at `/`     |
 
 Dashboard settings, zone-wide:
 

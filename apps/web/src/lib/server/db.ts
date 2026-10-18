@@ -2,7 +2,7 @@ import postgres, { type Sql } from 'postgres';
 import { getRequestEvent } from '$app/server';
 import { DATABASE_URL } from '$app/env/private';
 import { bindings, onWorkers } from '#bindings';
-import type { Place, Profile, Traits } from '#lib/types';
+import type { Place } from '#lib/types';
 
 /**
  * On Workers the connection goes through Hyperdrive (wrangler.jsonc), which keeps a warm pool next to the
@@ -18,6 +18,10 @@ function connect(): Sql {
 	return postgres(hyperdrive ?? DATABASE_URL, {
 		max: onWorkers ? 1 : 5,
 		idle_timeout: 20,
+		// Side effect worth knowing: Hyperdrive's query cache (60 s + 15 s stale by default) cannot cache postgres.js
+		// queries sent unprepared, so session and onboarding reads are always fresh today. Before turning this on,
+		// give those reads a cache-disabled Hyperdrive config (Cloudflare's advice for auth), or a sign-out or an
+		// `onboardedAt` change could take over a minute to show.
 		prepare: false
 	});
 }
@@ -58,32 +62,22 @@ export async function ensureUser(uid: string, name?: string | null) {
 	          ON CONFLICT (id) DO UPDATE SET name = COALESCE(EXCLUDED.name, users.name)`;
 }
 
-export async function getProfile(uid: string): Promise<Profile | null> {
-	const rows = await sql<Profile[]>`
-		SELECT p.user_id, u.name, p.traits, p.summary, p.updated_at
-		FROM profiles p JOIN users u ON u.id = p.user_id WHERE p.user_id = ${uid}`;
-	return rows[0] ?? null;
+/** The person's taste embedding ("people like you" weighting), or null before onboarding finishes. */
+export async function getTasteEmbedding(uid: string): Promise<number[] | null> {
+	const [row] = await sql<{ embedding: string | null }[]>`
+		SELECT embedding::text AS embedding FROM taste WHERE user_id = ${uid}`;
+	return row?.embedding ? JSON.parse(row.embedding) : null;
 }
 
-export type ProfileWithEmbedding = Profile & { embedding: number[] | null };
-
-/** Profile plus its vector in one round trip, for the paths that need both. */
-export async function getProfileWithEmbedding(uid: string): Promise<ProfileWithEmbedding | null> {
-	const rows = await sql<(Profile & { embedding: string | null })[]>`
-		SELECT p.user_id, u.name, p.traits, p.summary, p.updated_at, p.embedding::text AS embedding
-		FROM profiles p JOIN users u ON u.id = p.user_id WHERE p.user_id = ${uid}`;
-	const row = rows[0];
-	return row ? { ...row, embedding: row.embedding ? JSON.parse(row.embedding) : null } : null;
+/**
+ * The connection hooks.server.ts uses after the response is sent (usage flush): this request's own on Workers,
+ * opened if nothing in the request needed one yet, and the shared pool under Node.
+ */
+export function sqlFor(locals: App.Locals): Sql {
+	return onWorkers ? (locals.sql ??= connect()) : sharedSql();
 }
 
-export async function upsertProfile(uid: string, traits: Traits, embedding: number[]) {
-	await sql`INSERT INTO profiles (user_id, traits, summary, embedding, updated_at)
-	          VALUES (${uid}, ${sql.json(traits as never)}, ${traits.summary}, ${vec(embedding)}::vector, now())
-	          ON CONFLICT (user_id) DO UPDATE SET traits = EXCLUDED.traits, summary = EXCLUDED.summary,
-	            embedding = EXCLUDED.embedding, updated_at = now()`;
-}
-
-/** Upsert a Maps-grounded place by google_place_id. Returns the row. */
+/** The places row for a Google place: matched by place id, else by name, else created. Returns the row. */
 export async function upsertGroundedPlace(p: {
 	placeId: string;
 	title: string;
@@ -97,7 +91,7 @@ export async function upsertGroundedPlace(p: {
 			await sql`UPDATE places SET google_place_id = ${p.placeId}, maps_url = COALESCE(maps_url, ${p.uri}) WHERE id = ${existing[0].id}`;
 		return existing[0];
 	}
-	// Another request (or the background Maps enrichment) may insert the same name first: merge instead of failing.
+	// Another request may insert the same name first: merge instead of failing.
 	const rows = await sql<Place[]>`
 		INSERT INTO places (google_place_id, name, maps_url, tags) VALUES (${p.placeId}, ${p.title}, ${p.uri}, '{}')
 		ON CONFLICT (name) DO UPDATE SET google_place_id = COALESCE(places.google_place_id, EXCLUDED.google_place_id),

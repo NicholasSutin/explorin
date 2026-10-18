@@ -6,8 +6,6 @@
 import { dev } from '$app/env';
 import { AUTH_FROM_EMAIL, RESEND_API_KEY } from '$app/env/private';
 
-export const emailConfigured = () => Boolean(RESEND_API_KEY);
-
 const escape = (s: string) =>
 	s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
@@ -15,7 +13,7 @@ const escape = (s: string) =>
 function toHtml(paragraphs: string[], url: string) {
 	return paragraphs
 		.map((p) => {
-			const safe = escape(p);
+			const safe = escape(p).replace(/\n/g, '<br>');
 			const link = `<a href="${escape(url)}">${escape(url)}</a>`;
 			return `<p style="font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#1b1b1b;margin:0 0 16px">${safe.replace(escape(url), link)}</p>`;
 		})

@@ -24,15 +24,15 @@ Transforms any AI agent into a travel planning consultant using a structured met
 
 Ground truth files in `references/`:
 
-| File | Contents |
-|------|----------|
-| `destinations.json` | 200 global destinations with coordinates, costs, best months |
-| `airports.json` | 500 airports with IATA codes and coordinates |
-| `airlines.json` | Major airlines with alliances, hubs, regions |
-| `activities.json` | Activity types with durations, cost tiers |
-| `budget-benchmarks.json` | Daily cost benchmarks by destination tier |
-| `booking-integrations.json` | Integration roadmap for booking providers |
-| `embed-snippets.json` | Embeddable widget templates |
+| File                        | Contents                                                     |
+| --------------------------- | ------------------------------------------------------------ |
+| `destinations.json`         | 200 global destinations with coordinates, costs, best months |
+| `airports.json`             | 500 airports with IATA codes and coordinates                 |
+| `airlines.json`             | Major airlines with alliances, hubs, regions                 |
+| `activities.json`           | Activity types with durations, cost tiers                    |
+| `budget-benchmarks.json`    | Daily cost benchmarks by destination tier                    |
+| `booking-integrations.json` | Integration roadmap for booking providers                    |
+| `embed-snippets.json`       | Embeddable widget templates                                  |
 
 ## Scripts
 

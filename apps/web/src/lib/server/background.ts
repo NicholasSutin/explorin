@@ -2,7 +2,7 @@ import { getRequestEvent } from '$app/server';
 import { waitUntil } from '#bindings';
 
 /**
- * Run work that outlives the response (Maps enrichment, live-context refresh). Workers cancel a request's
+ * Run work that outlives the response (learning from a trip note). Workers cancel a request's
  * pending promises once its response is done unless they are registered with `waitUntil`, which
  * `cloudflare:workers` exports for use anywhere in request scope (budget: about 30 s after the response is
  * sent). The promise is also recorded on `locals` so hooks.server.ts keeps this request's database

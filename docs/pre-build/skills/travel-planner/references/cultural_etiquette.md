@@ -3,6 +3,7 @@
 ## How to Use This Guide
 
 When planning travel to a specific country, use web search to gather current information about:
+
 - Cultural customs and etiquette
 - Dress codes
 - Dining customs
@@ -14,6 +15,7 @@ When planning travel to a specific country, use web search to gather current inf
 ## General Categories to Research for Any Destination
 
 ### 1. Greetings & Social Interactions
+
 - Appropriate greetings (handshake, bow, kiss, etc.)
 - Use of titles and formal address
 - Personal space expectations
@@ -22,6 +24,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Gift-giving customs
 
 ### 2. Dress Code
+
 - General modesty expectations
 - Requirements for religious sites
 - Business attire standards
@@ -30,6 +33,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Footwear customs (removing shoes)
 
 ### 3. Dining Etiquette
+
 - Table manners
 - Use of utensils vs hands
 - Tipping customs and percentages
@@ -40,6 +44,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Toasting traditions
 
 ### 4. Religious & Cultural Sensitivities
+
 - Major religion(s) and practices
 - Prayer times and their impact
 - Dress requirements at religious sites
@@ -49,6 +54,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Religious holidays and closures
 
 ### 5. Communication
+
 - Common phrases in local language
 - Yes/no gestures (can vary!)
 - Pointing etiquette
@@ -58,6 +64,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Personal questions expectations
 
 ### 6. Photography Rules
+
 - Where photography is prohibited
 - Permission before photographing people
 - Military/government building restrictions
@@ -65,6 +72,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Drone regulations
 
 ### 7. Legal Considerations
+
 - Alcohol laws and regulations
 - Drug laws and penalties
 - Smoking regulations
@@ -76,6 +84,7 @@ When planning travel to a specific country, use web search to gather current inf
 ### 8. Tipping Guide by Country Category
 
 **No Tipping Expected:**
+
 - Japan
 - South Korea
 - Singapore (sometimes included in bill)
@@ -84,21 +93,25 @@ When planning travel to a specific country, use web search to gather current inf
 - Australia (sometimes)
 
 **Service Charge Included:**
+
 - Many European countries (France, Italy, Spain)
 - Check bill for "service compris" or similar
 - Small additional tip (5-10%) for excellent service
 
 **Tipping Expected (10-15%):**
+
 - UK
 - Germany
 - Canada
 - Mexico
 
 **Tipping Expected (15-20%):**
+
 - United States
 - General guideline: 15-20% for restaurants, $1-2 per drink at bars
 
 **Tipping Guidelines:**
+
 - Middle East: 10-15%, sometimes included
 - South America: 10% typical
 - Southeast Asia: Not required but appreciated (small amounts)
@@ -106,7 +119,9 @@ When planning travel to a specific country, use web search to gather current inf
 ## Common Cultural Mistakes by Region
 
 ### Asia
+
 **Common Mistakes:**
+
 - ❌ Touching someone's head
 - ❌ Pointing feet at people or religious objects
 - ❌ Refusing food or drink offers
@@ -115,6 +130,7 @@ When planning travel to a specific country, use web search to gather current inf
 - ❌ Sticking chopsticks upright in rice (funeral symbolism)
 
 **Do's:**
+
 - ✓ Bow or wai as appropriate
 - ✓ Use both hands when giving/receiving items
 - ✓ Dress modestly at temples
@@ -123,7 +139,9 @@ When planning travel to a specific country, use web search to gather current inf
 - ✓ Respect elders
 
 ### Middle East
+
 **Common Mistakes:**
+
 - ❌ Public displays of affection
 - ❌ Using left hand for eating
 - ❌ Showing soles of feet
@@ -132,6 +150,7 @@ When planning travel to a specific country, use web search to gather current inf
 - ❌ Drinking alcohol where prohibited
 
 **Do's:**
+
 - ✓ Dress modestly (cover shoulders, knees)
 - ✓ Remove shoes when entering homes
 - ✓ Accept hospitality graciously
@@ -140,7 +159,9 @@ When planning travel to a specific country, use web search to gather current inf
 - ✓ Ask permission before photographing people
 
 ### Europe
+
 **Common Mistakes:**
+
 - ❌ Being loud in public
 - ❌ Expecting air conditioning everywhere
 - ❌ Assuming everyone speaks English
@@ -149,6 +170,7 @@ When planning travel to a specific country, use web search to gather current inf
 - ❌ Jaywalking (strictly enforced in some countries)
 
 **Do's:**
+
 - ✓ Greet with local greeting (Bonjour, Guten Tag, etc.)
 - ✓ Dress more formally than in US
 - ✓ Learn basic phrases in local language
@@ -157,7 +179,9 @@ When planning travel to a specific country, use web search to gather current inf
 - ✓ Follow local dining hours
 
 ### Latin America
+
 **Common Mistakes:**
+
 - ❌ Being impatient or in a rush
 - ❌ Assuming Spanish everywhere (Brazil speaks Portuguese)
 - ❌ Not greeting with kiss/hug
@@ -166,6 +190,7 @@ When planning travel to a specific country, use web search to gather current inf
 - ❌ Expecting punctuality
 
 **Do's:**
+
 - ✓ Be warm and friendly
 - ✓ Accept social kisses on cheek
 - ✓ Take time for conversation
@@ -174,7 +199,9 @@ When planning travel to a specific country, use web search to gather current inf
 - ✓ Learn to dance if invited!
 
 ### Africa
+
 **Common Mistakes:**
+
 - ❌ Photographing without permission
 - ❌ Treating Africa as one country
 - ❌ Being condescending
@@ -183,6 +210,7 @@ When planning travel to a specific country, use web search to gather current inf
 - ❌ Public displays of impatience
 
 **Do's:**
+
 - ✓ Greet elders with respect
 - ✓ Ask before photographing people
 - ✓ Dress conservatively in rural areas
@@ -193,6 +221,7 @@ When planning travel to a specific country, use web search to gather current inf
 ## Religious Site Etiquette
 
 ### Buddhist Temples
+
 - Remove shoes before entering
 - Don't point feet at Buddha images
 - Walk clockwise around stupas
@@ -203,6 +232,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Ask before photographing
 
 ### Mosques
+
 - Remove shoes before entering
 - Cover head (women)
 - Cover arms and legs
@@ -213,6 +243,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Non-Muslims may not be allowed in all areas
 
 ### Churches/Cathedrals
+
 - Dress modestly (cover shoulders and knees)
 - Remove hat (men)
 - Speak quietly
@@ -223,6 +254,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Drop small donation if free entry
 
 ### Hindu Temples
+
 - Remove shoes and leather items
 - Dress modestly
 - May need to remove socks
@@ -233,6 +265,7 @@ When planning travel to a specific country, use web search to gather current inf
 - Menstruating women traditionally don't enter (varies by temple)
 
 ### Synagogues
+
 - Men cover head (kippah provided)
 - Dress modestly
 - Turn off electronics on Sabbath (Friday evening to Saturday evening)
@@ -244,6 +277,7 @@ When planning travel to a specific country, use web search to gather current inf
 ## Emergency Phrases by Situation
 
 ### Medical Emergency
+
 - "I need a doctor" / "I need help"
 - "Hospital" / "Pharmacy"
 - "I'm allergic to..."
@@ -251,6 +285,7 @@ When planning travel to a specific country, use web search to gather current inf
 - "Please call an ambulance"
 
 ### Lost/Theft
+
 - "I lost my passport"
 - "Police station"
 - "I was robbed"
@@ -258,6 +293,7 @@ When planning travel to a specific country, use web search to gather current inf
 - "Where is the [embassy/consulate]?"
 
 ### Basic Needs
+
 - "Water"
 - "Bathroom/Toilet"
 - "Food"
@@ -265,6 +301,7 @@ When planning travel to a specific country, use web search to gather current inf
 - "Can you help me?"
 
 ### Transportation
+
 - "Airport/Bus station/Train station"
 - "How much does it cost?"
 - "Stop here, please"
@@ -276,12 +313,14 @@ When planning travel to a specific country, use web search to gather current inf
 When researching a specific destination, gather information in these areas:
 
 **1. Current Entry Requirements**
+
 - Visa requirements for your nationality
 - Required documents
 - COVID-19 or health requirements
 - Travel insurance requirements
 
 **2. Currency & Costs**
+
 - Local currency
 - Current exchange rate
 - ATM availability
@@ -290,6 +329,7 @@ When researching a specific destination, gather information in these areas:
 - Tipping customs
 
 **3. Safety Considerations**
+
 - Current travel advisories
 - Areas to avoid
 - Common scams
@@ -297,6 +337,7 @@ When researching a specific destination, gather information in these areas:
 - Embassy contact info
 
 **4. Cultural Norms**
+
 - Appropriate greetings
 - Dress expectations
 - Dining customs
@@ -304,6 +345,7 @@ When researching a specific destination, gather information in these areas:
 - Taboo topics
 
 **5. Practical Information**
+
 - Best time to visit
 - Climate during your dates
 - Power outlets/voltage
@@ -312,6 +354,7 @@ When researching a specific destination, gather information in these areas:
 - English proficiency level
 
 **6. Local Customs**
+
 - Business hours
 - Meal times
 - Siesta or break periods

@@ -17,7 +17,7 @@ export async function sendWelcome(to: string): Promise<boolean> {
 		'Explorin is opening city by city, New York first. We will send one email when your city opens, and nothing else.',
 		'',
 		// Only when the app has a public URL of its own (APP_URL); otherwise there is nowhere to send people yet.
-		...(APP_URL ? [`In the meantime, the NYC demo is open: ${APP_URL}`, ''] : []),
+		...(APP_URL ? [`New York is open now. Create your account: ${APP_URL}`, ''] : []),
 		'go somewhere. feel something.',
 		'Explorin'
 	].join('\n');
@@ -32,10 +32,7 @@ export async function sendWelcome(to: string): Promise<boolean> {
 				text,
 				html: text
 					.split('\n\n')
-					.map(
-						(p) =>
-							`<p>${linkify(p.replace(/\n/g, '<br>'))}</p>`
-					)
+					.map((p) => `<p>${linkify(p.replace(/\n/g, '<br>'))}</p>`)
 					.join('')
 			}),
 			signal: AbortSignal.timeout(8000)

@@ -16,24 +16,24 @@ Explorin needs a public landing page: what it is, a few postcards, and a link in
 
 ### Option A: static HTML and CSS, brand synced from the package (chosen)
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Low: two files and a copy step |
-| Cost | Free on any static host (Cloudflare Pages, Netlify, GitHub Pages) |
-| Scalability | A CDN serves it; content scales until there are many pages |
-| Team familiarity | HTML and CSS; the brand tokens are already CSS variables |
+| Dimension        | Assessment                                                        |
+| ---------------- | ----------------------------------------------------------------- |
+| Complexity       | Low: two files and a copy step                                    |
+| Cost             | Free on any static host (Cloudflare Pages, Netlify, GitHub Pages) |
+| Scalability      | A CDN serves it; content scales until there are many pages        |
+| Team familiarity | HTML and CSS; the brand tokens are already CSS variables          |
 
 **Pros:** zero dependencies and nothing to upgrade; builds in milliseconds; the whole page is readable in one file; no risk of the marketing deploy breaking the app or vice versa.
 **Cons:** no components or templating; a second page means duplicated header and footer markup; no image pipeline, so photos must be pre-optimised (they already are, in `apps/web/static/marketing`).
 
 ### Option B: SvelteKit with `adapter-static`
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Medium: another SvelteKit project, Vite config, deps to keep in step with `apps/web` |
-| Cost | Free hosting, but a dependency tree to maintain |
-| Scalability | Good: components, layouts, image optimisation plugins |
-| Team familiarity | High: same stack as the app, Svelte skills are in the repo |
+| Dimension        | Assessment                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| Complexity       | Medium: another SvelteKit project, Vite config, deps to keep in step with `apps/web` |
+| Cost             | Free hosting, but a dependency tree to maintain                                      |
+| Scalability      | Good: components, layouts, image optimisation plugins                                |
+| Team familiarity | High: same stack as the app, Svelte skills are in the repo                           |
 
 **Pros:** shared mental model with the app; components for repeated sections; could later import from a shared `packages/ui`.
 **Cons:** the first version is one page, so the framework carries no weight; two SvelteKit apps in one workspace doubles install and upgrade churn; the root `npm install` would hoist and restructure `apps/web/node_modules`.

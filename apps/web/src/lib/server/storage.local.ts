@@ -46,3 +46,15 @@ export async function getPhoto(
 		return null;
 	}
 }
+
+/** Remove every photo this person uploaded (account deletion). */
+export async function deletePhotos(uid: string): Promise<number> {
+	const { readdir, rm } = await import('node:fs/promises');
+	const dir = resolve(ROOT, uid);
+	if (!dir.startsWith(ROOT + sep) || !/^[0-9a-f-]{36}$/i.test(uid)) return 0;
+	const count = await readdir(dir)
+		.then((f) => f.length)
+		.catch(() => 0);
+	await rm(dir, { recursive: true, force: true });
+	return count;
+}

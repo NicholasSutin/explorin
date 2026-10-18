@@ -60,7 +60,7 @@
 
 {#if !data.authReady}
 	<p class="mt-6 text-sm text-red-700" role="alert">
-		Accounts are not set up on this deployment yet. The NYC demo on the home page works without one.
+		Accounts are not set up on this deployment yet.
 	</p>
 {:else}
 	<form
