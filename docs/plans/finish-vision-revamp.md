@@ -286,6 +286,12 @@ A correctness review, a security review of these commits and a security pass ove
   - `--through 0002` ran 0001 and 0002. The old account's deletion statements then succeeded (rolled back), leaving its 3 `experiences` rows orphaned until 0003.
   - A plain `--apply` ran 0003: the legacy tables were gone, both member quotes remained, and the 3 old accounts had taste rows.
 - Fork `fuygwusnh0` ran the same stages and served as the local dev database for three agent-created test users and the recorded demo.
+- **Agent QA fixes (2026-10-18):** the test users' 14 findings are fixed on this branch (2111439, 3e4fc91, bf9ae18, a29e3b9, cb67072):
+  - the planner keeps the visiting order its copy describes, picks the branch of a chain nearest the other stops, and makes at most 8 paid geocodes a plan (22 before);
+  - the drafted story mentions only checked-in places unless the note says otherwise;
+  - the scrapbook shows the reviewed story, Share is there on desktop right after saving, and nothing is pre-picked;
+  - smaller trip, tier-list and copy fixes.
+  `auth.spec` and `journey.spec` passed (8 of 8 at phone size, and the journey at 1280×860) on fork `m5uf6cw9c7` at the post-deploy state (`--through 0002`), on the real map. The fork is deleted.
 
 ### Deploy sequence (Nick)
 
@@ -306,4 +312,6 @@ Run every command from `apps/web` on an up-to-date `feat/vision` (step 1) or `ma
 - Run `db:migrate` against production at the three points marked above.
 - Sign in afterwards to check.
 - Delete the `GOOGLE_MAPS_MAP_ID` secret if it exists.
-- Delete the rehearsal forks.
+- Turn off **Builds for Preview branches** for both Workers (Settings → Builds → Previews Base). Their `npx wrangler preview` step fails without a `previews` block, which would need preview-safe copies of the database, bucket and secrets.
+- Delete the merged branches `feat/people-like-you` and `feat/drop-legacy` on GitHub.
+- The rehearsal and QA forks are already deleted.
