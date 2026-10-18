@@ -247,6 +247,34 @@ WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = x.id)
   - `journey.spec`: 8 passed, and account deletion works without the old tables.
 - **Empty database:** Tiger doesn't allow `CREATE DATABASE`, so the app's tables on the fork were dropped instead. Migrate then applied `schema.sql` and recorded both migrations as baseline without running them, and a second run found nothing pending.
 
+### Review fixes and second rehearsal (2026-10-18)
+
+A correctness review, a security review of these commits and a security pass over the whole PR found no high-severity issue. They did find the following, now fixed:
+
+- **A:**
+  - The runner sets `lock_timeout = 5s` per transaction and commits `schema.sql` together with the baseline.
+  - It rejects misnamed or duplicate-numbered files, never echoes a malformed `DATABASE_URL`, and detects a new database by `public.users`.
+  - 0001 tolerates interests that aren't JSON.
+  - Account deletion also strips the person's quotes from other people's planned trips, and matches pending sign-up links exactly.
+  - Trip pages show only quotes that are still shared.
+  - `/photos` enforces the exact key shape.
+  - The taste summary goes into prompts JSON-quoted.
+- **C:**
+  - Quotes:
+    - One quote per trip, via `reflections.trip_id`. It is unique, finishing again updates it, and it is deleted with the trip.
+    - Quotes match only on their own place id; older rows keep name matching.
+    - At most one quote per author is shown per stop.
+  - Learned phrases:
+    - Opt-in: nothing is kept unless tapped.
+    - Filtered server-side for sensitive topics.
+    - Never re-suggested once forgotten, via `taste.forgotten`.
+  - The deploy order changed: migrate before merging, because C's code reads the new columns on most pages.
+- **Rehearsed again on fork `bkcpd8ekd7`, deleted afterwards:**
+  - **A:** the migrated-account flow and `auth.spec` plus `journey.spec` (8 passed).
+  - **C:** SQL checks for the upsert, the copied-quote cleanup, the shared-quote filter, the trip cascade and the forgotten list, plus the matching rules; then `auth.spec` plus `journey.spec` (8 passed, one phrase kept, merged and forgotten).
+  - **B:** 0002, then `auth.spec` plus `journey.spec` (8 passed).
+  - **Empty database:** baseline only.
+
 ### Deploy sequence (Nick)
 
 1. **A.** Merge PR #2 (feat/vision → main) and let Workers Builds deploy `explorin-app` and `explorin-marketing`. Then, from `apps/web` on an up-to-date main:
