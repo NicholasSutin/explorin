@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { AUDIENCES, INTERESTS } from '#lib/taste';
-import { getTaste, saveAboutYou, setFlipAnimations } from '#lib/server/taste';
+import { forgetLearned, getTaste, saveAboutYou, setFlipAnimations } from '#lib/server/taste';
 import { changePassword, deleteAccount, updateAccount, usageSummary } from '#lib/server/account';
 import { hasPassword } from '#lib/server/auth';
 import type { Actions, PageServerLoad } from './$types';
@@ -25,6 +25,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			interests: taste?.interests ?? [],
 			audience: taste?.audience ?? [],
 			grades: taste?.grades ?? {},
+			learned: taste?.learned ?? [],
 			flip: taste?.flipAnimations ?? true
 		},
 		usage
@@ -68,6 +69,12 @@ export const actions: Actions = {
 			return fail(400, { section: 'about', message: parsed.error.issues[0].message });
 		await saveAboutYou(locals.uid, locals.user?.name ?? '', parsed.data);
 		return { section: 'about', saved: true };
+	},
+	forget: async ({ request, locals }) => {
+		const form = await request.formData();
+		const phrase = String(form.get('phrase') ?? '');
+		if (phrase) await forgetLearned(locals.uid, locals.user?.name ?? null, phrase);
+		return { section: 'learned', saved: true };
 	},
 	flip: async ({ request, locals }) => {
 		const form = await request.formData();

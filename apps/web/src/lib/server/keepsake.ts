@@ -1,6 +1,8 @@
 /**
  * After the day: draft the scrapbook entry from the person's note (one Gemini call), then save it. Saving also
  * turns the note into a "people like you" reflection on the highlight stop's place, quoted only with consent.
+ * The draft can suggest a phrase or two the note reveals about the person's taste; the ones they keep are
+ * remembered by the finish endpoint (`addLearned`).
  */
 import { z } from 'zod';
 import {
@@ -10,11 +12,11 @@ import {
 	EMOTIONS,
 	type KeepsakeDraft
 } from '#lib/keepsake';
-import { CATEGORY, GRADE_WEIGHT } from '#lib/taste';
+import { CATEGORY, GRADE_WEIGHT, LEARNED_CHARS, LEARNED_PER_TRIP } from '#lib/taste';
 import type { Trip } from '#lib/adventure';
 import { adventureAI, embed } from './gemini';
 import { getTasteEmbedding, sql, upsertGroundedPlace, vec } from './db';
-import { getTaste } from './taste';
+import { cleanPhrase, getTaste } from './taste';
 import { GEMINI_API_KEY } from '$app/env/private';
 
 const draftSchema = z.object({
@@ -22,7 +24,9 @@ const draftSchema = z.object({
 	story: z.string().trim().min(10).max(900),
 	emotions: z.array(z.string()).max(4),
 	quote: z.string().trim().max(240),
-	bestFor: z.array(z.string()).max(10)
+	bestFor: z.array(z.string()).max(10),
+	// Optional extra: a malformed value must not cost the whole draft.
+	learned: z.array(z.string()).max(10).catch([])
 });
 
 const visitedNames = (trip: Trip) =>
@@ -60,6 +64,7 @@ export async function draftKeepsake(uid: string, trip: Trip, note: string): Prom
 		emotions: [],
 		quote: note.split(/(?<=[.!?])\s+/)[0]?.slice(0, 240) ?? '',
 		bestForOptions: defaultBestFor(trip),
+		learned: [],
 		aiGenerated: false
 	};
 	if (!GEMINI_API_KEY) return fallback;
@@ -70,12 +75,14 @@ export async function draftKeepsake(uid: string, trip: Trip, note: string): Prom
 Use only details actually given: never invent events, people or feelings.
 Return JSON {"title":"an evocative 3-7 word title","story":"2-4 warm sentences in second person, built from their note and the places","emotions":["up to 3 of: ${EMOTIONS.join(', ')}"],"quote":"one sentence from their note, nearly verbatim, that would help someone similar decide to go; empty if the note has none","bestFor":["exactly ${BEST_FOR_SUGGESTED} of: ${BEST_FOR.join('; ')}"]}.
 Choose bestFor from what the places and the note suggest about who would enjoy this day most.
+Also return "learned": up to ${LEARNED_PER_TRIP} short phrases (under ${LEARNED_CHARS} characters, written about them, e.g. "loves long walks between stops") that the note reveals about what they enjoy or avoid when exploring and that "About them" does not already say. Use [] when the note reveals nothing new. Never include health, religion, politics, sexuality, ethnicity, money troubles or anything about other people.
 Day: ${JSON.stringify({ planned: trip.title, request: trip.prompt, city: trip.city, places, note })}
 About them: ${JSON.stringify(taste?.summary ?? 'unknown')}`,
 			'keepsake.draft'
 		)
 	);
 	if (!out.success) return fallback;
+	const known = new Set((taste?.learned ?? []).map((p) => p.toLowerCase()));
 	const options = [
 		...new Set(out.data.bestFor.filter((b) => (BEST_FOR as readonly string[]).includes(b)))
 	];
@@ -89,6 +96,9 @@ About them: ${JSON.stringify(taste?.summary ?? 'unknown')}`,
 			.slice(0, 3),
 		quote: out.data.quote,
 		bestForOptions: options.slice(0, BEST_FOR_SUGGESTED),
+		learned: [...new Set(out.data.learned.map(cleanPhrase))]
+			.filter((p) => p.length >= 3 && !known.has(p.toLowerCase()))
+			.slice(0, LEARNED_PER_TRIP),
 		aiGenerated: true
 	};
 }
@@ -105,7 +115,12 @@ export const keepsakeInput = z.object({
 	story: z.string().trim().max(900),
 	emotions: z.array(z.enum(EMOTIONS)).max(3),
 	quote: z.string().trim().max(240),
-	share: z.boolean()
+	share: z.boolean(),
+	/** Learned phrases the person kept; absent from pages opened before this field existed. */
+	learned: z
+		.array(z.string().max(LEARNED_CHARS * 2))
+		.max(LEARNED_PER_TRIP)
+		.default([])
 });
 export type KeepsakeInput = z.infer<typeof keepsakeInput>;
 
@@ -152,10 +167,10 @@ export async function saveKeepsake(uid: string, name: string | null, trip: Trip,
 			displayName(uid, name)
 		]);
 		await sql`
-			INSERT INTO reflections (place_id, author_id, source, display_name, body, quote, emotions, themes,
-			                         photo_urls, consent_share, embedding, author_profile_embedding)
-			VALUES (${place.id}, ${uid}, 'user', ${who}, ${k.note}, ${k.quote || null}, ${k.emotions},
-			        ${k.bestFor}, '{}', ${k.share && Boolean(k.quote)}, ${vec(bodyVec)}::vector,
+			INSERT INTO reflections (place_id, google_place_id, author_id, source, display_name, body, quote, emotions,
+			                         themes, photo_urls, consent_share, embedding, author_profile_embedding)
+			VALUES (${place.id}, ${highlight.placeId ?? null}, ${uid}, 'user', ${who}, ${k.note}, ${k.quote || null},
+			        ${k.emotions}, ${k.bestFor}, '{}', ${k.share && Boolean(k.quote)}, ${vec(bodyVec)}::vector,
 			        ${authorVec ? vec(authorVec) : null}::vector)`;
 	} catch (e) {
 		console.warn('[keepsake] reflection not stored', (e as Error).message);

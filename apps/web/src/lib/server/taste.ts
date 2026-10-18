@@ -9,6 +9,9 @@ import {
 	FIRST_ROUND,
 	GRADES,
 	isCategory,
+	LEARNED_CHARS,
+	LEARNED_MAX,
+	LEARNED_PER_TRIP,
 	rankCategories,
 	tasteSummary,
 	type Grades
@@ -25,6 +28,8 @@ export interface Taste {
 	offered: string[];
 	summary: string | null;
 	flipAnimations: boolean;
+	/** Phrases kept from trip notes, newest first. */
+	learned: string[];
 	updatedAt: string | null;
 }
 
@@ -36,6 +41,7 @@ const EMPTY: Taste = {
 	offered: [],
 	summary: null,
 	flipAnimations: true,
+	learned: [],
 	updatedAt: null
 };
 
@@ -49,9 +55,10 @@ export async function getTaste(uid: string): Promise<Taste | null> {
 			offered: string[];
 			summary: string | null;
 			flip_animations: boolean;
+			learned: string[];
 			updated_at: Date;
 		}[]
-	>`SELECT blurb, interests, audience, grades, offered, summary, flip_animations, updated_at
+	>`SELECT blurb, interests, audience, grades, offered, summary, flip_animations, learned, updated_at
 	  FROM taste WHERE user_id = ${uid}`;
 	if (!row) return null;
 	return {
@@ -62,6 +69,7 @@ export async function getTaste(uid: string): Promise<Taste | null> {
 		offered: row.offered,
 		summary: row.summary,
 		flipAnimations: row.flip_animations,
+		learned: row.learned,
 		updatedAt: row.updated_at.toISOString()
 	};
 }
@@ -119,6 +127,52 @@ export async function saveGrades(
 
 export async function setFlipAnimations(uid: string, on: boolean) {
 	await sql`UPDATE taste SET flip_animations = ${on}, updated_at = now() WHERE user_id = ${uid}`;
+}
+
+/** One learned phrase as stored: single-spaced, no control characters, within the length cap. */
+export function cleanPhrase(p: string): string {
+	return p
+		.replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.replace(/[.;]+$/, '')
+		.slice(0, LEARNED_CHARS)
+		.trim();
+}
+
+/**
+ * Remember phrases the person kept from a trip note (newest first, case-insensitive duplicates dropped, at most
+ * LEARNED_MAX), then refresh the summary so the planner and "people like you" use them. A repeated finish
+ * request finds nothing new and does no work. The merge is one UPDATE, so concurrent requests cannot lose a phrase.
+ */
+export async function addLearned(uid: string, name: string | null, phrases: string[]) {
+	const current = await getTaste(uid);
+	if (!current) return;
+	const known = new Set(current.learned.map((p) => p.toLowerCase()));
+	const fresh = [...new Set(phrases.map(cleanPhrase).filter((p) => p.length >= 3))]
+		.filter((p) => !known.has(p.toLowerCase()))
+		.slice(0, LEARNED_PER_TRIP);
+	if (!fresh.length) return;
+	await sql`
+		UPDATE taste SET learned = ARRAY(
+		    SELECT p FROM (
+		      SELECT DISTINCT ON (lower(p)) p, ord
+		      FROM unnest(${fresh}::text[] || learned) WITH ORDINALITY AS x(p, ord)
+		      ORDER BY lower(p), ord
+		    ) d
+		    ORDER BY ord LIMIT ${LEARNED_MAX}),
+		  updated_at = now()
+		WHERE user_id = ${uid}`;
+	await refreshSummary(uid, name);
+}
+
+/** Forget one learned phrase (Settings) and refresh the summary. */
+export async function forgetLearned(uid: string, name: string | null, phrase: string) {
+	const [row] = await sql`
+		UPDATE taste SET learned = array_remove(learned, ${phrase}), updated_at = now()
+		WHERE user_id = ${uid} AND ${phrase} = ANY(learned)
+		RETURNING 1`;
+	if (row) await refreshSummary(uid, name);
 }
 
 const pickSchema = z.object({ ids: z.array(z.string()).max(20) });

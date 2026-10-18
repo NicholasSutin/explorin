@@ -54,10 +54,13 @@ CREATE TABLE IF NOT EXISTS reflections (
   consent_share boolean DEFAULT true,
   embedding vector(768),
   author_profile_embedding vector(768),   -- null for public reviews
+  google_place_id text,           -- the exact Google place a member wrote about; places.name merges same-name branches
   created_at timestamptz DEFAULT now()
 );
+ALTER TABLE reflections ADD COLUMN IF NOT EXISTS google_place_id text;
 
 CREATE INDEX IF NOT EXISTS reflections_place_idx ON reflections(place_id);
+CREATE INDEX IF NOT EXISTS reflections_google_place_idx ON reflections(google_place_id);
 CREATE INDEX IF NOT EXISTS experiences_user_idx ON experiences(user_id);
 
 CREATE TABLE IF NOT EXISTS response_cache (
@@ -128,6 +131,7 @@ CREATE INDEX IF NOT EXISTS verification_identifier_idx ON verification(identifie
 -- What onboarding learns: the free-text blurb, broad interests, who they plan for, and the tier-list grades
 -- ({ "<category id>": "S+" | "A+" | "A" | "B" | "C" | "NO" }). `summary` is a plain-language digest of all of it,
 -- embedded so "people like you" can weigh quotes by taste. `offered` is which cards the tier list showed.
+-- `learned` holds short phrases drawn from trip notes that the person kept (newest first, at most 8).
 CREATE TABLE IF NOT EXISTS taste (
   user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   blurb text NOT NULL DEFAULT '',
@@ -138,8 +142,10 @@ CREATE TABLE IF NOT EXISTS taste (
   summary text,
   embedding vector(768),
   flip_animations boolean NOT NULL DEFAULT true,
+  learned text[] NOT NULL DEFAULT '{}',
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE taste ADD COLUMN IF NOT EXISTS learned text[] NOT NULL DEFAULT '{}';
 
 -- One planned day. Stops live in trip_stops; happenings (NYC permitted events near the stops) are a snapshot.
 CREATE TABLE IF NOT EXISTS trips (
