@@ -1,0 +1,188 @@
+{
+	"urban-parks": {
+		"file": "/taste/urban-parks.webp",
+		"photographer": "Mick Kirchman",
+		"source": "https://unsplash.com/photos/central-park-lawn-with-people-relaxing-and-city-skyscrapers-EHcY-53pbf4",
+		"license": "Unsplash License"
+	},
+	"nature-hikes": {
+		"file": "/taste/nature-hikes.webp",
+		"photographer": "Beth Macdonald",
+		"source": "https://unsplash.com/photos/a-man-with-a-backpack-is-walking-down-a-path-in-the-woods-Pxjt28EGyhU",
+		"license": "Unsplash License"
+	},
+	"city-walks": {
+		"file": "/taste/city-walks.webp",
+		"photographer": "Malia Moore",
+		"source": "https://unsplash.com/photos/brownstone-row-houses-with-ornate-stairs-on-street-Dhv_gvjW-FE",
+		"license": "Unsplash License"
+	},
+	"high-up": {
+		"file": "/taste/high-up.webp",
+		"photographer": "Matthew Jones",
+		"source": "https://unsplash.com/photos/gray-coin-operated-telescope-across-city-buildings-during-daytime-JSi9gOkGr0c",
+		"license": "Unsplash License"
+	},
+	"restaurants": {
+		"file": "/taste/restaurants.webp",
+		"photographer": "Jay Wennington",
+		"source": "https://unsplash.com/photos/dish-on-white-ceramic-plate-N_Y88TWmGwA",
+		"license": "Unsplash License"
+	},
+	"small-bites": {
+		"file": "/taste/small-bites.webp",
+		"photographer": "note thanun",
+		"source": "https://unsplash.com/photos/tray-of-freshly-cooked-dumplings-at-a-food-stall-hS33DOtTE6U",
+		"license": "Unsplash License"
+	},
+	"pastries": {
+		"file": "/taste/pastries.webp",
+		"photographer": "Kavita Joshi Rai",
+		"source": "https://unsplash.com/photos/croissant-on-top-of-stainless-steel-tray-lE5O9DktAQY",
+		"license": "Unsplash License"
+	},
+	"coffee-shops": {
+		"file": "/taste/coffee-shops.webp",
+		"photographer": "Lex Sirikiat",
+		"source": "https://unsplash.com/photos/cafe-latte-art-work-VkUP6wWqSvw",
+		"license": "Unsplash License"
+	},
+	"fast-food": {
+		"file": "/taste/fast-food.webp",
+		"photographer": "Mike",
+		"source": "https://unsplash.com/photos/burger-with-lettuce-and-fries-PxJ9zkM2wdA",
+		"license": "Unsplash License"
+	},
+	"museums": {
+		"file": "/taste/museums.webp",
+		"photographer": "Zalfa Imani",
+		"source": "https://unsplash.com/photos/woman-in-black-coat-standing-in-front-of-paintings-1xp5VxvyKL0",
+		"license": "Unsplash License"
+	},
+	"famous-attractions": {
+		"file": "/taste/famous-attractions.webp",
+		"photographer": "Robert Bye",
+		"source": "https://unsplash.com/photos/new-york-time-square-XLK1tJqvIt4",
+		"license": "Unsplash License"
+	},
+	"street-performers": {
+		"file": "/taste/street-performers.webp",
+		"photographer": "Matthew LeJune",
+		"source": "https://unsplash.com/photos/people-at-the-streets-near-a-live-band-t-A4eLb3jpw",
+		"license": "Unsplash License"
+	},
+	"hosted-tours": {
+		"file": "/taste/hosted-tours.webp",
+		"photographer": "Bernie Almanzar",
+		"source": "https://unsplash.com/photos/people-walking-on-street-during-daytime-CUzEBQz4ThE",
+		"license": "Unsplash License"
+	},
+	"shopping": {
+		"file": "/taste/shopping.webp",
+		"photographer": "Vitaly Gariev",
+		"source": "https://unsplash.com/photos/woman-happily-holding-shopping-bags-outside-building-F1KZtMgczQU",
+		"license": "Unsplash License"
+	},
+	"clothes-shopping": {
+		"file": "/taste/clothes-shopping.webp",
+		"photographer": "Clark Street Mercantile",
+		"source": "https://unsplash.com/photos/clothing-boutique-interior-with-hanging-racks-qnKhZJPKFD8",
+		"license": "Unsplash License"
+	},
+	"gift-shopping": {
+		"file": "/taste/gift-shopping.webp",
+		"photographer": "David Tip",
+		"source": "https://unsplash.com/photos/assorted-wall-decors-on-brown-wooden-wall-u04wJqkx_eM",
+		"license": "Unsplash License"
+	},
+	"cheap": {
+		"file": "/taste/cheap.webp",
+		"photographer": "Inna Safa",
+		"source": "https://unsplash.com/photos/a-slice-of-pizza-on-a-pink-plate-pwEDmiquo4U",
+		"license": "Unsplash License"
+	},
+	"upscale": {
+		"file": "/taste/upscale.webp",
+		"photographer": "Ambitious Studio* | Rick Barrett",
+		"source": "https://unsplash.com/photos/clear-martini-glass-on-brown-wooden-table-QjUY7auDzUQ",
+		"license": "Unsplash License"
+	},
+	"fast-paced": {
+		"file": "/taste/fast-paced.webp",
+		"photographer": "Chris Barbalis",
+		"source": "https://unsplash.com/photos/people-walking-on-pedestrian-lane-during-daytime-eZsT7oQhG4I",
+		"license": "Unsplash License"
+	},
+	"slow-relaxing": {
+		"file": "/taste/slow-relaxing.webp",
+		"photographer": "Brad Rucker",
+		"source": "https://unsplash.com/photos/woman-relaxing-in-chair-reading-a-book-outdoors-BSoyrHP5RXs",
+		"license": "Unsplash License"
+	},
+	"quiet-areas": {
+		"file": "/taste/quiet-areas.webp",
+		"photographer": "Julien Riedel",
+		"source": "https://unsplash.com/photos/gray-concrete-road-between-buildings-alGtgU3MQu4",
+		"license": "Unsplash License"
+	},
+	"lively-areas": {
+		"file": "/taste/lively-areas.webp",
+		"photographer": "Christian",
+		"source": "https://unsplash.com/photos/VRbtz7PD40M",
+		"license": "Unsplash License"
+	},
+	"niche": {
+		"file": "/taste/niche.webp",
+		"photographer": "Anastasia Saldatava",
+		"source": "https://unsplash.com/photos/a-room-filled-with-lots-of-records-and-cds-7Ys0u4woGQs",
+		"license": "Unsplash License"
+	},
+	"hidden-gems": {
+		"file": "/taste/hidden-gems.webp",
+		"photographer": "Mary Schultz",
+		"source": "https://unsplash.com/photos/open-wooden-door-leading-to-a-lush-garden-rxRobCNbrG8",
+		"license": "Unsplash License"
+	},
+	"underrated": {
+		"file": "/taste/underrated.webp",
+		"photographer": "Muhammed Fardeen Finos",
+		"source": "https://unsplash.com/photos/alis-deli-cafe-with-green-signage-q14SBTgdMz4",
+		"license": "Unsplash License"
+	},
+	"world-famous": {
+		"file": "/taste/world-famous.webp",
+		"photographer": "AussieActive",
+		"source": "https://unsplash.com/photos/statue-of-liberty-new-york-1brtlzDq-o8",
+		"license": "Unsplash License"
+	},
+	"social-media-worthy": {
+		"file": "/taste/social-media-worthy.webp",
+		"photographer": "Anderson W Rangel",
+		"source": "https://unsplash.com/photos/man-taking-photo-of-lighted-mans-face-wall-mural-nCG_O98XBEs",
+		"license": "Unsplash License"
+	},
+	"group-activities": {
+		"file": "/taste/group-activities.webp",
+		"photographer": "Vitaly Gariev",
+		"source": "https://unsplash.com/photos/friends-enjoying-a-rooftop-party-with-city-view-hLGbHZYpGL8",
+		"license": "Unsplash License"
+	},
+	"couples-activities": {
+		"file": "/taste/couples-activities.webp",
+		"photographer": "Olek Buzunov",
+		"source": "https://unsplash.com/photos/couple-walking-towards-a-bridge-at-sunset-Qx7OnYBoipk",
+		"license": "Unsplash License"
+	},
+	"solo-dates": {
+		"file": "/taste/solo-dates.webp",
+		"photographer": "bahareh moradian",
+		"source": "https://unsplash.com/photos/a-young-woman-eating-in-a-retro-diner-booth-zbhV-x9orl0",
+		"license": "Unsplash License"
+	},
+	"solo-activities": {
+		"file": "/taste/solo-activities.webp",
+		"photographer": "Bradley Dunn",
+		"source": "https://unsplash.com/photos/man-with-backpack-standing-near-pedestrian-lane-77kBW3aUQ2M",
+		"license": "Unsplash License"
+	}
+}

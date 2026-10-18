@@ -8,6 +8,7 @@
  */
 import { NIMBLE_API_KEY, NIMBLE_BASE_URL } from '$app/env/private';
 import { timedFetch } from './http';
+import { trackCall } from './usage';
 
 export const nimbleEnabled = () => Boolean(NIMBLE_API_KEY);
 
@@ -57,6 +58,7 @@ export interface LivePlace {
 }
 export async function mapsPlace(query: string, timeoutMs = 4000): Promise<LivePlace | null> {
 	if (!nimbleEnabled()) return null;
+	trackCall('nimble.maps_place', 'place.live');
 	try {
 		const data = await sdk(
 			'/v2/extract/templates/run',
@@ -95,9 +97,11 @@ export async function mapsPlace(query: string, timeoutMs = 4000): Promise<LivePl
 
 /** Web search for long-tail discovery (SDK API /v2/search). */
 export async function webSearch(
-	query: string
+	query: string,
+	operation = 'search'
 ): Promise<{ title: string; url: string; snippet: string }[]> {
 	if (!nimbleEnabled()) return [];
+	trackCall('nimble.search', operation);
 	try {
 		const data = await sdk('/v2/search', { query, max_results: 8, search_depth: 'lite' }, 10000);
 		return ((data?.results ?? []) as any[])
@@ -116,6 +120,7 @@ export async function webSearch(
 /** Fetch a public page (Yelp / Tripadvisor) as markdown via the SDK Extract API. Empty string on failure. */
 export async function pageText(url: string): Promise<string> {
 	if (!nimbleEnabled()) return '';
+	trackCall('nimble.extract', 'page.read');
 	try {
 		const data = await sdk(
 			'/v2/extract',

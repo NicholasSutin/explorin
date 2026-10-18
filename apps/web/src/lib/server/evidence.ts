@@ -1,8 +1,7 @@
 /**
  * "People like you" for discovery: first-person quotes from the reflections table, matched to the
  * places a discovery run produced and ranked by how close they are to the asker's prompt (and to
- * the asker's profile, when they have one). This is the same two-axis retrieval the profile flow
- * uses, scoped to a known list of places. Needs DATABASE_URL and a Gemini key; otherwise it says so
+ * the asker's taste profile, when they have one): two-axis retrieval scoped to a known list of places. Needs DATABASE_URL and a Gemini key; otherwise it says so
  * and the pipeline moves on.
  */
 import { DATABASE_URL, GEMINI_API_KEY } from '$app/env/private';
@@ -29,16 +28,16 @@ export async function attachVoices<T extends Pick<Experience, 'place' | 'voices'
 ): Promise<{ experiences: T[]; voices: number; profile: boolean }> {
 	if (!evidenceEnabled() || !experiences.length) return { experiences, voices: 0, profile: false };
 	// Loaded lazily so the discovery path does not pull Postgres in when no database is configured.
-	const [{ sql, vec, getProfileWithEmbedding }, { embed }] = await Promise.all([
+	const [{ sql, vec, getTasteEmbedding }, { embed }] = await Promise.all([
 		import('./db'),
 		import('./gemini')
 	]);
 	const names = [...new Set(experiences.map((e) => norm(e.place)).filter(Boolean))];
-	const [promptVec, profile] = await Promise.all([
-		embed(prompt, 'query'),
-		uid ? getProfileWithEmbedding(uid) : null
+	const [promptVec, taste] = await Promise.all([
+		embed(prompt, 'query', 'plan.people'),
+		uid ? getTasteEmbedding(uid) : null
 	]);
-	const profileVec = profile?.embedding ? vec(profile.embedding) : null;
+	const profileVec = taste ? vec(taste) : null;
 	const rows = await sql<VoiceRow[]>`
 		SELECT r.id, r.quote, r.display_name AS who, r.source, r.emotions, p.name AS place,
 		       0.6 * (1 - (r.embedding <=> ${vec(promptVec)}::vector))

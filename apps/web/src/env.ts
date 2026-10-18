@@ -17,6 +17,23 @@ export const variables = defineEnvVars({
 		description:
 			'Optional Cloud-based map style ID (Google Maps Platform > Map Management); used by /api/map?style=cloud'
 	},
+	GOOGLE_MAPS_BROWSER_KEY: {
+		public: true,
+		schema: (v) => v?.trim() || '',
+		description:
+			'Browser key for the Maps JavaScript API (the interactive trip map). Public by nature: restrict it to ' +
+			'HTTP referrers app.explorin.app/* and localhost, and to the Maps JavaScript API only. Without it the trip ' +
+			'page falls back to a static map.'
+	},
+	MONTHLY_CREDITS: {
+		schema: (v) => {
+			const n = Number(v);
+			return Number.isFinite(n) && n > 0 ? Math.round(n) : 2000;
+		},
+		description:
+			'Per-person monthly allowance in credits (1 credit = $0.001 of estimated upstream cost). New plans stop ' +
+			'once it is spent; the month resets on the 1st. Default 2000 ($2).'
+	},
 	DATABASE_URL: { schema: (v) => v || '', description: 'Postgres with pgvector' },
 	NIMBLE_API_KEY: {
 		schema: optional,
@@ -26,14 +43,6 @@ export const variables = defineEnvVars({
 	NIMBLE_BASE_URL: {
 		schema: (v) => v || 'https://sdk.nimbleway.com',
 		description: 'Nimble SDK API base'
-	},
-	LONGTAIL: {
-		schema: (v) => v === 'true',
-		description: 'Enable the slow long-tail web-search fallback (off for the demo)'
-	},
-	DEMO_CACHE: {
-		schema: (v) => v !== 'false',
-		description: 'Cache the scripted demo prompt response'
 	},
 	// Accounts (better-auth). Locally these come from `.env`; on Workers, secrets via `wrangler secret put`.
 	BETTER_AUTH_SECRET: {

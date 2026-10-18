@@ -2,7 +2,7 @@ import postgres, { type Sql } from 'postgres';
 import { getRequestEvent } from '$app/server';
 import { DATABASE_URL } from '$app/env/private';
 import { bindings, onWorkers } from '#bindings';
-import type { Place, Profile, Traits } from '#lib/types';
+import type { Place } from '#lib/types';
 
 /**
  * On Workers the connection goes through Hyperdrive (wrangler.jsonc), which keeps a warm pool next to the
@@ -58,29 +58,19 @@ export async function ensureUser(uid: string, name?: string | null) {
 	          ON CONFLICT (id) DO UPDATE SET name = COALESCE(EXCLUDED.name, users.name)`;
 }
 
-export async function getProfile(uid: string): Promise<Profile | null> {
-	const rows = await sql<Profile[]>`
-		SELECT p.user_id, u.name, p.traits, p.summary, p.updated_at
-		FROM profiles p JOIN users u ON u.id = p.user_id WHERE p.user_id = ${uid}`;
-	return rows[0] ?? null;
+/** The person's taste embedding ("people like you" weighting), or null before onboarding finishes. */
+export async function getTasteEmbedding(uid: string): Promise<number[] | null> {
+	const [row] = await sql<{ embedding: string | null }[]>`
+		SELECT embedding::text AS embedding FROM taste WHERE user_id = ${uid}`;
+	return row?.embedding ? JSON.parse(row.embedding) : null;
 }
 
-export type ProfileWithEmbedding = Profile & { embedding: number[] | null };
-
-/** Profile plus its vector in one round trip, for the paths that need both. */
-export async function getProfileWithEmbedding(uid: string): Promise<ProfileWithEmbedding | null> {
-	const rows = await sql<(Profile & { embedding: string | null })[]>`
-		SELECT p.user_id, u.name, p.traits, p.summary, p.updated_at, p.embedding::text AS embedding
-		FROM profiles p JOIN users u ON u.id = p.user_id WHERE p.user_id = ${uid}`;
-	const row = rows[0];
-	return row ? { ...row, embedding: row.embedding ? JSON.parse(row.embedding) : null } : null;
-}
-
-export async function upsertProfile(uid: string, traits: Traits, embedding: number[]) {
-	await sql`INSERT INTO profiles (user_id, traits, summary, embedding, updated_at)
-	          VALUES (${uid}, ${sql.json(traits as never)}, ${traits.summary}, ${vec(embedding)}::vector, now())
-	          ON CONFLICT (user_id) DO UPDATE SET traits = EXCLUDED.traits, summary = EXCLUDED.summary,
-	            embedding = EXCLUDED.embedding, updated_at = now()`;
+/**
+ * The connection hooks.server.ts uses after the response is sent (usage flush): this request's own on Workers,
+ * opened if nothing in the request needed one yet, and the shared pool under Node.
+ */
+export function sqlFor(locals: App.Locals): Sql {
+	return onWorkers ? (locals.sql ??= connect()) : sharedSql();
 }
 
 /** Upsert a Maps-grounded place by google_place_id. Returns the row. */

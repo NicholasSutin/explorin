@@ -119,3 +119,92 @@ CREATE TABLE IF NOT EXISTS verification (
   "updatedAt" timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS verification_identifier_idx ON verification(identifier);
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- Explorin v1: taste profile, trips, happenings geocode cache, usage ledger. Additive and idempotent like the rest.
+-- Everything a person owns hangs off users(id) with ON DELETE CASCADE; src/lib/server/account.ts deletes the rest.
+-- ---------------------------------------------------------------------------------------------------------------
+
+-- What onboarding learns: the free-text blurb, broad interests, who they plan for, and the tier-list grades
+-- ({ "<category id>": "S+" | "A+" | "A" | "B" | "C" | "NO" }). `summary` is a plain-language digest of all of it,
+-- embedded so "people like you" can weigh quotes by taste. `offered` is which cards the tier list showed.
+CREATE TABLE IF NOT EXISTS taste (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  blurb text NOT NULL DEFAULT '',
+  interests text[] NOT NULL DEFAULT '{}',
+  audience text[] NOT NULL DEFAULT '{}',
+  grades jsonb NOT NULL DEFAULT '{}',
+  offered text[] NOT NULL DEFAULT '{}',
+  summary text,
+  embedding vector(768),
+  flip_animations boolean NOT NULL DEFAULT true,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- One planned day. Stops live in trip_stops; happenings (NYC permitted events near the stops) are a snapshot.
+CREATE TABLE IF NOT EXISTS trips (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  prompt text NOT NULL,
+  city text NOT NULL,
+  day_window text NOT NULL DEFAULT 'now',          -- now | morning | afternoon | evening | all_day
+  title text,
+  status text NOT NULL DEFAULT 'planned',          -- planned | active | finished
+  happenings jsonb NOT NULL DEFAULT '[]',
+  note text,
+  photo_urls text[] NOT NULL DEFAULT '{}',
+  best_for text[] NOT NULL DEFAULT '{}',
+  best_for_options text[] NOT NULL DEFAULT '{}',
+  story_title text,
+  story text,
+  emotions text[] NOT NULL DEFAULT '{}',
+  highlight_stop_id uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  started_at timestamptz,
+  finished_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS trips_user_idx ON trips(user_id, created_at DESC);
+
+-- A stop on a trip. `data` is Explorin's own copy (AI title, reason, tags, category) plus the Google place id.
+-- Google's terms allow storing place ids indefinitely and coordinates for up to 30 days, so `lat/lng` carry
+-- `coords_at` and are refreshed from the place id when older (src/lib/server/trips.ts). Photos and reviews are
+-- never stored; they are fetched by place id when shown. `visited_lat/lng` is the person's own GPS fix.
+CREATE TABLE IF NOT EXISTS trip_stops (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id uuid NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  position integer NOT NULL,
+  google_place_id text,
+  data jsonb NOT NULL,
+  lat double precision,
+  lng double precision,
+  coords_at timestamptz,
+  in_plan boolean NOT NULL DEFAULT true,
+  added_by text NOT NULL DEFAULT 'ai',             -- ai | user
+  visited_at timestamptz,
+  visited_lat double precision,
+  visited_lng double precision
+);
+CREATE INDEX IF NOT EXISTS trip_stops_trip_idx ON trip_stops(trip_id, position);
+
+-- Event-location text -> coordinates, shared across people (greenmarkets repeat weekly). Rows older than 30 days
+-- are ignored and overwritten, which also keeps Google-geocoded coordinates inside their caching window.
+CREATE TABLE IF NOT EXISTS geocode_cache (
+  query text PRIMARY KEY,
+  lat double precision,
+  lng double precision,
+  source text NOT NULL,                            -- geosearch | google | none
+  fetched_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Every paid upstream call made on someone's behalf, priced at list rates (src/lib/server/pricing.ts).
+-- 1 credit = $0.001. Settings shows the month's total; plans stop at MONTHLY_CREDITS.
+CREATE TABLE IF NOT EXISTS usage_events (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  service text NOT NULL,                           -- gemini | embedding | nimble | places | maps | geocoding
+  operation text NOT NULL,
+  units integer NOT NULL DEFAULT 1,
+  cost_micros bigint NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS usage_user_time_idx ON usage_events(user_id, created_at DESC);

@@ -14,6 +14,7 @@
 import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_MAP_ID } from '$app/env/private';
 import { formatLatLng as fmt, type LatLng } from '#lib/adventure';
 import { DAY, timedFetch, ttlCache } from './http';
+import { trackCall } from './usage';
 
 export type MapStyle = 'paper' | 'ink' | 'cloud';
 export const MAP_STYLES: MapStyle[] = ['paper', 'ink', 'cloud'];
@@ -122,6 +123,7 @@ export async function staticMap(req: MapRequest): Promise<MapImage | null> {
 	const hit = imageCache.get(url);
 	if (hit) return hit;
 	try {
+		trackCall('maps.static', 'map.static');
 		const res = await timedFetch(url);
 		const type = res.headers.get('content-type') || '';
 		if (!res.ok || !type.startsWith('image/')) return null;

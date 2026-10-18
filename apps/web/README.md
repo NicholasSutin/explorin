@@ -1,62 +1,58 @@
 # Explorin web app
 
-Discovery-to-scrapbook at `/`, and the photo-based taste profile at `/onboarding`, `/ask`, `/profile`. One product: discovery results carry "people like you" evidence from the profile side whenever the database is configured. See [MVP.md](MVP.md) for the credential-free demo and live API configuration.
+Sign up, tell Explorin what you like (a few words and a quick tier list), plan a day of real places, walk it on a living map, then keep it in a scrapbook you can share. How it fits together: [docs/system-design.md](../../docs/system-design.md). Behaviour, limits and costs: [MVP.md](MVP.md).
 
-Hyper-personalized NYC experiences, recommended with evidence from how similar people felt there.
-Built at the AI Engineer NYC Hackathon, October 11, 2026. Scope lives in [`../../docs/pre-build/PLAN.md`](../../docs/pre-build/PLAN.md).
-
-**Gemini** does the seeing (photo profiler), reasoning (intent, composer, reflection analysis), Maps grounding, and embeddings.
-[https://console.cloud.google.com/billing]
-**Nimble** brings real public reviews (Google Maps, Tripadvisor, Yelp) for cold start, the live "right now" line, and long-tail web search.
-Postgres + pgvector stores profiles, places, and reflections. Hosted on **Cloudflare Workers** with photos in **R2**.
+**Gemini** narrows the tier list, picks places from the web pages Nimble finds, and drafts the scrapbook entry. **Nimble** searches the web. **Google Places** verifies places (coordinates, photos, reviews on demand); the **Maps JavaScript API** draws the trip map and **Static Maps** the scrapbook stamp. **NYC Open Data** supplies happenings. Postgres + pgvector (Tiger Cloud, through Hyperdrive on Workers) stores accounts, taste, trips, reflections and usage; photos go to R2.
 
 ## Setup
 
 ```bash
-cp .env.example .env     # fill in keys
-npm install
-npm run setup            # schema + 14 seed places
-npm run nimble:smoke     # confirm Nimble endpoints/fields before ingest
-npm run ingest           # real reviews -> labeled reflections (or: npm run db:seed-reflections as fallback)
-npm run dev              # plain Vite dev server with HMR; photos stored in .photos/
+cp .env.example .env     # fill in keys (each one is explained there)
+npm install              # from the repo root
+npm run db:migrate       # applies scripts/schema.sql (idempotent)
+npm run db:seed          # optional: curated places
+npm run db:seed-reflections   # optional: seed "people like you" quotes
+npm run dev              # http://localhost:5173
 ```
 
-Scripts run with Node's `--env-file=.env`.
+Without `RESEND_API_KEY` the sign-up link is printed to the dev server console. Locally, Cloudflare's Turnstile test keys (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`) always pass.
 
-### Cloudflare (later)
+### Google Cloud, once
 
-The default build uses adapter-node and local-disk photos. Set `DEPLOY_TARGET=cloudflare` (the `build:cf`, `preview:cf`, `deploy` scripts do) to build for Workers + R2.
+- **Server key** (`GOOGLE_MAPS_API_KEY`): Places API (New) and Maps Static API; optionally Geocoding API (places NYC street-segment events on the map).
+- **Browser key** (`GOOGLE_MAPS_BROWSER_KEY`): Maps JavaScript API only, restricted to HTTP referrers `app.explorin.app/*`, `localhost:5173/*`, `127.0.0.1:4173/*`. In production it is a `var` in `wrangler.jsonc`. Without it the trip page shows a static snapshot.
+
+### Cloudflare
 
 ```bash
-npx wrangler login
-npx wrangler r2 bucket create explorin-photos
-npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL"   # once; id goes in wrangler.jsonc
-cp .env.prod.example .env.prod   # fill in; gitignored
-npm run secrets:web --prefix ../..          # status: what is on the Worker vs. in the file
-npm run secrets:web:update --prefix ../..   # create or overwrite every non-empty key (secrets:web:new creates only; :sync also deletes, after confirming)
-cp .env .dev.vars            # wrangler reads .dev.vars for local `npm run preview`
+cp .env.prod.example .env.prod      # secrets; gitignored
+npm run secrets:web --prefix ../..          # what is on the Worker vs. in the file
+npm run secrets:web:update --prefix ../..   # push every non-empty key
 npm run deploy
 ```
 
-Secrets, with what each enables: `GEMINI_API_KEY`, `DATABASE_URL`, `NIMBLE_API_KEY` (discovery and AI); `GOOGLE_MAPS_API_KEY` (place photos, reviews, stylized static maps); `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), `TURNSTILE_SECRET_KEY` (a Turnstile site that lists app.explorin.app; the site key is a var) and `RESEND_API_KEY` (sign-up link and reset emails) together enable accounts. Without the last three, sign-in answers 503 and only the demo works. One-off changes still work with `npx wrangler secret put NAME`.
+Secrets: `GEMINI_API_KEY`, `DATABASE_URL`, `NIMBLE_API_KEY`, `GOOGLE_MAPS_API_KEY`, `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`. Vars (in `wrangler.jsonc`): `GOOGLE_MAPS_BROWSER_KEY`, `BETTER_AUTH_URL`, `TURNSTILE_SITE_KEY`, `TURNSTILE_HOSTNAMES`, `AUTH_FROM_EMAIL`, optional `MONTHLY_CREDITS`.
 
-Optional: put [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) in front of Postgres and read `platform.env.HYPERDRIVE.connectionString`.
+## Tests
 
-## Demo shortcuts
+```bash
+npm run check                                                   # svelte-check + wrangler types
+node ../../node_modules/@playwright/test/cli.js test tests/auth.spec.ts   # guards, no database needed
+```
 
-- **Preset profiles:** the onboarding screen has "Demo: start from a preset profile" chips (Maya, Sam, Lee) so a second phone skips photo onboarding.
-- **Personal seed persona:** give an AI agent the prompt in [`data/personas/PROMPT.md`](data/personas/PROMPT.md), save its JSON to `data/personas/<id>.json` (gitignored), then `npm run db:seed-persona -- data/personas/<id>.json`. The persona appears as a chip and their reflections become "From someone like you" evidence.
-- **Cached demo prompt:** the scripted prompt ("a run with views of the water and the Empire State Building") is cached per user for 2 hours in the `response_cache` table. Run it once before presenting.
-- **Seed evidence:** `npm run db:seed-reflections` loads 29 curated quotes labeled "From seed notes". Live Google data (rating, open status) is cached in `places.live` and refreshed in the background.
+`tests/journey.spec.ts` drives the whole product from sign-up to account deletion with real Nimble, Gemini and Places calls (about 50 credits per run) and a stand-in for the Maps JavaScript API. It needs a dev server with Turnstile test keys and its log file; the command is at the top of the spec. Add `E2E_DESKTOP=1` for the laptop layout. Screenshots and the exported share images land in `test-results/`.
 
-## How it works
+## Layout
 
-1. Photos + bio -> Gemini profiler -> traits with evidence -> embedded summary
-2. Prompt -> intent -> (embedding ‖ Maps grounding) -> two-axis retrieval (what + who felt it) -> composer (IDs only) -> validator -> cards
-3. Start / Finish -> photo + text reflection -> Gemini emotion analysis -> stored as quotable evidence for the next person
-
-Quotes are only ever pulled from the database by ID; the model never writes quote text. Review excerpts are labeled with their source.
-
-## Disclosure
-
-Code written during the event with AI-assisted coding (Claude Code). No sign-in; anonymous cookie session. Photo EXIF (including GPS) is stripped client side before upload. HEIC/HEIF photos are accepted everywhere: Safari decodes them natively, other browsers fall back to a libheif WASM decoder in a Web Worker (`src/lib/heic/`).
+| Path | What |
+|---|---|
+| `src/routes/welcome` | guest landing |
+| `src/routes/(auth)` | sign-up link, password, sign-in, reset |
+| `src/routes/(onboarding)` | about you, tier list |
+| `src/routes/(app)` | home (plan), scrapbook, settings, with the tab bar |
+| `src/routes/(trip)` | trip map and the end-of-day reflection |
+| `src/lib/server` | plan, taste, trips, keepsake, account, usage, happenings, geocode, places, nimble, gemini |
+| `src/lib/scrapbook`, `src/lib/components/scrapbook` | page layout, SVG pages, book, export |
+| `src/lib/gmaps.ts`, `src/lib/components/trip` | trip map, sheet, hand-off |
+| `static/taste` | tier-list photos (Unsplash License; credits in `src/lib/taste-credits.json`) |
+| `legacy/` | the hackathon flows, not built; delete when no longer needed |

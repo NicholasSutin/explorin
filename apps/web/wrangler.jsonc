@@ -45,7 +45,12 @@
 	// BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY, RESEND_API_KEY) go in: npx wrangler secret put <NAME>.
 	// Defaults for the optional vars live in src/env.ts; override here with "vars" if needed.
 	// Accounts: the Turnstile widget below must belong to a Turnstile site that lists app.explorin.app.
+	// GOOGLE_MAPS_BROWSER_KEY is the interactive trip map's key (Maps JavaScript API). It ships to browsers by design,
+	// so it is a var, not a secret: restrict it in Google Cloud to HTTP referrers app.explorin.app/* and to the Maps
+	// JavaScript API only. Empty means trip pages show a static snapshot instead of the live map.
+	// MONTHLY_CREDITS (optional, default 2000 = $2 of estimated upstream cost per person per month) caps new plans.
 	"vars": {
+		"GOOGLE_MAPS_BROWSER_KEY": "AIzaSyBQmWlpJE9HMB4vKGbOrF2oWVFlbGqNI1w",
 		"BETTER_AUTH_URL": "https://app.explorin.app",
 		"TURNSTILE_SITE_KEY": "0x4AAAAAAFUppmWr4tQ59Tnr",
 		"TURNSTILE_HOSTNAMES": "app.explorin.app",

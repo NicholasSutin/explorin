@@ -94,7 +94,6 @@ export const auth = betterAuth({
 		additionalFields: {
 			// Set by the onboarding form, never by the client directly.
 			homeCity: { type: 'string', required: false, input: false },
-			interests: { type: 'string[]', required: false, input: false },
 			onboardedAt: { type: 'date', required: false, input: false }
 		}
 	},
@@ -166,17 +165,15 @@ export async function setPassword(headers: Headers, newPassword: string) {
 	await auth.api.setPassword({ headers, body: { newPassword } });
 }
 
-/** Record the onboarding answers on the account (server-only fields). */
-export async function completeOnboarding(
-	userId: string,
-	data: { name: string; homeCity: string; interests: string[] }
-) {
+/** Step 1 of onboarding: what to call them and where they explore (server-only fields). */
+export async function saveAccountBasics(userId: string, data: { name: string; homeCity: string }) {
 	const ctx = await auth.$context;
-	await ctx.internalAdapter.updateUser(userId, {
-		name: data.name,
-		homeCity: data.homeCity,
-		interests: data.interests,
-		onboardedAt: new Date()
-	});
+	await ctx.internalAdapter.updateUser(userId, { name: data.name, homeCity: data.homeCity });
 	await ensureUser(userId, data.name);
+}
+
+/** The tier list is done: the account can plan. Until then every page sends it back to onboarding. */
+export async function markOnboarded(userId: string) {
+	const ctx = await auth.$context;
+	await ctx.internalAdapter.updateUser(userId, { onboardedAt: new Date() });
 }
