@@ -16,8 +16,6 @@ export const EMBED_PER_M = 150_000;
 /** Flat per-call prices. */
 export const PER_CALL = {
 	'nimble.search': 3_000,
-	'nimble.extract': 10_000,
-	'nimble.maps_place': 3_000,
 	'places.text_search_pro': 32_000,
 	'places.details_essentials': 5_000,
 	'places.details_pro': 17_000,

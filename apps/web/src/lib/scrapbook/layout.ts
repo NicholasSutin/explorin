@@ -228,7 +228,7 @@ export function stampMap(trip: Trip, px: number): string | null {
 		.slice(0, 12);
 	if (!pts.length) return null;
 	const size = Math.min(640, Math.round(px));
-	return `/api/map?pins=${pts.map(formatLatLng).join(';')}&numbered=1&trail=${pts.length > 1 ? 1 : 0}&w=${size}&h=${size}&style=paper`;
+	return `/api/map?pins=${pts.map(formatLatLng).join(';')}&numbered=1&trail=${pts.length > 1 ? 1 : 0}&w=${size}&h=${size}`;
 }
 
 export function layoutPage(trip: Trip, format: Format, pageNumber?: number): PageModel {

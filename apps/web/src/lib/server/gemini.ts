@@ -1,6 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { GEMINI_API_KEY } from '$app/env/private';
-import { getPhoto } from '#storage';
 import { trackEmbedding, trackGemini } from './usage';
 
 export const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
@@ -52,25 +51,8 @@ export async function embed(
 	return values;
 }
 
-/** Load an image (storage key `/photos/...` or data URL, the only forms the app produces) as an inlineData part. */
-export async function imagePart(url: string): Promise<Part> {
-	if (url.startsWith('data:')) {
-		const m = url.match(/^data:([^;]+);base64,(.*)$/);
-		if (!m) throw new Error('Bad data URL');
-		return { inlineData: { mimeType: m[1], data: m[2] } };
-	}
-	if (url.startsWith('/photos/')) {
-		const photo = await getPhoto(url.slice('/photos/'.length));
-		if (!photo) throw new Error('Photo not found in storage');
-		return {
-			inlineData: { mimeType: photo.contentType, data: Buffer.from(photo.body).toString('base64') }
-		};
-	}
-	throw new Error('Unsupported photo URL');
-}
-
 /**
- * Loose JSON generation for the discovery and scrapbook flows: no response schema, short
+ * Loose JSON generation for the planner and the keepsake draft: no response schema, short
  * timeout, and null instead of throwing so every caller can degrade honestly.
  */
 export async function adventureAI<T>(prompt: string, operation = 'generate'): Promise<T | null> {

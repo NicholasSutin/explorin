@@ -18,8 +18,7 @@ import {
 	TAGS,
 	type DayWindow,
 	type DiscoveryStep,
-	type Experience,
-	type LatLng
+	type Experience
 } from '#lib/adventure';
 import { CATEGORY, GRADE_WEIGHT, type Grades } from '#lib/taste';
 import { distanceM, formatDistance, orderStops } from '#lib/geo';
@@ -334,5 +333,3 @@ Search results: ${JSON.stringify(candidates)}`,
 	if (curated) console.info('[plan] used the curated set for', tripId);
 	emit({ type: 'result', tripId });
 }
-
-export type { LatLng };

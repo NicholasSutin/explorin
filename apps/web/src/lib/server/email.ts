@@ -6,8 +6,6 @@
 import { dev } from '$app/env';
 import { AUTH_FROM_EMAIL, RESEND_API_KEY } from '$app/env/private';
 
-export const emailConfigured = () => Boolean(RESEND_API_KEY);
-
 const escape = (s: string) =>
 	s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 

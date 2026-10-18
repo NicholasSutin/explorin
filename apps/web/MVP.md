@@ -26,19 +26,19 @@ What the app does today, where it stops, and what each piece costs. Setup is in 
 
 ## Costs (list prices after free monthly allowances)
 
-| Call | When | Price |
-|---|---|---|
-| Nimble search | 2 per plan | plan-dependent (estimated $0.003) |
-| Gemini Flash | tier-list narrowing, plan pick, keepsake draft | ~$0.30 / 1M input, $2.50 / 1M output tokens |
-| Gemini embeddings | taste save, plan, keepsake | ~$0.15 / 1M tokens |
-| Places Text Search Pro | 1 per planned stop | $32 / 1k after 5k free |
-| Place Details Essentials | trip and scrapbook refresh by place id | $5 / 1k after 10k free |
-| Place Details Pro | landmark tapped on the map | $17 / 1k after 5k free |
-| Place Details reviews | "Google reviews" opened | $25 / 1k after 1k free |
-| Place photo | each stop photo shown | $7 / 1k after 1k free |
-| Maps JavaScript API | each trip map load | $7 / 1k after 10k free |
-| Static Maps | scrapbook stamp, fallback map | $2 / 1k after 10k free |
-| Geocoding | NYC street-segment events (cached 30 days) | $5 / 1k after 10k free |
-| NYC Open Data, GeoSearch | happenings | free |
+| Call                     | When                                           | Price                                       |
+| ------------------------ | ---------------------------------------------- | ------------------------------------------- |
+| Nimble search            | 2 per plan                                     | plan-dependent (estimated $0.003)           |
+| Gemini Flash             | tier-list narrowing, plan pick, keepsake draft | ~$0.30 / 1M input, $2.50 / 1M output tokens |
+| Gemini embeddings        | taste save, plan, keepsake                     | ~$0.15 / 1M tokens                          |
+| Places Text Search Pro   | 1 per planned stop                             | $32 / 1k after 5k free                      |
+| Place Details Essentials | trip and scrapbook refresh by place id         | $5 / 1k after 10k free                      |
+| Place Details Pro        | landmark tapped on the map                     | $17 / 1k after 5k free                      |
+| Place Details reviews    | "Google reviews" opened                        | $25 / 1k after 1k free                      |
+| Place photo              | each stop photo shown                          | $7 / 1k after 1k free                       |
+| Maps JavaScript API      | each trip map load                             | $7 / 1k after 10k free                      |
+| Static Maps              | scrapbook stamp, fallback map                  | $2 / 1k after 10k free                      |
+| Geocoding                | NYC street-segment events (cached 30 days)     | $5 / 1k after 10k free                      |
+| NYC Open Data, GeoSearch | happenings                                     | free                                        |
 
 Prices are in `src/lib/server/pricing.ts`, the single place to update them.

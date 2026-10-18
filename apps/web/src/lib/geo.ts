@@ -59,18 +59,3 @@ export function orderStops<T>(items: T[], at: (t: T) => LatLng | undefined, orig
 	}
 	return [...route, ...rest];
 }
-
-/** Bounding box of some points, padded by `padM` metres. */
-export function bbox(points: LatLng[], padM = 0) {
-	const lat = points.map((p) => p.lat);
-	const lng = points.map((p) => p.lng);
-	const dLat = padM / 111320;
-	const mid = (Math.min(...lat) + Math.max(...lat)) / 2;
-	const dLng = padM / (111320 * Math.cos(rad(mid)));
-	return {
-		south: Math.min(...lat) - dLat,
-		north: Math.max(...lat) + dLat,
-		west: Math.min(...lng) - dLng,
-		east: Math.max(...lng) + dLng
-	};
-}

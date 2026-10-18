@@ -3,10 +3,7 @@ import { decodePhoto } from './heic';
 import type { LatLng } from './adventure';
 
 /** Pull the server's message out of a failed response; SvelteKit's `error()` answers `{ message }`. */
-export async function errorMessage(
-	res: Response,
-	fallback = 'Something went wrong. Please try again.'
-) {
+async function errorMessage(res: Response, fallback = 'Something went wrong. Please try again.') {
 	try {
 		return ((await res.json()) as { message?: string }).message || fallback;
 	} catch {
@@ -62,17 +59,6 @@ export async function reencodePhoto(
 export async function stripAndResize(file: File, maxEdge = 1600): Promise<File> {
 	const blob = await reencodePhoto(file, { maxEdge });
 	return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
-}
-
-/** `reencodePhoto` as a JPEG data URL, for histories kept in localStorage. */
-export async function photoDataUrl(file: File, maxEdge = 1200, quality = 0.72): Promise<string> {
-	const blob = await reencodePhoto(file, { maxEdge, quality });
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(String(reader.result));
-		reader.onerror = () => reject(reader.error);
-		reader.readAsDataURL(blob);
-	});
 }
 
 export async function uploadPhotos(files: File[]): Promise<string[]> {

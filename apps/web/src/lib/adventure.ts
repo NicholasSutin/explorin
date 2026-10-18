@@ -16,7 +16,7 @@ export interface ExperiencePhoto {
 	attributionUrl?: string;
 }
 
-/** A first-person quote from the profile side ("people like you"), matched to a place. */
+/** A first-person quote about a place ("people like you"): a member's trip note, a seed note or a public review. */
 export interface PlaceVoice {
 	id: string;
 	quote: string;

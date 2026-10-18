@@ -1,8 +1,8 @@
 /**
- * "People like you" for discovery: first-person quotes from the reflections table, matched to the
- * places a discovery run produced and ranked by how close they are to the asker's prompt (and to
- * the asker's taste profile, when they have one): two-axis retrieval scoped to a known list of places. Needs DATABASE_URL and a Gemini key; otherwise it says so
- * and the pipeline moves on.
+ * "People like you" in the planner: first-person quotes from the reflections table, matched to the stops a
+ * plan produced and ranked by how close they are to the asker's prompt and to the asker's taste embedding
+ * (two-axis retrieval scoped to a known list of places, ADR-0005). Needs DATABASE_URL and a Gemini key;
+ * otherwise the step reports itself skipped and the plan goes on.
  */
 import { DATABASE_URL, GEMINI_API_KEY } from '$app/env/private';
 import type { Experience, PlaceVoice } from '#lib/adventure';
@@ -27,7 +27,7 @@ export async function attachVoices<T extends Pick<Experience, 'place' | 'voices'
 	uid?: string
 ): Promise<{ experiences: T[]; voices: number; profile: boolean }> {
 	if (!evidenceEnabled() || !experiences.length) return { experiences, voices: 0, profile: false };
-	// Loaded lazily so the discovery path does not pull Postgres in when no database is configured.
+	// Loaded lazily so the planner does not pull Postgres in when no database is configured.
 	const [{ sql, vec, getTasteEmbedding }, { embed }] = await Promise.all([
 		import('./db'),
 		import('./gemini')

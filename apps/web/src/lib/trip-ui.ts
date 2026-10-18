@@ -1,5 +1,5 @@
 /** Client-side helpers for the trip screens: what is selected on the map, and leg distances. */
-import type { Happening, LatLng, Stop } from './adventure';
+import type { Happening, LatLng } from './adventure';
 import { distanceM, walkMinutes, WALKABLE_M, formatDistance } from './geo';
 
 export type Selection =
@@ -44,5 +44,3 @@ export function happeningTime(h: Happening): string {
 	};
 	return `${fmt(h.starts)} – ${fmt(h.ends)}`;
 }
-
-export const planned = (stops: Stop[]) => stops.filter((s) => s.inPlan);

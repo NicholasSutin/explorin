@@ -5,17 +5,14 @@ const optional = (v: string | undefined) => v || undefined;
 export const variables = defineEnvVars({
 	GEMINI_API_KEY: {
 		schema: (v) => (v || '').trim(),
-		description: 'Google AI Studio key (billed tier for Maps grounding)'
+		description:
+			'Google AI Studio key: planner picks, tier-list narrowing, keepsake drafts and embeddings'
 	},
 	GOOGLE_MAPS_API_KEY: {
 		schema: optional,
 		description:
-			'Google Cloud key with Places API (New) enabled; powers place photos on experience cards (optional)'
-	},
-	GOOGLE_MAPS_MAP_ID: {
-		schema: optional,
-		description:
-			'Optional Cloud-based map style ID (Google Maps Platform > Map Management); used by /api/map?style=cloud'
+			'Server-side Google Cloud key: Places API (New), Maps Static API and Geocoding API. Verifies planned stops ' +
+			'and supplies their photos (optional)'
 	},
 	GOOGLE_MAPS_BROWSER_KEY: {
 		public: true,
@@ -38,7 +35,7 @@ export const variables = defineEnvVars({
 	NIMBLE_API_KEY: {
 		schema: optional,
 		description:
-			'Nimble SDK API key (Settings > API Keys), sent as Bearer; powers /v2/search and /v2/extract'
+			"Nimble SDK API key (Settings > API Keys), sent as Bearer; powers the planner's web search (/v2/search)"
 	},
 	NIMBLE_BASE_URL: {
 		schema: (v) => v || 'https://sdk.nimbleway.com',

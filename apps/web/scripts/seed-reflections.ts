@@ -1,6 +1,6 @@
 /**
  * Curated seed reflections (source = 'seed', labeled "From seed notes" in the UI). Honest, short, feeling-first.
- * This is the guaranteed demo dataset; real public reviews from ingest-reviews.ts layer on top when available.
+ * The baseline "people like you" set; real public reviews from ingest-reviews.ts and members' trip notes add to it.
  * Idempotent: skips quotes that already exist.
  */
 import { sql, embedDoc, vec } from './_shared';

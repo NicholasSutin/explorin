@@ -41,7 +41,7 @@
 			"simple": { "limit": 10, "period": 60 }
 		}
 	],
-	// Secrets (GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY, optional GOOGLE_MAPS_MAP_ID,
+	// Secrets (GEMINI_API_KEY, DATABASE_URL, NIMBLE_API_KEY, GOOGLE_MAPS_API_KEY,
 	// BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY, RESEND_API_KEY) go in: npx wrangler secret put <NAME>.
 	// Defaults for the optional vars live in src/env.ts; override here with "vars" if needed.
 	// Accounts: the Turnstile widget below must belong to a Turnstile site that lists app.explorin.app.

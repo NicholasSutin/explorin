@@ -11,7 +11,6 @@ import {
 	EMBED_PER_M,
 	GEMINI_INPUT_PER_M,
 	GEMINI_OUTPUT_PER_M,
-	MICROS_PER_CREDIT,
 	PER_CALL,
 	type PricedCall
 } from './pricing';
@@ -79,4 +78,3 @@ export async function flushUsage(locals: App.Locals, sql: Sql): Promise<void> {
 }
 
 export const monthlyCredits = () => MONTHLY_CREDITS;
-export const toCredits = (micros: number) => micros / MICROS_PER_CREDIT;
