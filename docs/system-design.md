@@ -121,7 +121,7 @@ usage_events(id, user_id → users, service, operation, units, cost_micros, crea
 geocode_cache(query, lat, lng, source, fetched_at)
 ```
 
-All personal tables cascade from `users(id)`; `account.ts` deletes the legacy ones (`reflections`, `experiences`, `profiles`) explicitly, then R2 photos, then the better-auth user.
+All personal tables cascade from `users(id)` except `reflections`, which `account.ts` deletes explicitly; it removes R2 photos first and the better-auth user last.
 
 ### Tier-list narrowing
 

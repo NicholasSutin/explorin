@@ -1,8 +1,8 @@
 /**
  * Account-level operations for settings: profile edits, password change, usage summary and full deletion.
  * Deletion removes everything the person created: photos in storage, trips and stops, taste, usage, their
- * reflections (shared quotes included, also the copies planned into other people's trips), legacy experiences
- * and profiles, the app's users row, and finally the better-auth user (sessions and accounts cascade from it).
+ * reflections (shared quotes included, also the copies planned into other people's trips), the app's
+ * users row, and finally the better-auth user (sessions and accounts cascade from it).
  */
 import { auth } from './auth';
 import { sql } from './db';
@@ -80,8 +80,7 @@ export async function deleteAccount(userId: string): Promise<{ photos: number }>
 	const photos = await deletePhotos(userId);
 	await sql.begin(async (tx) => {
 		const quotes = await tx<{ id: string }[]>`
-			DELETE FROM reflections WHERE author_id = ${userId}
-			OR experience_id IN (SELECT id FROM experiences WHERE user_id = ${userId}) RETURNING id::text`;
+			DELETE FROM reflections WHERE author_id = ${userId} RETURNING id::text`;
 		// Planning copies matched quotes into each stop (trip_stops.data.voices); remove theirs from everyone's trips.
 		const ids = quotes.map((q) => q.id);
 		if (ids.length)
@@ -91,11 +90,9 @@ export async function deleteAccount(userId: string): Promise<{ photos: number }>
 				  '[]'::jsonb))
 				WHERE jsonb_typeof(data->'voices') = 'array'
 				  AND EXISTS (SELECT 1 FROM jsonb_array_elements(data->'voices') v WHERE v->>'id' = ANY(${ids}::text[]))`;
-		await tx`DELETE FROM experiences WHERE user_id = ${userId}`;
 		await tx`DELETE FROM trips WHERE user_id = ${userId}`;
 		await tx`DELETE FROM usage_events WHERE user_id = ${userId}`;
 		await tx`DELETE FROM taste WHERE user_id = ${userId}`;
-		await tx`DELETE FROM profiles WHERE user_id = ${userId}`;
 		const [u] = await tx<
 			{ email: string }[]
 		>`DELETE FROM "user" WHERE id = ${userId} RETURNING email`;
