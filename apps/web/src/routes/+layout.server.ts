@@ -6,6 +6,7 @@ export const load: LayoutServerLoad = ({ locals }) => ({
 		? {
 				name: locals.user.name,
 				email: locals.user.email,
+				homeCity: (locals.user.homeCity as string | null | undefined) ?? null,
 				onboarded: Boolean(locals.user.onboardedAt)
 			}
 		: null

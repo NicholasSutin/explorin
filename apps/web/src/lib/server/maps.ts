@@ -8,15 +8,12 @@
  * and therefore safe to include in the html-to-image scrapbook export.
  *
  * Styling: Static Maps accepts the classic JSON style language as `style=` query params
- * (feature|element|rules), which is what `paper` and `ink` use. If GOOGLE_MAPS_MAP_ID is set
- * (a Cloud-based map style from the console), `style=cloud` passes it as `map_id` instead.
+ * (feature|element|rules); every image uses the `PAPER` look, the same one the live trip map draws.
  */
-import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_MAP_ID } from '$app/env/private';
+import { GOOGLE_MAPS_API_KEY } from '$app/env/private';
 import { formatLatLng as fmt, type LatLng } from '#lib/adventure';
 import { DAY, timedFetch, ttlCache } from './http';
-
-export type MapStyle = 'paper' | 'ink' | 'cloud';
-export const MAP_STYLES: MapStyle[] = ['paper', 'ink', 'cloud'];
+import { trackCall } from './usage';
 
 /* Brand palette from packages/brand/README.md */
 const INK = '0x203d32';
@@ -51,26 +48,6 @@ const PAPER = [
 	`feature:water|element:labels.text.fill|color:0x5f7a74`
 ];
 
-/** Night-ink look for dark surfaces: deep green ground, cream roads, orange water accents. */
-const INK_STYLE = [
-	`feature:all|element:geometry|color:0x1d3a30`,
-	`feature:all|element:labels.text.fill|color:0xdfe6d8`,
-	`feature:all|element:labels.text.stroke|color:${INK}|weight:2`,
-	`feature:all|element:labels.icon|visibility:off`,
-	`feature:administrative|element:geometry.stroke|color:0x3b5a4c`,
-	`feature:poi|element:labels|visibility:off`,
-	`feature:poi|element:geometry|color:0x23463a`,
-	`feature:poi.park|element:geometry|color:0x2d5a46`,
-	`feature:road|element:geometry.fill|color:0x3f6a56`,
-	`feature:road|element:geometry.stroke|color:0x1d3a30`,
-	`feature:road|element:labels.text.fill|color:0xb9c7b4`,
-	`feature:road.highway|element:geometry.fill|color:0x6f8f72`,
-	`feature:road.highway|element:labels|visibility:off`,
-	`feature:transit|visibility:off`,
-	`feature:water|element:geometry|color:0x14271f`,
-	`feature:water|element:labels.text.fill|color:0x8aa89c`
-];
-
 export interface MapRequest {
 	/** Centre + zoom for a single place; omit both and pass `pins` for an auto-fitted overview. */
 	center?: LatLng;
@@ -78,7 +55,6 @@ export interface MapRequest {
 	pins: LatLng[];
 	width: number;
 	height: number;
-	style: MapStyle;
 	/** Number the pins 1..9 (Static Maps labels are a single character). */
 	numbered?: boolean;
 	/** Draw a path through the pins in order (history "trail"). */
@@ -94,20 +70,14 @@ function staticMapUrl(req: MapRequest): string {
 	q.set('format', 'png');
 	if (req.center) q.set('center', fmt(req.center));
 	if (req.zoom) q.set('zoom', String(req.zoom));
-	const style = req.style === 'cloud' && !GOOGLE_MAPS_MAP_ID ? 'paper' : req.style;
-	if (style === 'cloud') q.set('map_id', GOOGLE_MAPS_MAP_ID!);
-	else for (const s of style === 'ink' ? INK_STYLE : PAPER) q.append('style', s);
-	const color = style === 'ink' ? '0xf2a071' : ORANGE;
+	for (const s of PAPER) q.append('style', s);
 	if (req.numbered)
 		req.pins
 			.slice(0, 9)
-			.forEach((p, i) => q.append('markers', `color:${color}|label:${i + 1}|${fmt(p)}`));
-	else if (req.pins.length) q.append('markers', `color:${color}|${req.pins.map(fmt).join('|')}`);
+			.forEach((p, i) => q.append('markers', `color:${ORANGE}|label:${i + 1}|${fmt(p)}`));
+	else if (req.pins.length) q.append('markers', `color:${ORANGE}|${req.pins.map(fmt).join('|')}`);
 	if (req.trail && req.pins.length > 1)
-		q.append(
-			'path',
-			`color:${style === 'ink' ? '0xf2a071cc' : '0xd96738cc'}|weight:3|geodesic:true|${req.pins.map(fmt).join('|')}`
-		);
+		q.append('path', `color:${ORANGE}cc|weight:3|geodesic:true|${req.pins.map(fmt).join('|')}`);
 	q.set('key', GOOGLE_MAPS_API_KEY ?? '');
 	return `https://maps.googleapis.com/maps/api/staticmap?${q.toString()}`;
 }
@@ -122,6 +92,7 @@ export async function staticMap(req: MapRequest): Promise<MapImage | null> {
 	const hit = imageCache.get(url);
 	if (hit) return hit;
 	try {
+		trackCall('maps.static', 'map.static');
 		const res = await timedFetch(url);
 		const type = res.headers.get('content-type') || '';
 		if (!res.ok || !type.startsWith('image/')) return null;

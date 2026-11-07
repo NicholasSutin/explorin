@@ -41,16 +41,16 @@ A user uploads a few photos, and Gemini infers what kind of person they are outd
 
 ## 3. Stack
 
-| Layer | Choice |
-|---|---|
-| Framework | SvelteKit (Svelte 5), TypeScript, `@sveltejs/adapter-vercel` |
-| Styling | Tailwind CSS, mobile-first, single column, max width 430px |
-| LLM | `@google/genai`, model `gemini-3.8-flash` |
-| Embeddings | `gemini-embedding-2`, 768 dimensions |
-| Web data | Nimble (`@nimble-way/nimble-js` or plain `fetch`) |
-| Database | Postgres with pgvector (Tiger Cloud free service), `postgres` npm package |
-| Photos | Vercel Blob (`@vercel/blob`) |
-| Hosting | Vercel |
+| Layer      | Choice                                                                    |
+| ---------- | ------------------------------------------------------------------------- |
+| Framework  | SvelteKit (Svelte 5), TypeScript, `@sveltejs/adapter-vercel`              |
+| Styling    | Tailwind CSS, mobile-first, single column, max width 430px                |
+| LLM        | `@google/genai`, model `gemini-3.8-flash`                                 |
+| Embeddings | `gemini-embedding-2`, 768 dimensions                                      |
+| Web data   | Nimble (`@nimble-way/nimble-js` or plain `fetch`)                         |
+| Database   | Postgres with pgvector (Tiger Cloud free service), `postgres` npm package |
+| Photos     | Vercel Blob (`@vercel/blob`)                                              |
+| Hosting    | Vercel                                                                    |
 
 ### Setup commands
 
@@ -202,29 +202,36 @@ LIMIT 12;
 All calls go through `src/lib/server/gemini.ts`.
 
 ```ts
-import { GoogleGenAI } from '@google/genai';
-import { GEMINI_API_KEY } from '$env/static/private';
+import { GoogleGenAI } from "@google/genai";
+import { GEMINI_API_KEY } from "$env/static/private";
 
 export const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-export const MODEL = 'gemini-3.8-flash';
+export const MODEL = "gemini-3.8-flash";
 
-export async function generateJson<T>(contents: any, schema: object): Promise<T> {
+export async function generateJson<T>(
+  contents: any,
+  schema: object,
+): Promise<T> {
   const res = await ai.models.generateContent({
     model: MODEL,
     contents,
-    config: { responseMimeType: 'application/json', responseSchema: schema }
+    config: { responseMimeType: "application/json", responseSchema: schema },
   });
   return JSON.parse(res.text!) as T;
 }
 
-export async function embed(text: string, kind: 'query' | 'doc'): Promise<number[]> {
-  const prefixed = kind === 'query'
-    ? `task: search result | query: ${text}`
-    : `title: none | text: ${text}`;
+export async function embed(
+  text: string,
+  kind: "query" | "doc",
+): Promise<number[]> {
+  const prefixed =
+    kind === "query"
+      ? `task: search result | query: ${text}`
+      : `title: none | text: ${text}`;
   const out = await ai.models.embedContent({
-    model: 'gemini-embedding-2',
+    model: "gemini-embedding-2",
     contents: prefixed,
-    config: { outputDimensionality: 768 }
+    config: { outputDimensionality: 768 },
   });
   return out.embeddings![0].values!;
 }
@@ -238,7 +245,9 @@ Input: 3 to 5 photos, optional bio. Output schema:
 
 ```json
 {
-  "activities": [{ "name": "running", "confidence": 0.9, "evidence": "photo 3: race bib" }],
+  "activities": [
+    { "name": "running", "confidence": 0.9, "evidence": "photo 3: race bib" }
+  ],
   "scenery": ["waterfront", "skyline"],
   "pace": "chill | moderate | active",
   "social": "solo | small_group | crowd",
@@ -285,15 +294,21 @@ Then `embed(prompt + ' ' + vibe, 'query')`.
 const res = await ai.models.generateContent({
   model: MODEL,
   contents: `List up to 5 real places in New York City for: ${intent.search_query}.
-             Must satisfy: ${intent.must_see.join('; ')}.`,
+             Must satisfy: ${intent.must_see.join("; ")}.`,
   config: {
     tools: [{ googleMaps: {} }],
-    toolConfig: { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } }
-  }
+    toolConfig: {
+      retrievalConfig: { latLng: { latitude: lat, longitude: lng } },
+    },
+  },
 });
 const grounded = (res.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
   .filter((c: any) => c.maps)
-  .map((c: any) => ({ placeId: c.maps.placeId, title: c.maps.title, uri: c.maps.uri }));
+  .map((c: any) => ({
+    placeId: c.maps.placeId,
+    title: c.maps.title,
+    uri: c.maps.uri,
+  }));
 ```
 
 Constraints: English only, text only, cannot be combined with `responseSchema` in the same call (keep it as its own step). Upsert any new grounded places into `places`. Show a "Places from Google Maps" attribution with links on cards.
@@ -305,14 +320,16 @@ Input: profile traits, intent, CANDIDATES (place id, name, tags), EVIDENCE (refl
 ```json
 {
   "feasibility_note": "string or null",
-  "cards": [{
-    "place_id": "uuid from CANDIDATES",
-    "title": "Sunrise loop at Gantry Plaza",
-    "plan": "2 to 3 sentences: where to start, which way to go, where to stop",
-    "why_for_you": "2 sentences tying the user's traits to what similar people felt",
-    "quote_ids": ["uuid from EVIDENCE"],
-    "right_now": "string or null"
-  }]
+  "cards": [
+    {
+      "place_id": "uuid from CANDIDATES",
+      "title": "Sunrise loop at Gantry Plaza",
+      "plan": "2 to 3 sentences: where to start, which way to go, where to stop",
+      "why_for_you": "2 sentences tying the user's traits to what similar people felt",
+      "quote_ids": ["uuid from EVIDENCE"],
+      "right_now": "string or null"
+    }
+  ]
 }
 ```
 
@@ -330,10 +347,23 @@ If nothing satisfies a must_see, say so in feasibility_note and offer the closes
 
 ```json
 {
-  "emotions": ["awe", "calm", "nostalgia", "pride", "joy", "belonging", "gratitude", "exhilaration"],
+  "emotions": [
+    "awe",
+    "calm",
+    "nostalgia",
+    "pride",
+    "joy",
+    "belonging",
+    "gratitude",
+    "exhilaration"
+  ],
   "themes": ["skyline", "family", "home"],
   "quote": "The single most quotable sentence, the user's own words, lightly trimmed.",
-  "profile_updates": { "add_scenery": ["sunrise"], "add_values": [], "add_activities": [] },
+  "profile_updates": {
+    "add_scenery": ["sunrise"],
+    "add_values": [],
+    "add_activities": []
+  },
   "learned": "Short toast text: 'You love sunrise runs by the water.'"
 }
 ```
@@ -394,22 +424,22 @@ Described in section 7. This is the answer to "what if I ask for something weird
 
 Start with these; add more with the same shape. Tags must be honest.
 
-| Name | Kind | Tags | Honest note |
-|---|---|---|---|
-| Gantry Plaza State Park, LIC | run_route | water_view, esb_view, skyline, sunrise | East River; direct Midtown and Empire State view |
-| Hunters Point South Park | run_route | water_view, esb_view, skyline | East River; Empire State and Chrysler |
-| Central Park Reservoir loop | run_route | water_view, skyline, quiet | 1.58 miles, run counterclockwise; reservoir, not river |
-| Brooklyn Bridge Park, Pier 1 to Pier 6 | run_route | water_view, skyline, harbor | Lower Manhattan skyline, not Empire State |
-| Washington Street, DUMBO | viewpoint | esb_view, bridge | Empire State framed in the Manhattan Bridge arch |
-| Domino Park, Williamsburg | walk | water_view, skyline | East River |
-| Roosevelt Island loop | run_route | water_view, skyline, quiet | East River both sides |
-| Hudson River Greenway, Chelsea to Battery | run_route | water_view, sunset | Hudson; city is behind you |
-| Fort Tilden, Battery Harris East | viewpoint | atlantic, skyline, quiet | Ocean plus distant skyline; closest match for "Atlantic and skyline" |
-| Coney Island boardwalk | run_route | atlantic, lively | True ocean; no skyline at ground level |
-| Rockaway Beach boardwalk | run_route | atlantic | Ocean only |
-| The High Line | walk | skyline, lively | Elevated; peeks of Empire State |
-| Little Island | viewpoint | water_view, sunset | Hudson |
-| East River Esplanade | run_route | water_view | Queens-facing |
+| Name                                      | Kind      | Tags                                   | Honest note                                                          |
+| ----------------------------------------- | --------- | -------------------------------------- | -------------------------------------------------------------------- |
+| Gantry Plaza State Park, LIC              | run_route | water_view, esb_view, skyline, sunrise | East River; direct Midtown and Empire State view                     |
+| Hunters Point South Park                  | run_route | water_view, esb_view, skyline          | East River; Empire State and Chrysler                                |
+| Central Park Reservoir loop               | run_route | water_view, skyline, quiet             | 1.58 miles, run counterclockwise; reservoir, not river               |
+| Brooklyn Bridge Park, Pier 1 to Pier 6    | run_route | water_view, skyline, harbor            | Lower Manhattan skyline, not Empire State                            |
+| Washington Street, DUMBO                  | viewpoint | esb_view, bridge                       | Empire State framed in the Manhattan Bridge arch                     |
+| Domino Park, Williamsburg                 | walk      | water_view, skyline                    | East River                                                           |
+| Roosevelt Island loop                     | run_route | water_view, skyline, quiet             | East River both sides                                                |
+| Hudson River Greenway, Chelsea to Battery | run_route | water_view, sunset                     | Hudson; city is behind you                                           |
+| Fort Tilden, Battery Harris East          | viewpoint | atlantic, skyline, quiet               | Ocean plus distant skyline; closest match for "Atlantic and skyline" |
+| Coney Island boardwalk                    | run_route | atlantic, lively                       | True ocean; no skyline at ground level                               |
+| Rockaway Beach boardwalk                  | run_route | atlantic                               | Ocean only                                                           |
+| The High Line                             | walk      | skyline, lively                        | Elevated; peeks of Empire State                                      |
+| Little Island                             | viewpoint | water_view, sunset                     | Hudson                                                               |
+| East River Esplanade                      | run_route | water_view                             | Queens-facing                                                        |
 
 **Known reality check:** no NYC run has both a true Atlantic view and a clear Empire State Building view. The app should say so and offer Fort Tilden (ocean plus distant skyline) or Gantry Plaza (water plus Empire State).
 
@@ -429,10 +459,14 @@ Start with these; add more with the same shape. Tags must be honest.
 
 ```ts
 export const handle = async ({ event, resolve }) => {
-  let uid = event.cookies.get('uid');
+  let uid = event.cookies.get("uid");
   if (!uid) {
     uid = crypto.randomUUID();
-    event.cookies.set('uid', uid, { path: '/', maxAge: 60 * 60 * 24 * 30, httpOnly: true });
+    event.cookies.set("uid", uid, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      httpOnly: true,
+    });
   }
   event.locals.uid = uid;
   return resolve(event);
@@ -443,14 +477,14 @@ Insert the `users` row on first profile creation. For the demo, the two phones a
 
 ## 12. Timeline
 
-| Time | Person A (AI + data) | Person B (UI + Nimble) | Checkpoint |
-|---|---|---|---|
-| 1:00 to 2:00 | Repo, Vercel, DB + schema, Gemini billing, Job 1 profiler | App frame, onboarding, upload to Blob, profile screen | Photos in, profile chips out, deployed |
-| 2:00 to 3:30 | Jobs 2, 3, 4 + retrieval + validate | Nimble test calls, `nimble.ts`, seed places, review ingest | Prompt returns grounded cards with quotes |
-| 3:30 to 5:00 | Job 5, profile merge, experience endpoints | Ask, RecCard, Go, Reflect screens | Full loop works across two phones |
-| 5:00 to 6:30 | Retrieval tuning, long-tail fallback, caching | Nimble live line, transitions, polish | Optional: Sentry wizard |
-| 6:30 to 7:30 | Hardening, error states, demo cache | README, screenshots, manifest | **Feature freeze 7:30** |
-| 7:30 to 8:15 | Rehearse 3 times on two phones, backup video | Submission, prize opt-ins (Gemini, Nimble, Tiger if used) | Submitted |
+| Time         | Person A (AI + data)                                      | Person B (UI + Nimble)                                     | Checkpoint                                |
+| ------------ | --------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------- |
+| 1:00 to 2:00 | Repo, Vercel, DB + schema, Gemini billing, Job 1 profiler | App frame, onboarding, upload to Blob, profile screen      | Photos in, profile chips out, deployed    |
+| 2:00 to 3:30 | Jobs 2, 3, 4 + retrieval + validate                       | Nimble test calls, `nimble.ts`, seed places, review ingest | Prompt returns grounded cards with quotes |
+| 3:30 to 5:00 | Job 5, profile merge, experience endpoints                | Ask, RecCard, Go, Reflect screens                          | Full loop works across two phones         |
+| 5:00 to 6:30 | Retrieval tuning, long-tail fallback, caching             | Nimble live line, transitions, polish                      | Optional: Sentry wizard                   |
+| 6:30 to 7:30 | Hardening, error states, demo cache                       | README, screenshots, manifest                              | **Feature freeze 7:30**                   |
+| 7:30 to 8:15 | Rehearse 3 times on two phones, backup video              | Submission, prize opt-ins (Gemini, Nimble, Tiger if used)  | Submitted                                 |
 
 Kill rules: if Maps grounding is not returning place IDs by 3:00, use seed places only. If Nimble review ingest is not working by 3:00, hand-write 30 clearly labeled seed reflections and keep Nimble for the live line only.
 

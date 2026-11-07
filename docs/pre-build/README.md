@@ -5,23 +5,23 @@ Read this folder before building. Nothing in here is application code.
 
 ## Start here
 
-| File | What it is | Authority |
-|---|---|---|
-| [PLAN.md](PLAN.md) | Product scope, stack, data model, Gemini and Nimble jobs, timeline, demo script | **Source of truth for scope.** Do not add features outside its Golden Path without asking. |
-| [event/event-info.md](event/event-info.md) | Date, hours, location, hosts, rules links, submission flow | Facts scraped from Luma and MLH on 2026-10-11 |
-| [event/judging-criteria.md](event/judging-criteria.md) | The four judging criteria | From the organizers' slide |
-| [event/prizes.md](event/prizes.md) | All six prize categories with sponsor links | Scraped from MLH on 2026-10-11 |
+| File                                                   | What it is                                                                      | Authority                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [PLAN.md](PLAN.md)                                     | Product scope, stack, data model, Gemini and Nimble jobs, timeline, demo script | **Source of truth for scope.** Do not add features outside its Golden Path without asking. |
+| [event/event-info.md](event/event-info.md)             | Date, hours, location, hosts, rules links, submission flow                      | Facts scraped from Luma and MLH on 2026-10-11                                              |
+| [event/judging-criteria.md](event/judging-criteria.md) | The four judging criteria                                                       | From the organizers' slide                                                                 |
+| [event/prizes.md](event/prizes.md)                     | All six prize categories with sponsor links                                     | Scraped from MLH on 2026-10-11                                                             |
 
 ## research/
 
 Background research done before the plan was written. Useful for judge questions and for
 understanding why things were cut. Not instructions.
 
-| File | Topic | Status vs PLAN.md |
-|---|---|---|
-| [research/google-maps-user-data.md](research/google-maps-user-data.md) | Can "Sign in with Google" expose saved places, reviews, timeline? | Not used. Google sign-in is cut; Maps grounding via Gemini is used instead. |
-| [research/chatbot-memory-access.md](research/chatbot-memory-access.md) | Can we read a user's memory from Claude / ChatGPT / Copilot? | Not used. Profile is built from the user's own photos. |
-| [research/oauth/facebook.md](research/oauth/facebook.md), [instagram.md](research/oauth/instagram.md), [linkedin.md](research/oauth/linkedin.md) | OAuth scopes and what user data each exposes | **Cut.** PLAN.md section 2 removes all OAuth; anonymous cookie session only. |
+| File                                                                                                                                             | Topic                                                             | Status vs PLAN.md                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [research/google-maps-user-data.md](research/google-maps-user-data.md)                                                                           | Can "Sign in with Google" expose saved places, reviews, timeline? | Not used. Google sign-in is cut; Maps grounding via Gemini is used instead.  |
+| [research/chatbot-memory-access.md](research/chatbot-memory-access.md)                                                                           | Can we read a user's memory from Claude / ChatGPT / Copilot?      | Not used. Profile is built from the user's own photos.                       |
+| [research/oauth/facebook.md](research/oauth/facebook.md), [instagram.md](research/oauth/instagram.md), [linkedin.md](research/oauth/linkedin.md) | OAuth scopes and what user data each exposes                      | **Cut.** PLAN.md section 2 removes all OAuth; anonymous cookie session only. |
 
 ## skills/
 

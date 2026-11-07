@@ -1,4 +1,7 @@
-/** One real call per Nimble job so we can confirm endpoint paths and response field names before trusting them. */
+/**
+ * One real call per Nimble job (planner web search; review-page extract for ingest-reviews.ts) to confirm endpoint
+ * paths and response field names before trusting them.
+ */
 import { nimbleSdk, nimbleEnabled } from './_shared';
 
 const show = (label: string, data: any) => {
@@ -19,12 +22,6 @@ if (nimbleEnabled()) {
 			query: 'scenic running routes NYC Empire State view',
 			max_results: 3,
 			search_depth: 'lite'
-		})
-	);
-	await attempt('SDK template google_maps_search', () =>
-		nimbleSdk('/v2/extract/templates/run', {
-			template: 'google_maps_search',
-			params: { query: 'Gantry Plaza State Park New York' }
 		})
 	);
 	await attempt('SDK /v2/extract (yelp, markdown)', async () => {

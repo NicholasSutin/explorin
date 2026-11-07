@@ -36,9 +36,6 @@ if (!building && !dev && !TURNSTILE_SECRET_KEY)
 /** Paths that must carry a Turnstile token (`x-captcha-response`); relative to /api/auth. */
 const CAPTCHA_ENDPOINTS = ['/sign-in/magic-link', '/sign-in/email', '/request-password-reset'];
 
-/** Where the emailed sign-up link lands: the page that asks for a password (it forwards accounts that have one). */
-export const SIGNUP_PASSWORD_PATH = '/signup/password';
-
 /**
  * Cloudflare's dummy secrets (1x…, 2x…, 3x… "always passes / always fails / token spent") answer siteverify
  * without an `action` and with hostname "example.com", so the strict checks would reject them. They are
@@ -49,8 +46,8 @@ const usingTestSecret = dev && /^[123]x0+AA$/.test(TURNSTILE_SECRET_KEY ?? '');
 
 export const auth = betterAuth({
 	appName: 'Explorin',
-	// Without BETTER_AUTH_SECRET the instance still constructs (the build analyses routes, and the demo must keep
-	// working), but hooks.server.ts refuses every /api/auth request and never reads a session: see `authConfigured`.
+	// Without BETTER_AUTH_SECRET the instance still constructs (the build analyses routes), but hooks.server.ts
+	// refuses every /api/auth request and never reads a session: see `authConfigured`.
 	secret: BETTER_AUTH_SECRET ?? 'unconfigured-placeholder-see-authConfigured-00000000',
 	baseURL: BETTER_AUTH_URL,
 	trustedOrigins: dev ? ['http://localhost:5173', 'http://127.0.0.1:4173'] : [],
@@ -94,7 +91,6 @@ export const auth = betterAuth({
 		additionalFields: {
 			// Set by the onboarding form, never by the client directly.
 			homeCity: { type: 'string', required: false, input: false },
-			interests: { type: 'string[]', required: false, input: false },
 			onboardedAt: { type: 'date', required: false, input: false }
 		}
 	},
@@ -109,7 +105,7 @@ export const auth = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-				// Mirror into the app's `users` table so profiles, experiences and reflections can reference the account.
+				// Mirror into the app's `users` table so taste, trips, usage and reflections can reference the account.
 				after: async (user) => {
 					await ensureUser(user.id, user.name || null); // the name is chosen at onboarding
 				}
@@ -166,17 +162,15 @@ export async function setPassword(headers: Headers, newPassword: string) {
 	await auth.api.setPassword({ headers, body: { newPassword } });
 }
 
-/** Record the onboarding answers on the account (server-only fields). */
-export async function completeOnboarding(
-	userId: string,
-	data: { name: string; homeCity: string; interests: string[] }
-) {
+/** Step 1 of onboarding: what to call them and where they explore (server-only fields). */
+export async function saveAccountBasics(userId: string, data: { name: string; homeCity: string }) {
 	const ctx = await auth.$context;
-	await ctx.internalAdapter.updateUser(userId, {
-		name: data.name,
-		homeCity: data.homeCity,
-		interests: data.interests,
-		onboardedAt: new Date()
-	});
+	await ctx.internalAdapter.updateUser(userId, { name: data.name, homeCity: data.homeCity });
 	await ensureUser(userId, data.name);
+}
+
+/** The tier list is done: the account can plan. Until then every page sends it back to onboarding. */
+export async function markOnboarded(userId: string) {
+	const ctx = await auth.$context;
+	await ctx.internalAdapter.updateUser(userId, { onboardedAt: new Date() });
 }

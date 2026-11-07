@@ -16,12 +16,12 @@ The web app must run locally with hot reload, be demoable on a laptop or any Nod
 
 ### Option A: build-time target switch (chosen)
 
-| Dimension | Assessment |
-|---|---|
-| Complexity | Low: one env var, one alias |
-| Cost | Two adapters as dev dependencies |
-| Scalability | Workers scale per request; Node scales per process |
-| Team familiarity | Both already in use |
+| Dimension        | Assessment                                         |
+| ---------------- | -------------------------------------------------- |
+| Complexity       | Low: one env var, one alias                        |
+| Cost             | Two adapters as dev dependencies                   |
+| Scalability      | Workers scale per request; Node scales per process |
+| Team familiarity | Both already in use                                |
 
 **Pros:** `npm run dev` needs no Cloudflare tooling; the production path is exercised by `npm run preview:cf`; platform differences are confined to two small files.
 **Cons:** two code paths to test; a Node-only module (`node:fs` in `personas.ts`) must guard itself when built for Workers.

@@ -5,35 +5,62 @@ const optional = (v: string | undefined) => v || undefined;
 export const variables = defineEnvVars({
 	GEMINI_API_KEY: {
 		schema: (v) => (v || '').trim(),
-		description: 'Google AI Studio key (billed tier for Maps grounding)'
+		description:
+			'Google AI Studio key: planner picks, tier-list narrowing, keepsake drafts and embeddings'
 	},
 	GOOGLE_MAPS_API_KEY: {
 		schema: optional,
 		description:
-			'Google Cloud key with Places API (New) enabled; powers place photos on experience cards (optional)'
+			'Server-side Google Cloud key: Places API (New), Maps Static API and Geocoding API. Verifies planned stops ' +
+			'and supplies their photos (optional)'
 	},
-	GOOGLE_MAPS_MAP_ID: {
+	GOOGLE_MAPS_BROWSER_KEY: {
+		public: true,
+		schema: (v) => v?.trim() || '',
+		description:
+			'Browser key for the Maps JavaScript API (the interactive trip map). Public by nature: restrict it to ' +
+			'HTTP referrers app.explorin.app/* and localhost, and to the Maps JavaScript API only. Without it the trip ' +
+			'page falls back to a static map.'
+	},
+	MONTHLY_CREDITS: {
+		schema: (v) => {
+			const n = Number(v);
+			return Number.isFinite(n) && n > 0 ? Math.round(n) : 2000;
+		},
+		description:
+			'Per-person monthly allowance in credits (1 credit = $0.001 of estimated upstream cost). New plans stop ' +
+			'once it is spent; the month resets on the 1st. Default 2000 ($2).'
+	},
+	DATABASE_URL: {
+		schema: (v) => v || '',
+		description:
+			'Postgres with pgvector: the Neon branch for this environment, pooled host (`-pooler`). Written by ' +
+			'`neon env pull`. On Workers the HYPERDRIVE binding is used instead and this is only the fallback.'
+	},
+	AI_GATEWAY: {
+		schema: (v) => (v?.trim().toLowerCase() === 'neon' ? ('neon' as const) : undefined),
+		description:
+			'"neon" sends Gemini generation (not embeddings) through the Neon AI Gateway of this branch instead of ' +
+			'Google AI Studio. Needs NEON_AI_GATEWAY_BASE_URL, NEON_AI_GATEWAY_TOKEN and prepaid gateway credits. ' +
+			'Unset means GEMINI_API_KEY direct.'
+	},
+	NEON_AI_GATEWAY_BASE_URL: {
+		schema: (v) => v?.trim().replace(/\/$/, '') || undefined,
+		description: "The branch's AI Gateway host, no path (`neon env pull` writes it)"
+	},
+	NEON_AI_GATEWAY_TOKEN: {
 		schema: optional,
 		description:
-			'Optional Cloud-based map style ID (Google Maps Platform > Map Management); used by /api/map?style=cloud'
+			'Bearer credential for the AI Gateway (`neon env pull` writes it; a secret on Workers)'
 	},
-	DATABASE_URL: { schema: (v) => v || '', description: 'Postgres with pgvector' },
 	NIMBLE_API_KEY: {
 		schema: optional,
 		description:
-			'Nimble SDK API key (Settings > API Keys), sent as Bearer; powers /v2/search and /v2/extract'
+			"Nimble SDK API key (Settings > API Keys), sent as Bearer; powers the planner's web search (/v2/search)"
 	},
 	NIMBLE_BASE_URL: {
 		schema: (v) => v || 'https://sdk.nimbleway.com',
 		description: 'Nimble SDK API base'
-	},
-	LONGTAIL: {
-		schema: (v) => v === 'true',
-		description: 'Enable the slow long-tail web-search fallback (off for the demo)'
-	},
-	DEMO_CACHE: {
-		schema: (v) => v !== 'false',
-		description: 'Cache the scripted demo prompt response'
 	},
 	// Accounts (better-auth). Locally these come from `.env`; on Workers, secrets via `wrangler secret put`.
 	BETTER_AUTH_SECRET: {

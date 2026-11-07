@@ -1,12 +1,9 @@
 /** Browser-side helpers: API calls and EXIF-stripping image re-encode. */
 import { decodePhoto } from './heic';
-import type { Profile, RecommendResponse, ReflectionAnalysis } from './types';
+import type { LatLng } from './adventure';
 
 /** Pull the server's message out of a failed response; SvelteKit's `error()` answers `{ message }`. */
-export async function errorMessage(
-	res: Response,
-	fallback = 'Something went wrong. Please try again.'
-) {
+async function errorMessage(res: Response, fallback = 'Something went wrong. Please try again.') {
 	try {
 		return ((await res.json()) as { message?: string }).message || fallback;
 	} catch {
@@ -64,17 +61,6 @@ export async function stripAndResize(file: File, maxEdge = 1600): Promise<File> 
 	return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
 }
 
-/** `reencodePhoto` as a JPEG data URL, for histories kept in localStorage. */
-export async function photoDataUrl(file: File, maxEdge = 1200, quality = 0.72): Promise<string> {
-	const blob = await reencodePhoto(file, { maxEdge, quality });
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(String(reader.result));
-		reader.onerror = () => reject(reader.error);
-		reader.readAsDataURL(blob);
-	});
-}
-
 export async function uploadPhotos(files: File[]): Promise<string[]> {
 	const form = new FormData();
 	for (const f of await Promise.all(files.map((f) => stripAndResize(f)))) form.append('files', f);
@@ -82,36 +68,36 @@ export async function uploadPhotos(files: File[]): Promise<string[]> {
 	return urls;
 }
 
-export const createProfile = (name: string, photoUrls: string[], bio?: string) =>
-	api<{ profile: Profile }>('/api/profile', { method: 'POST', json: { name, photoUrls, bio } });
-
-export const getProfile = () => api<{ profile: Profile | null }>('/api/profile');
-
-export const recommend = (prompt: string, lat?: number, lng?: number) =>
-	api<RecommendResponse>('/api/recommend', { method: 'POST', json: { prompt, lat, lng } });
-
-export const startExperience = (experienceId: string) =>
-	api<{ id: string; started_at: string }>('/api/experience', {
+/** POST and read newline-delimited JSON events as they arrive (the planner's progress stream). */
+export async function streamApi(
+	path: string,
+	body: unknown,
+	onEvent: (event: Record<string, unknown>) => void,
+	timeoutMs = 90000
+): Promise<void> {
+	const res = await fetch(path, {
 		method: 'POST',
-		json: { experienceId }
+		headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
+		body: JSON.stringify(body),
+		signal: AbortSignal.timeout(timeoutMs)
 	});
-
-export const finishExperience = (experienceId: string) =>
-	api<{ id: string; started_at: string; finished_at: string }>('/api/experience', {
-		method: 'PATCH',
-		json: { experienceId }
-	});
-
-export const reflect = (
-	experienceId: string,
-	text: string,
-	photoUrls: string[],
-	consent: boolean
-) =>
-	api<ReflectionAnalysis & { reflection_id: string; profile: Profile | null }>('/api/reflect', {
-		method: 'POST',
-		json: { experienceId, text, photoUrls, consent }
-	});
+	if (!res.ok || !res.body) throw new Error(await errorMessage(res));
+	const reader = res.body.getReader();
+	const decoder = new TextDecoder();
+	let buffer = '';
+	for (;;) {
+		const { value, done } = await reader.read();
+		if (done) break;
+		buffer += decoder.decode(value, { stream: true });
+		let i: number;
+		while ((i = buffer.indexOf('\n')) >= 0) {
+			const line = buffer.slice(0, i).trim();
+			buffer = buffer.slice(i + 1);
+			if (line) onEvent(JSON.parse(line));
+		}
+	}
+	if (buffer.trim()) onEvent(JSON.parse(buffer));
+}
 
 export function getLocation(timeoutMs = 2500): Promise<{ lat: number; lng: number } | null> {
 	return new Promise((resolve) => {
@@ -131,19 +117,53 @@ export function getLocation(timeoutMs = 2500): Promise<{ lat: number; lng: numbe
 	});
 }
 
-/** Keep the last results in sessionStorage so /go and /reflect can show place names without a round trip. */
-const KEY = 'explorin.lastCards.v1';
-export function saveCards(r: RecommendResponse) {
-	try {
-		sessionStorage.setItem(KEY, JSON.stringify(r));
-	} catch {
-		/* ignore */
-	}
+export interface Fix extends LatLng {
+	accuracy: number;
+	at: number;
 }
-export function loadCards(): RecommendResponse | null {
-	try {
-		return JSON.parse(sessionStorage.getItem(KEY) ?? 'null');
-	} catch {
-		return null;
+
+/**
+ * Follow the device position while the page is open. Restarts when the page becomes visible again (iOS stops
+ * the watch while Safari is in the background, e.g. while Apple Maps has the screen). Returns a stop function.
+ */
+export function watchLocation(
+	onFix: (fix: Fix) => void,
+	onError: (message: string) => void
+): () => void {
+	if (!('geolocation' in navigator)) {
+		onError('Location is not available in this browser.');
+		return () => {};
 	}
+	let id: number | null = null;
+	const start = () => {
+		if (id !== null) navigator.geolocation.clearWatch(id);
+		id = navigator.geolocation.watchPosition(
+			(p) =>
+				onFix({
+					lat: p.coords.latitude,
+					lng: p.coords.longitude,
+					accuracy: p.coords.accuracy,
+					at: p.timestamp
+				}),
+			(e) =>
+				onError(
+					e.code === e.PERMISSION_DENIED
+						? 'Location is off for Explorin. Turn it on in your browser settings to follow along.'
+						: 'Could not get your location right now.'
+				),
+			{ enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+		);
+	};
+	const onVisible = () => document.visibilityState === 'visible' && start();
+	start();
+	document.addEventListener('visibilitychange', onVisible);
+	return () => {
+		if (id !== null) navigator.geolocation.clearWatch(id);
+		document.removeEventListener('visibilitychange', onVisible);
+	};
 }
+
+/** Apple devices get Apple Maps first in the hand-off. iPadOS reports itself as a Mac with touch. */
+export const prefersAppleMaps = () =>
+	/iPhone|iPad|iPod/.test(navigator.userAgent) ||
+	(/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);

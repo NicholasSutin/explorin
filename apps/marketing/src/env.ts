@@ -38,12 +38,13 @@ export const variables = defineEnvVars({
 		schema: (v) => {
 			const url = v?.trim();
 			if (!url) return undefined;
-			if (!/^https?:\/\//i.test(url)) throw new Error(`APP_URL must be an absolute http(s) URL, got "${url}"`);
+			if (!/^https?:\/\//i.test(url))
+				throw new Error(`APP_URL must be an absolute http(s) URL, got "${url}"`);
 			return url;
 		},
 		description:
-			'Where "Open the app" and the welcome email\'s demo link point. Leave unset until the app has its own ' +
+			'Where "Open the app" and the welcome email\'s sign-up link point. Leave unset until the app has its own ' +
 			'public hostname: with no value the button is not rendered and the email omits the link. It must not ' +
-			'be this site\'s own origin (explorin.app hosts the landing page, not the app).'
+			"be this site's own origin (explorin.app hosts the landing page, not the app)."
 	}
 });

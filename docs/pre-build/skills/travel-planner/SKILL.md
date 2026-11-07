@@ -12,6 +12,7 @@ This skill transforms Claude into a comprehensive travel planning assistant that
 ## When to Use This Skill
 
 Invoke this skill for travel-related tasks:
+
 - Planning trips and creating itineraries
 - Budget planning and expense tracking
 - Destination research and recommendations
@@ -37,12 +38,14 @@ If "false", proceed to Step 2 (Setup). If "true", proceed to Step 3 (Trip Planni
 When no preferences exist, collect comprehensive travel information:
 
 **Travel Style & Budget:**
+
 - Budget level: budget, mid-range, luxury
 - Travel pace: relaxed, moderate, packed
 - Accommodation preferences: hostel, hotel, Airbnb, resort
 - Travel companions: solo, couple, family, group
 
 **Interests & Activities:**
+
 - Sightseeing & landmarks
 - Food & culinary experiences
 - Adventure & outdoor activities
@@ -55,17 +58,20 @@ When no preferences exist, collect comprehensive travel information:
 - Wellness & spa
 
 **Dietary & Health:**
+
 - Dietary restrictions (vegetarian, vegan, allergies)
 - Accessibility needs
 - Health considerations
 - Fitness level
 
 **Languages & Skills:**
+
 - Languages spoken
 - Travel experience level
 - Comfort with adventure
 
 **Previous Travel:**
+
 - Countries/cities visited
 - Favorite destinations
 - Bucket list destinations
@@ -103,6 +109,7 @@ Replace `[SKILL_DIR]` with actual skill path.
 When user wants to plan a trip, gather:
 
 **Essential Information:**
+
 1. **Destination**: City/country
 2. **Dates**: Departure and return dates (or flexible date range)
 3. **Duration**: Number of days
@@ -146,6 +153,7 @@ trip_id = add_trip(trip, status="current")
 Use web search to gather current information:
 
 **Essential Research:**
+
 1. **Entry Requirements** - Visa, passport, vaccinations
 2. **Best Time to Visit** - Weather, seasons, festivals
 3. **Safety Information** - Travel advisories, safe areas, common scams
@@ -158,6 +166,7 @@ Use web search to gather current information:
 10. **Practical Info** - Currency, tipping, power outlets, language
 
 **Search Topics to Cover:**
+
 - "[Destination] visa requirements for [nationality]"
 - "[Destination] best time to visit weather"
 - "[Destination] cultural do's and don'ts"
@@ -195,6 +204,7 @@ Notes: Book Picasso Museum tickets online in advance
 ```
 
 Repeat for each day, ensuring:
+
 - Logical geographic grouping
 - Realistic timing with buffers
 - Mix of activity types
@@ -500,10 +510,12 @@ Would you like me to adjust anything in the itinerary?
 ## Technical Notes
 
 **Data Storage:**
+
 - Preferences: `~/.claude/travel_planner/preferences.json`
 - Trips: `~/.claude/travel_planner/trips.json`
 
 **CLI Commands:**
+
 ```bash
 # Check initialization
 python3 scripts/travel_db.py is_initialized
@@ -523,13 +535,17 @@ python3 scripts/travel_db.py export > backup.json
 ## Resources
 
 ### scripts/travel_db.py
+
 Database management for preferences, trips, budget tracking, itineraries, and travel statistics.
 
 ### scripts/plan_generator.py
+
 Generates itineraries, budget breakdowns, packing checklists, and preparation timelines.
 
 ### references/travel_guidelines.md
+
 Comprehensive guide for destination research, budget planning, itinerary creation, packing strategies, and safety tips.
 
 ### references/cultural_etiquette.md
+
 Templates and guidelines for researching country-specific customs, dress codes, dining etiquette, religious considerations, and common mistakes to avoid.

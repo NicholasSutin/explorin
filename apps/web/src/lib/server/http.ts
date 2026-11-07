@@ -55,14 +55,6 @@ export function ttlCache<V>(ttlMs: number, max = 1000) {
 	};
 }
 
-/** A photo reference the app itself produced: a storage key or an inline data URL. Never a remote URL. */
-export const photoUrl = z
-	.string()
-	.max(12 * 1024 * 1024)
-	.regex(
-		/^(\/photos\/[A-Za-z0-9-]+\/[A-Za-z0-9-]+\.(jpg|png|webp)|data:image\/(jpeg|png|webp);base64,)/
-	);
-
 /** Parse and validate a JSON request body, or fail the request with 400 and a readable message. */
 export async function parseBody<T>(
 	request: Request,

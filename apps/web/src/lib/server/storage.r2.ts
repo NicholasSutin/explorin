@@ -32,3 +32,19 @@ export async function getPhoto(
 		contentType: obj.httpMetadata?.contentType ?? 'image/jpeg'
 	};
 }
+
+/** Remove every photo this person uploaded (account deletion): list by `<uid>/` prefix, delete in batches. */
+export async function deletePhotos(uid: string): Promise<number> {
+	const b = bucket();
+	if (!b || !/^[0-9a-f-]{36}$/i.test(uid)) return 0;
+	let removed = 0;
+	let cursor: string | undefined;
+	do {
+		const page = await b.list({ prefix: `${uid}/`, cursor, limit: 1000 });
+		const keys = page.objects.map((o) => o.key);
+		if (keys.length) await b.delete(keys);
+		removed += keys.length;
+		cursor = page.truncated ? page.cursor : undefined;
+	} while (cursor);
+	return removed;
+}
