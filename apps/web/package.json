@@ -13,6 +13,8 @@
 		"lint": "prettier --check .",
 		"format": "prettier --write .",
 		"db:migrate": "node --env-file=.env --import tsx scripts/migrate.ts",
+		"db:migrate:prod": "node --env-file=.env.prod --import tsx scripts/migrate.ts",
+		"db:copy": "node --import tsx scripts/copy-db.ts",
 		"db:seed": "node --env-file=.env --import tsx scripts/seed-places.ts",
 		"db:seed-reflections": "node --env-file=.env --import tsx scripts/seed-reflections.ts",
 		"ingest": "node --env-file=.env --import tsx scripts/ingest-reviews.ts",
@@ -27,6 +29,8 @@
 		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
+		"@neon/config": "^1.13.0",
+		"@neon/env": "^2.1.0",
 		"@playwright/test": "^1.64.0",
 		"@sveltejs/adapter-cloudflare": "^8.0.0",
 		"@sveltejs/adapter-node": "^6.0.0",

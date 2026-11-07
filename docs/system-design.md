@@ -29,7 +29,7 @@ Explorin learns what someone likes, plans a day of real places around it, walks 
 
 ### Constraints
 
-SvelteKit 3 / Svelte 5 runes, TypeScript, Tailwind 4 with the brand tokens in `routes/layout.css`. Cloudflare Workers + R2 + Hyperdrive in production (`DEPLOY_TARGET=cloudflare`), adapter-node and local disk in dev. Postgres with pgvector (Tiger Cloud).
+SvelteKit 3 / Svelte 5 runes, TypeScript, Tailwind 4 with the brand tokens in `routes/layout.css`. Cloudflare Workers + R2 + Hyperdrive in production (`DEPLOY_TARGET=cloudflare`), adapter-node and local disk in dev. Postgres with pgvector on Neon, one branch per environment ([ADR-0010](adr/0010-postgres-on-neon.md)).
 
 ## 2. High-level design
 
@@ -143,7 +143,7 @@ Upstream wrappers return `null`/`[]` and never cache failures. `adventureAI` is 
 
 **Cost per person.** A plan is about 2 Nimble searches, 1 Gemini call, ~6 Text Searches, 1 embedding and a handful of geocodes; a trip view adds 1 map load and up to ~8 Essentials refreshes and photos. At list prices that is roughly 25–60 credits ($0.03–0.06) per planned day, usually inside Google's free monthly allowances.
 
-**Scaling.** Stateless apart from per-isolate caches. Postgres connections go through Hyperdrive (pool 20 to Tiger, which allows ~90); each Worker request opens one connection lazily and closes it after the response.
+**Scaling.** Stateless apart from per-isolate caches. Postgres connections go through Hyperdrive (pool 20 to the Neon production branch's direct host, which allows ~900); each Worker request opens one connection lazily and closes it after the response.
 
 | Failure                         | Effect                                                                           | Mitigation                          |
 | ------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |

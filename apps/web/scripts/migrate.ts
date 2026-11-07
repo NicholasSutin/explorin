@@ -18,7 +18,7 @@
  * pending migrations numbered NNNN or lower do (`--through 0000` is schema.sql alone).
  */
 import { readdirSync, readFileSync } from 'node:fs';
-import { env, sql } from './_shared';
+import { databaseUrl, sql } from './_shared';
 
 const LOCK_TIMEOUT = '5s';
 const NAME = /^(\d{4})-[a-z0-9-]+\.sql$/;
@@ -41,10 +41,16 @@ const schema = readFileSync(new URL('./schema.sql', import.meta.url), 'utf8');
 // Parsed here (not only by postgres.js) so a malformed URL is reported without echoing its password.
 let target: URL;
 try {
-	target = new URL(env('DATABASE_URL'));
+	target = new URL(databaseUrl());
 } catch {
-	fail('DATABASE_URL is not a valid URL (percent-encode special characters in the password)');
+	fail(
+		'DATABASE_URL(_UNPOOLED) is not a valid URL (percent-encode special characters in the password)'
+	);
 }
+if (target.hostname.includes('-pooler'))
+	fail(
+		`${target.hostname} is a pooled host; migrations need DATABASE_URL_UNPOOLED in the env file`
+	);
 console.log(`database: ${target.hostname}${target.pathname}${apply ? '' : '  (dry run)'}`);
 
 // One reserved connection for the whole run, so the advisory lock and each BEGIN/COMMIT share a session.

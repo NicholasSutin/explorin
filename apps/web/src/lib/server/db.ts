@@ -5,11 +5,13 @@ import { bindings, onWorkers } from '#bindings';
 import type { Place } from '#lib/types';
 
 /**
- * On Workers the connection goes through Hyperdrive (wrangler.jsonc), which keeps a warm pool next to the
- * database so each request's fresh connection is a local handshake instead of a TLS round trip to Tiger Data.
- * Falls back to DATABASE_URL when the binding is absent. Resolved on first use, never at import: the build
- * analyses routes with the bindings unavailable. Hyperdrive's docs suggest `fetch_types: false`, but postgres.js
- * `reserve()` (which Kysely, and so better-auth, uses) never resolves with it off, so types stay on.
+ * The database is Neon Postgres (ADR-0010), one branch per environment. On Workers the connection goes through
+ * Hyperdrive (wrangler.jsonc), configured with the branch's direct host: Hyperdrive keeps the warm pool next to the
+ * database, so each request's fresh connection is a local handshake instead of a TLS round trip, and Neon's PgBouncer
+ * would only be a second pool. Elsewhere (dev server, scripts) DATABASE_URL is the `-pooler` host; `prepare: false`
+ * below is what PgBouncer's transaction mode needs. Resolved on first use, never at import: the build analyses
+ * routes with the bindings unavailable. Hyperdrive's docs suggest `fetch_types: false`, but postgres.js `reserve()`
+ * (which Kysely, and so better-auth, uses) never resolves with it off, so types stay on.
  */
 function connect(): Sql {
 	const hyperdrive = onWorkers

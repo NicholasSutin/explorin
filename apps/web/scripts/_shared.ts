@@ -9,11 +9,16 @@ export const env = (k: string, required = true) => {
 	return v ?? '';
 };
 
+/**
+ * Scripts use the direct (non-pooler) Neon host when the env file has it: migrate.ts holds a session advisory lock
+ * and runs BEGIN/COMMIT on one reserved connection, which PgBouncer's transaction mode does not keep together.
+ */
+export const databaseUrl = () => process.env.DATABASE_URL_UNPOOLED || env('DATABASE_URL');
+
 // Lazy so scripts that only need Nimble (e.g. nimble-smoke) run without DATABASE_URL / GEMINI_API_KEY.
 let _sql: ReturnType<typeof postgres> | undefined;
 let _ai: GoogleGenAI | undefined;
-const db = () =>
-	(_sql ??= postgres(env('DATABASE_URL'), { max: 3, prepare: false, onnotice: () => {} }));
+const db = () => (_sql ??= postgres(databaseUrl(), { max: 3, prepare: false, onnotice: () => {} }));
 export const sql: ReturnType<typeof postgres> = new Proxy(
 	(() => {}) as unknown as ReturnType<typeof postgres>,
 	{
