@@ -1,6 +1,6 @@
 # ADR-0009: Versioned migrations next to the idempotent schema
 
-**Status:** Accepted
+**Status:** Accepted. Since [ADR-0010](0010-postgres-on-neon.md) the database is Neon: development has its own `dev` branch, production migrations run with `npm run db:migrate:prod`, and rehearsals use a short-lived Neon branch instead of a Tiger fork.
 **Date:** 2026-10-17
 **Deciders:** Nick Sutin
 

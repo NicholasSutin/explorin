@@ -31,7 +31,28 @@ export const variables = defineEnvVars({
 			'Per-person monthly allowance in credits (1 credit = $0.001 of estimated upstream cost). New plans stop ' +
 			'once it is spent; the month resets on the 1st. Default 2000 ($2).'
 	},
-	DATABASE_URL: { schema: (v) => v || '', description: 'Postgres with pgvector' },
+	DATABASE_URL: {
+		schema: (v) => v || '',
+		description:
+			'Postgres with pgvector: the Neon branch for this environment, pooled host (`-pooler`). Written by ' +
+			'`neon env pull`. On Workers the HYPERDRIVE binding is used instead and this is only the fallback.'
+	},
+	AI_GATEWAY: {
+		schema: (v) => (v?.trim().toLowerCase() === 'neon' ? ('neon' as const) : undefined),
+		description:
+			'"neon" sends Gemini generation (not embeddings) through the Neon AI Gateway of this branch instead of ' +
+			'Google AI Studio. Needs NEON_AI_GATEWAY_BASE_URL, NEON_AI_GATEWAY_TOKEN and prepaid gateway credits. ' +
+			'Unset means GEMINI_API_KEY direct.'
+	},
+	NEON_AI_GATEWAY_BASE_URL: {
+		schema: (v) => v?.trim().replace(/\/$/, '') || undefined,
+		description: "The branch's AI Gateway host, no path (`neon env pull` writes it)"
+	},
+	NEON_AI_GATEWAY_TOKEN: {
+		schema: optional,
+		description:
+			'Bearer credential for the AI Gateway (`neon env pull` writes it; a secret on Workers)'
+	},
 	NIMBLE_API_KEY: {
 		schema: optional,
 		description:

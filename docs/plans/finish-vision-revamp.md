@@ -291,11 +291,13 @@ A correctness review, a security review of these commits and a security pass ove
   - the drafted story mentions only checked-in places unless the note says otherwise;
   - the scrapbook shows the reviewed story, Share is there on desktop right after saving, and nothing is pre-picked;
   - smaller trip, tier-list and copy fixes.
-  `auth.spec` and `journey.spec` passed (8 of 8 at phone size, and the journey at 1280×860) on fork `m5uf6cw9c7` at the post-deploy state (`--through 0002`), on the real map. The fork is deleted.
+    `auth.spec` and `journey.spec` passed (8 of 8 at phone size, and the journey at 1280×860) on fork `m5uf6cw9c7` at the post-deploy state (`--through 0002`), on the real map. The fork is deleted.
 
 ### Deploy sequence (Nick)
 
 Run every command from `apps/web` on an up-to-date `feat/vision` (step 1) or `main` (steps 3 and 4).
+
+> **Once the database is on Neon ([ADR-0010](../adr/0010-postgres-on-neon.md)):** `npm run db:migrate` targets the `dev` branch, not production. Run each production step below as `npm run db:migrate:prod -- --apply …` (reads `.env.prod`, which needs the production branch's `DATABASE_URL_UNPOOLED`). In step 4, the snapshot is `neon branches create --name pre-0003 --parent production` instead of a Tiger fork. All three steps were rehearsed on the Neon `dev` branch on 2026-11-07. These steps work the same before or after the Neon cutover; only the env file changes.
 
 1. **Before merging:** `npm run db:migrate -- --apply --through 0000`. This applies `schema.sql` only: it creates `taste`, `trips` and the other v1 tables and adds C's columns. The `main` code running in production ignores them.
 2. **Merge PR #2** and let Workers Builds deploy `explorin-app` and `explorin-marketing`.

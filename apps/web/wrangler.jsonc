@@ -56,11 +56,12 @@
 		"TURNSTILE_HOSTNAMES": "app.explorin.app",
 		"AUTH_FROM_EMAIL": "Explorin <hello@explorin.app>"
 	},
-	// Hyperdrive pools connections to the Tiger Data Postgres at the edge; every request opens its own connection
-	// (db.ts), so without it each one would pay a full TCP + TLS handshake to the database. Created once with:
-	//   npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL"
-	// Rotate the database password with: npx wrangler hyperdrive update <id> --connection-string=...
-	// Local `wrangler dev` needs WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=<DATABASE_URL> in the shell.
+	// Hyperdrive pools connections to the Neon `production` branch at the edge (ADR-0010); every request opens its
+	// own connection (db.ts), so without it each one would pay a full TCP + TLS handshake to the database. It takes
+	// the branch's DIRECT host (DATABASE_URL_UNPOOLED, no `-pooler`): Hyperdrive is the pool. Created once with:
+	//   npx wrangler hyperdrive create explorin-db --connection-string="$DATABASE_URL_UNPOOLED"
+	// Repoint or rotate the password in place (no deploy needed): npx wrangler hyperdrive update <id> --connection-string=...
+	// Local `wrangler dev` needs CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=<DATABASE_URL_UNPOOLED>.
 	// Without the binding (or outside Workers) db.ts falls back to DATABASE_URL directly.
 	"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "95a3d14afca04acbb1274df67aff62eb" }]
 }
