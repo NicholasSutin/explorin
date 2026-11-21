@@ -3,6 +3,7 @@ import { parseBody } from '#lib/server/http';
 import { planInput, runPlan, type PlanEvent } from '#lib/server/plan';
 import { creditsThisMonth } from '#lib/server/account';
 import { monthlyCredits } from '#lib/server/usage';
+import { premiumStatus } from '#lib/server/billing';
 import type { RequestHandler } from './$types';
 
 /**
@@ -15,11 +16,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		planInput,
 		'Tell us what you feel like doing (a few words is fine).'
 	);
-	const used = await creditsThisMonth(locals.uid);
-	if (used >= monthlyCredits())
+	const [used, premium] = await Promise.all([
+		creditsThisMonth(locals.uid),
+		premiumStatus(locals.uid)
+	]);
+	const limit = monthlyCredits(premium.active);
+	if (used >= limit)
 		error(
 			429,
-			`You've used this month's ${monthlyCredits().toLocaleString()} credits. They reset on the 1st; see Settings for the breakdown.`
+			`You've used this month's ${limit.toLocaleString()} credits. They reset on the 1st; see Settings for the breakdown.`
 		);
 
 	const encoder = new TextEncoder();

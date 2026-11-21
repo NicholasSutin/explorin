@@ -27,6 +27,21 @@
 	const chip = (on: boolean) =>
 		`cursor-pointer select-none rounded-full px-3 py-1.5 text-sm ring-1 ${on ? 'bg-ink text-cream ring-ink' : 'bg-white text-ink/80 ring-ink/15'}`;
 	const savedTaste = $derived(page.url.searchParams.get('saved') === 'taste');
+	const billingMessages: Record<string, string> = {
+		'checkout-failed': 'Stripe Checkout could not start. Try again.',
+		'portal-failed':
+			'The Stripe billing portal could not open. Check that it is configured in your Stripe sandbox.',
+		existing: 'Manage your existing subscription in the billing portal.',
+		'no-account': 'Start a subscription to open your billing account.',
+		unavailable: 'Checkout is currently unavailable.',
+		'account-permissions': 'Stripe rejected the API key or its permissions.',
+		'missing-resource':
+			'Stripe could not find the price or customer. Check that you are using the right Stripe environment.'
+	};
+	const billingStatus = $derived(page.url.searchParams.get('billing') ?? '');
+	const billingMessage = $derived(
+		Object.hasOwn(billingMessages, billingStatus) ? billingMessages[billingStatus] : undefined
+	);
 	const msg = (section: string) =>
 		form && 'section' in form && form.section === section ? form : null;
 	const input =
@@ -52,6 +67,42 @@
 
 <div class="mx-auto max-w-2xl space-y-6 pt-2">
 	<h1 class="font-serif text-4xl font-semibold">Settings</h1>
+
+	{#if data.billing.checkout || data.billing.manage}
+		<section class={card} aria-labelledby="s-billing">
+			<h2 id="s-billing" class={h2}>Explorin Premium</h2>
+			<p class="mt-2 text-sm">
+				{data.billing.credits.toLocaleString()} planning credits per month{data.billing.active
+					? ' · Active'
+					: ''}
+			</p>
+			{#if page.url.searchParams.get('billing') === 'complete' && !data.billing.active}
+				<p class="mt-2 text-sm" role="status">
+					Waiting for Stripe to confirm your subscription. Refresh in a moment.
+				</p>
+			{/if}
+			<div class="mt-4 flex flex-wrap gap-3">
+				{#if data.billing.checkout && !data.billing.active}
+					<form method="POST" action="/api/stripe/session">
+						<input type="hidden" name="operation" value="checkout" />
+						<button class="h-11 rounded-full bg-ink px-6 font-semibold text-cream">Subscribe</button
+						>
+					</form>
+				{/if}
+				{#if data.billing.manage}
+					<form method="POST" action="/api/stripe/session">
+						<input type="hidden" name="operation" value="portal" />
+						<button class="h-11 rounded-full border border-ink/15 px-6 font-semibold"
+							>Manage billing</button
+						>
+					</form>
+				{/if}
+			</div>
+			{#if billingMessage}
+				<p class="mt-3 text-sm text-red-700" role="alert">{billingMessage}</p>
+			{/if}
+		</section>
+	{/if}
 
 	<section class={card} aria-labelledby="s-profile">
 		<h2 id="s-profile" class={h2}>Profile</h2>

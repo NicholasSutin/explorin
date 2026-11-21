@@ -21,8 +21,8 @@ What the app does today, where it stops, and what each piece costs. Setup is in 
 - **Happenings** are permitted events (markets, festivals, parades, plaza events), filtered for public ones. Times come from permits and can change.
 - **Photos** are re-encoded in the browser (EXIF and GPS removed), stored under your account and served only to you. Up to four per day.
 - **Sharing** uses the Web Share API with files where supported (iOS Safari, Android Chrome); elsewhere the image downloads.
-- **Credits**: each person gets `MONTHLY_CREDITS` (default 2000 = $2 at list prices) per calendar month; planning stops at the cap until the 1st.
-- **Deletion** removes the account, taste, trips, photos, shared quotes and usage history immediately.
+- **Credits**: free accounts get `MONTHLY_CREDITS` (default 2,000). Premium accounts with an active or trialing subscription get 3,500 per calendar month. One credit represents $0.001 in estimated upstream spend. Planning stops at the allowance until the 1st.
+- **Deletion** removes the account, taste, trips, photos, shared quotes and usage history. A subscriber must end Stripe billing and let any open checkout expire before deleting the account.
 
 ## Costs (list prices after free monthly allowances)
 

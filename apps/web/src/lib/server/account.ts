@@ -9,6 +9,7 @@ import { sql } from './db';
 import { deletePhotos } from '#storage';
 import { MICROS_PER_CREDIT } from './pricing';
 import { monthlyCredits } from './usage';
+import { canDeleteBillingAccount } from './billing';
 
 export async function updateAccount(userId: string, data: { name: string; homeCity: string }) {
 	const ctx = await auth.$context;
@@ -38,7 +39,7 @@ export interface UsageSummary {
 	resetsOn: string;
 }
 
-export async function usageSummary(userId: string): Promise<UsageSummary> {
+export async function usageSummary(userId: string, premium: boolean): Promise<UsageSummary> {
 	const [services, days] = await Promise.all([
 		sql<{ service: string; calls: number; micros: string }[]>`
 			SELECT service, count(*)::int AS calls, sum(cost_micros)::text AS micros
@@ -55,7 +56,7 @@ export async function usageSummary(userId: string): Promise<UsageSummary> {
 	next.setUTCMonth(next.getUTCMonth() + 1, 1);
 	return {
 		creditsUsed: total / MICROS_PER_CREDIT,
-		creditsLimit: monthlyCredits(),
+		creditsLimit: monthlyCredits(premium),
 		costUsd: total / 1e6,
 		byService: services.map((s) => ({
 			service: s.service,
@@ -76,9 +77,10 @@ export async function creditsThisMonth(userId: string): Promise<number> {
 }
 
 /** Everything, irreversibly. Storage first: if it fails, nothing in the database is gone yet and a retry works. */
-export async function deleteAccount(userId: string): Promise<{ photos: number }> {
-	const photos = await deletePhotos(userId);
-	await sql.begin(async (tx) => {
+export async function deleteAccount(userId: string): Promise<{ photos: number } | null> {
+	return sql.begin(async (tx) => {
+		if (!(await canDeleteBillingAccount(tx, userId))) return null;
+		const photos = await deletePhotos(userId);
 		const quotes = await tx<{ id: string }[]>`
 			DELETE FROM reflections WHERE author_id = ${userId} RETURNING id::text`;
 		// Planning copies matched quotes into each stop (trip_stops.data.voices); remove theirs from everyone's trips.
@@ -102,6 +104,6 @@ export async function deleteAccount(userId: string): Promise<{ photos: number }>
 			         WHERE identifier = ${u.email} OR value = ${userId}
 			            OR CASE WHEN pg_input_is_valid(value, 'jsonb') THEN lower(value::jsonb->>'email') END = lower(${u.email})`;
 		await tx`DELETE FROM users WHERE id = ${userId}`;
+		return { photos };
 	});
-	return { photos };
 }

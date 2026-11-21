@@ -6,6 +6,14 @@ CREATE TABLE IF NOT EXISTS users (
   created_at timestamptz DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS premium_billing (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  stripe_customer_id text UNIQUE NOT NULL,
+  checkout_url text,
+  checkout_expires_at timestamptz,
+  subscription_status text
+);
+
 CREATE TABLE IF NOT EXISTS places (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   google_place_id text UNIQUE,

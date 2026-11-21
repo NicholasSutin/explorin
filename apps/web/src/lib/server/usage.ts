@@ -77,4 +77,7 @@ export async function flushUsage(locals: App.Locals, sql: Sql): Promise<void> {
 	}
 }
 
-export const monthlyCredits = () => MONTHLY_CREDITS;
+// At $0.001 per credit, the fixed Premium allowance budgets $3.50 in estimated upstream usage.
+export const PREMIUM_MONTHLY_CREDITS = 3500;
+export const monthlyCredits = (premium: boolean) =>
+	premium ? Math.max(PREMIUM_MONTHLY_CREDITS, MONTHLY_CREDITS) : MONTHLY_CREDITS;

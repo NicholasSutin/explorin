@@ -3,6 +3,9 @@ import { defineEnvVars } from '@sveltejs/kit/env';
 const optional = (v: string | undefined) => v || undefined;
 
 export const variables = defineEnvVars({
+	STRIPE_SECRET_KEY: { schema: optional, description: 'Server-side Stripe API key' },
+	STRIPE_PRICE_ID: { schema: optional, description: 'Recurring Explorin Premium Stripe price ID' },
+	STRIPE_WEBHOOK_SECRET: { schema: optional, description: 'Stripe billing webhook signing secret' },
 	GEMINI_API_KEY: {
 		schema: (v) => (v || '').trim(),
 		description:

@@ -4,13 +4,16 @@ import { AUDIENCES, INTERESTS, LEARNED_CHARS } from '#lib/taste';
 import { forgetLearned, getTaste, saveAboutYou, setFlipAnimations } from '#lib/server/taste';
 import { changePassword, deleteAccount, updateAccount, usageSummary } from '#lib/server/account';
 import { hasPassword } from '#lib/server/auth';
+import { checkoutConfigured, premiumStatus } from '#lib/server/billing';
+import { monthlyCredits } from '#lib/server/usage';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user!;
+	const billing = await premiumStatus(user.id);
 	const [taste, usage, password] = await Promise.all([
 		getTaste(user.id),
-		usageSummary(user.id),
+		usageSummary(user.id, billing.active),
 		hasPassword(user.id)
 	]);
 	return {
@@ -28,7 +31,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			learned: taste?.learned ?? [],
 			flip: taste?.flipAnimations ?? true
 		},
-		usage
+		usage,
+		billing: { ...billing, checkout: checkoutConfigured(), credits: monthlyCredits(true) }
 	};
 };
 
@@ -113,7 +117,13 @@ export const actions: Actions = {
 				.toUpperCase() !== 'DELETE'
 		)
 			return fail(400, { section: 'delete', message: 'Type DELETE to confirm.' });
-		await deleteAccount(locals.uid);
+		const deleted = await deleteAccount(locals.uid);
+		if (!deleted)
+			return fail(409, {
+				section: 'delete',
+				message:
+					'Cancel your subscription and let any open checkout expire before deleting your account.'
+			});
 		for (const name of ['__Secure-explorin.session_token', 'explorin.session_token'])
 			cookies.delete(name, { path: '/' });
 		redirect(303, '/welcome?deleted=1');
