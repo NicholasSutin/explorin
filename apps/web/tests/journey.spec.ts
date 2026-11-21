@@ -186,11 +186,9 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	await page.waitForLoadState('networkidle'); // the photo input needs its handler attached
 
 	// 6. Reflect: note, a photo, the highlight; then pick who it's best for.
-	await page
-		.getByLabel('Your note')
-		.fill(
-			'The croissant was flaky perfection. Got a little lost by the river and didn’t mind at all. I always pick walking over the subway.'
-		);
+	const note =
+		'The croissant was flaky perfection. Got a little lost by the river and didn’t mind at all. I always pick walking over the subway.';
+	await page.getByLabel('Your note').fill(note);
 	const png = await page.evaluate(() => {
 		const c = document.createElement('canvas');
 		c.width = 480;
@@ -215,6 +213,14 @@ test('sign up, taste, plan, walk, reflect, scrapbook, share, settings, delete', 
 	await expect(page.getByRole('heading', { name: 'Who’s this day best for?' })).toBeVisible({
 		timeout: 45_000
 	});
+	// Reflections are human-written only: the page text is their note, word for word, and any line offered for
+	// sharing is copied straight out of it.
+	await expect(page.getByLabel('Your words')).toHaveValue(note);
+	const shareLine = page.getByText(/^Share this line from your note/);
+	if (await shareLine.isVisible()) {
+		const line = (await shareLine.locator('em').innerText()).replace(/^“|”$/g, '');
+		expect(note).toContain(line);
+	}
 	const options = page.getByRole('group', { name: 'Best for' }).getByRole('button');
 	expect(await options.count()).toBe(6);
 	// Nothing is picked for them; the first tap picks.

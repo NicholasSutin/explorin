@@ -211,6 +211,21 @@ export function wrap(
 	return lines;
 }
 
+/** The handwritten lines of a format, wrapped as the page wraps them; `maxLines` past the ruled ones measures overflow. */
+const noteLines = (text: string, p: Preset, maxLines = p.note.lines) =>
+	wrap(text, p.w - 2 * p.m, p.note.size, 0.4, maxLines);
+
+/**
+ * Whether text fits a format's ruled lines, and roughly how many characters past them would be cut (the page ends
+ * the last line with "…"). The reflection step uses it so people can trim their own words instead of losing the end.
+ */
+export function noteFit(text: string, format: Format = 'page') {
+	const p = PRESETS[format];
+	const all = noteLines(text, p, Infinity);
+	const kept = all.slice(0, p.note.lines).join(' ').length;
+	return { fits: all.length <= p.note.lines, over: all.join(' ').length - kept };
+}
+
 export function shortDate(iso: string | null) {
 	return (iso ? new Date(iso) : new Date())
 		.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -342,7 +357,8 @@ export function layoutPage(trip: Trip, format: Format, pageNumber?: number): Pag
 			rot: 0
 		});
 
-	// The story they reviewed on the last step; their raw note if they cleared it.
+	// Their words as they kept them on the last step (pages saved before 2026-11-21 hold an AI-drafted story that
+	// they reviewed); their raw note if they cleared it.
 	const noteText = trip.story || trip.note || '';
 	const noteW = p.w - 2 * p.m;
 	const note = {
@@ -351,7 +367,7 @@ export function layoutPage(trip: Trip, format: Format, pageNumber?: number): Pag
 		w: noteW,
 		size: p.note.size,
 		lineH: p.note.lineH,
-		lines: wrap(noteText, noteW, p.note.size, 0.4, p.note.lines),
+		lines: noteLines(noteText, p),
 		ruled: p.note.lines
 	};
 
