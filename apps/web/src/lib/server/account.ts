@@ -1,7 +1,7 @@
 /**
  * Account-level operations for settings: profile edits, password change, usage summary and full deletion.
  * Deletion ends Premium billing (the Stripe customer is deleted), then removes everything the person created:
- * photos in storage, trips and stops, taste, usage, their reflections (shared quotes included, also the copies
+ * photos in storage, trips and stops, taste, the scrapbook's cover and look, usage, their reflections (shared quotes included, also the copies
  * planned into other people's trips), the app's users row, and finally the better-auth user (sessions and
  * accounts cascade from it).
  */
@@ -100,6 +100,7 @@ export async function deleteAccount(userId: string): Promise<{ photos: number } 
 		await tx`DELETE FROM trips WHERE user_id = ${userId}`;
 		await tx`DELETE FROM usage_events WHERE user_id = ${userId}`;
 		await tx`DELETE FROM taste WHERE user_id = ${userId}`;
+		await tx`DELETE FROM scrapbooks WHERE user_id = ${userId}`;
 		const [u] = await tx<
 			{ email: string }[]
 		>`DELETE FROM "user" WHERE id = ${userId} RETURNING email`;

@@ -1,6 +1,8 @@
 <script lang="ts">
 	/** The last page: room for the next day. */
-	let { empty = false }: { empty?: boolean } = $props();
+	import { DEFAULT_COVER, coverPalette, type CoverStyle } from '#lib/scrapbook/style';
+	let { empty = false, style = DEFAULT_COVER }: { empty?: boolean; style?: CoverStyle } = $props();
+	const c = $derived(coverPalette(style));
 </script>
 
 <svg
@@ -10,14 +12,14 @@
 	role="img"
 	aria-label="End of the book"
 >
-	<rect width="600" height="800" fill="#fbf8ef" />
+	<rect width="600" height="800" fill={c.endpaper} />
 	{#each { length: 14 } as _, i (i)}
 		<line
 			x1="56"
 			x2="544"
 			y1={240 + i * 34}
 			y2={240 + i * 34}
-			stroke="#7d9bb5"
+			stroke={c.endRule}
 			stroke-opacity="0.28"
 		/>
 	{/each}
@@ -27,7 +29,7 @@
 		text-anchor="middle"
 		font-family="Caveat,'Bradley Hand',cursive"
 		font-size="44"
-		fill="#26385a">{empty ? 'Your first page is waiting…' : 'To be continued…'}</text
+		fill={c.endPen}>{empty ? 'Your first page is waiting…' : 'To be continued…'}</text
 	>
 	<a href="/">
 		<rect x="190" y="660" width="220" height="54" rx="27" fill="#d96738" />

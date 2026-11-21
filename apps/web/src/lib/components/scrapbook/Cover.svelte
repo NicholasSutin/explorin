@@ -1,8 +1,21 @@
 <script lang="ts">
-	/** Cloth-bound notebook cover: woven texture lit from the top left, an elastic band, a paper label. */
-	let { name, days, years }: { name: string; days: number; years: string } = $props();
+	/**
+	 * Cloth-bound notebook cover: woven texture lit from the top left, an elastic band, a paper label. Cloth colour,
+	 * printed pattern (woven in with the texture), band colour and the label's title come from the cover style.
+	 */
+	import { DEFAULT_COVER, coverPalette, type CoverStyle } from '#lib/scrapbook/style';
+	import CoverPattern from './CoverPattern.svelte';
+	let {
+		name,
+		days,
+		years,
+		style = DEFAULT_COVER
+	}: { name: string; days: number; years: string; style?: CoverStyle } = $props();
 	const id = `c${Math.random().toString(36).slice(2, 8)}`;
 	const owner = $derived(name ? `${name}’s` : 'My');
+	const c = $derived(coverPalette(style));
+	/** The label is 316 wide; a long title shrinks to fit rather than running off it. */
+	const titleSize = $derived(Math.min(44, 300 / Math.max(1, [...style.title].length * 0.5)));
 </script>
 
 <svg
@@ -10,7 +23,7 @@
 	viewBox="0 0 600 800"
 	class="h-full w-full"
 	role="img"
-	aria-label="{owner} field notes, {days} days"
+	aria-label="{owner} {style.title}, {days} days"
 >
 	<defs>
 		<filter id="{id}-cloth" x="0" y="0" width="100%" height="100%">
@@ -73,21 +86,31 @@
 		<filter id="{id}-lift" x="-10%" y="-10%" width="120%" height="130%">
 			<feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0b1a14" flood-opacity="0.45" />
 		</filter>
+		<CoverPattern id="{id}-print" kind={style.pattern} color={c.pattern} bg={c.cloth} />
 	</defs>
-	<rect width="600" height="800" rx="14" fill="#285c47" />
-	<rect width="600" height="800" rx="14" fill="#285c47" filter="url(#{id}-cloth)" />
+	<rect width="600" height="800" rx="14" fill={c.cloth} />
+	<!-- The print sits under the weave filter, so the texture runs through it. -->
+	<g filter="url(#{id}-cloth)">
+		<rect width="600" height="800" rx="14" fill={c.cloth} />
+		{#if style.pattern !== 'cloth'}<rect
+				width="600"
+				height="800"
+				rx="14"
+				fill="url(#{id}-print)"
+			/>{/if}
+	</g>
 	<rect width="600" height="800" rx="14" fill="url(#{id}-sheen)" />
 	<!-- spine groove -->
-	<rect x="0" y="0" width="34" height="800" fill="#1d4637" opacity="0.6" />
-	<line x1="34" x2="34" y1="0" y2="800" stroke="#0f2a20" stroke-opacity="0.5" />
+	<rect x="0" y="0" width="34" height="800" fill={c.spine} opacity="0.6" />
+	<line x1="34" x2="34" y1="0" y2="800" stroke={c.seam} stroke-opacity="0.5" />
 	<!-- elastic band -->
-	<rect x="508" y="0" width="26" height="800" fill="#d96738" filter="url(#{id}-lift)" />
+	<rect x="508" y="0" width="26" height="800" fill={c.band} filter="url(#{id}-lift)" />
 	<rect
 		x="508"
 		y="0"
 		width="26"
 		height="800"
-		fill="#d96738"
+		fill={c.band}
 		filter="url(#{id}-cloth)"
 		opacity="0.6"
 	/>
@@ -120,9 +143,9 @@
 		y="372"
 		text-anchor="middle"
 		font-family="'Iowan Old Style','Palatino Linotype',Georgia,serif"
-		font-size="44"
+		font-size={titleSize}
 		font-weight="700"
-		fill="#203d32">Field notes</text
+		fill="#203d32">{style.title}</text
 	>
 	<text
 		x="280"
@@ -144,13 +167,13 @@
 	>
 	<!-- embossed mark -->
 	<g filter="url(#{id}-emboss)" opacity="0.9">
-		<circle cx="280" cy="610" r="34" fill="none" stroke="#1d4637" stroke-width="7" />
+		<circle cx="280" cy="610" r="34" fill="none" stroke={c.spine} stroke-width="7" />
 		<line
 			x1="304"
 			y1="634"
 			x2="338"
 			y2="668"
-			stroke="#1d4637"
+			stroke={c.spine}
 			stroke-width="9"
 			stroke-linecap="round"
 		/>
