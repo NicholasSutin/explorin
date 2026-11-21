@@ -26,6 +26,8 @@
 		"preview:cf": "DEPLOY_TARGET=cloudflare vite build && wrangler dev",
 		"gemini:smoke": "node --env-file=.env --import tsx scripts/gemini-smoke.ts",
 		"db:seed-persona": "node --env-file=.env --import tsx scripts/seed-persona.ts",
+		"stripe:setup": "node --env-file=.env --import tsx scripts/stripe-setup.ts",
+		"stripe:setup:prod": "node --env-file=.env.prod --import tsx scripts/stripe-setup.ts",
 		"test:e2e": "playwright test"
 	},
 	"devDependencies": {

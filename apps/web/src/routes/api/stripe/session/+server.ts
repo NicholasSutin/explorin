@@ -1,12 +1,11 @@
 import { error } from '@sveltejs/kit';
-import {
-	billingPortal,
-	checkoutConfigured,
-	startCheckout,
-	StripeRequestError
-} from '#lib/server/billing';
+import { billingPortal, checkoutConfigured, startCheckout } from '#lib/server/billing';
 import type { RequestHandler } from './$types';
 
+/**
+ * The Settings buttons post here (a plain form, so it works before hydration): `checkout` opens Stripe Checkout,
+ * `portal` the billing portal. Problems come back to Settings as `?billing=…`; Stripe's details go to the log.
+ */
 export const POST: RequestHandler = async ({ request, locals, url }) => {
 	if (!locals.user) error(401, 'Sign in to continue.');
 	if (request.headers.get('origin') !== url.origin) error(403, 'Invalid billing request origin.');
@@ -28,10 +27,6 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 		return Response.redirect(target, 303);
 	} catch (err) {
 		console.error(`[Stripe ${operation}]`, err);
-		if (err instanceof StripeRequestError) {
-			if (err.status === 401 || err.status === 403) return back('account-permissions');
-			if (err.code === 'resource_missing') return back('missing-resource');
-		}
 		return back(`${operation}-failed`);
 	}
 };

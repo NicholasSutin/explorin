@@ -19,17 +19,32 @@ Without `RESEND_API_KEY` the sign-up link is printed to the dev server console. 
 
 ### Stripe Premium
 
-1. In the Explorin Stripe sandbox, create or select the recurring $4.99 USD monthly price. Put its `price_…` ID in `STRIPE_PRICE_ID` and the sandbox server key in `STRIPE_SECRET_KEY` in `apps/web/.env`. A restricted key needs Write for Checkout Sessions, Customers and Customer portal, and Read for Subscriptions.
-2. Run `npm run db:migrate -- --apply` from `apps/web` against the development branch. The schema creates `premium_billing`.
-3. Enable cancellations in the Stripe customer portal for this environment. From the Stripe CLI, sign in to the same sandbox and run:
+Premium ($4.99 a month, 3,500 credits instead of 2,000) is off until `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` are all set; without them Settings shows no Subscribe button. How it works: [ADR-0011](../../docs/adr/0011-premium-on-stripe.md).
+
+**Locally, in a Stripe sandbox**
+
+1. Put the sandbox's secret key in `STRIPE_SECRET_KEY` in `.env`. A restricted key works with Write on Customers, Checkout Sessions, Customer portal, Prices, Products and Webhook endpoints (the last three only for the setup script), and Read on Subscriptions.
+2. `npm run stripe:setup` creates the price and the billing portal configuration (safe to run again) and prints `STRIPE_PRICE_ID`.
+3. `npm run db:migrate -- --apply` creates `premium_billing` on the dev branch.
+4. With the [Stripe CLI](https://docs.stripe.com/stripe-cli), signed in to the same sandbox:
 
    ```sh
    stripe listen --events customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,customer.subscription.paused,customer.subscription.resumed --forward-to http://localhost:5173/api/stripe/webhook
    ```
 
-4. Copy the listener's signing secret into `STRIPE_WEBHOOK_SECRET` in `.env` and restart Vite. In Settings, select **Subscribe** and finish Checkout with Stripe's test card `4242 4242 4242 4242`, a future expiration date, and any three-digit CVC. Verify that the webhook succeeds, Settings shows Premium active and the planner allowance shows 3,500 credits. Open **Manage billing** and cancel immediately in the sandbox to verify the account returns to the free allowance. Cancellation at period end keeps access while Stripe reports the subscription active.
+   Put the `whsec_…` it prints in `STRIPE_WEBHOOK_SECRET` and restart Vite.
 
-For Cloudflare, apply the production database schema before deploying. Configure the live customer portal and register `https://app.explorin.app/api/stripe/webhook` as a snapshot webhook for the five events above. Add `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, and the live endpoint's `STRIPE_WEBHOOK_SECRET` through Worker secrets or the project's secret sync. Keep sandbox and live Stripe credentials, price IDs, and database branches paired with their respective environments.
+5. Settings → **Subscribe**, pay with `4242 4242 4242 4242`, any future date and any CVC. Back on Settings, Premium shows as on and the usage card says 3,500. **Manage billing** opens Stripe's portal; cancelling there ends Premium at the end of the period (the webhook flips it then). Deleting the account deletes the Stripe customer, which cancels the subscription at once.
+
+Returning from Checkout or the portal reads Stripe directly, so subscribing works even before the webhook arrives; renewals, failed payments and period-end cancellations need the webhook.
+
+**Production, in this order**
+
+1. Apply the schema to production before merging (ADR-0009: additive before the deploy): `npm run db:migrate:prod -- --apply --through 0000` while later migrations are still held back, otherwise `--apply`. If the order slips, everyone stays on the free allowance until it lands; nothing breaks.
+2. Put the live key in `STRIPE_SECRET_KEY` in `.env.prod`, then `npm run stripe:setup:prod -- --webhook https://app.explorin.app/api/stripe/webhook` and copy the printed `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` into `.env.prod`. Stripe shows the webhook secret only once.
+3. `npm run secrets:web:new` from the repo root pushes the three keys to the Worker. Premium appears on the next request.
+
+Keep sandbox and live keys, prices and database branches paired: `.env` with the sandbox and the dev branch, `.env.prod` with live and production.
 
 ### Google Cloud, once
 

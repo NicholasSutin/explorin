@@ -27,21 +27,31 @@
 	const chip = (on: boolean) =>
 		`cursor-pointer select-none rounded-full px-3 py-1.5 text-sm ring-1 ${on ? 'bg-ink text-cream ring-ink' : 'bg-white text-ink/80 ring-ink/15'}`;
 	const savedTaste = $derived(page.url.searchParams.get('saved') === 'taste');
-	const billingMessages: Record<string, string> = {
-		'checkout-failed': 'Stripe Checkout could not start. Try again.',
-		'portal-failed':
-			'The Stripe billing portal could not open. Check that it is configured in your Stripe sandbox.',
-		existing: 'Manage your existing subscription in the billing portal.',
-		'no-account': 'Start a subscription to open your billing account.',
-		unavailable: 'Checkout is currently unavailable.',
-		'account-permissions': 'Stripe rejected the API key or its permissions.',
-		'missing-resource':
-			'Stripe could not find the price or customer. Check that you are using the right Stripe environment.'
+	// Outcomes of /api/stripe/session and of returning from Stripe (?billing=…).
+	const billingErrors: Record<string, string> = {
+		'checkout-failed': 'Couldn’t reach Stripe. Try again in a minute.',
+		'portal-failed': 'Couldn’t open billing. Try again in a minute.',
+		unavailable: 'Premium sign-up isn’t available right now.',
+		'no-account': 'There’s no billing account yet. Subscribe first.'
 	};
-	const billingStatus = $derived(page.url.searchParams.get('billing') ?? '');
-	const billingMessage = $derived(
-		Object.hasOwn(billingMessages, billingStatus) ? billingMessages[billingStatus] : undefined
+	const billingParam = $derived(page.url.searchParams.get('billing') ?? '');
+	const billingError = $derived(
+		Object.hasOwn(billingErrors, billingParam) ? billingErrors[billingParam] : undefined
 	);
+	const billingNotice = $derived.by(() => {
+		const b = data.billing;
+		if (b.status === 'past_due')
+			return 'Your last payment didn’t go through. Premium stays on while Stripe retries; update your card in Manage billing.';
+		if (b.subscribed && !b.active)
+			return 'Premium is on hold until a payment goes through. Open Manage billing to sort it out.';
+		if (billingParam === 'complete')
+			return b.active
+				? 'Welcome to Premium. Your new allowance applies now.'
+				: 'Waiting for Stripe to confirm your payment. Refresh in a moment.';
+		if (billingParam === 'existing')
+			return 'You already have Premium. Use Manage billing to change it.';
+		return undefined;
+	});
 	const msg = (section: string) =>
 		form && 'section' in form && form.section === section ? form : null;
 	const input =
@@ -71,18 +81,23 @@
 	{#if data.billing.checkout || data.billing.manage}
 		<section class={card} aria-labelledby="s-billing">
 			<h2 id="s-billing" class={h2}>Explorin Premium</h2>
-			<p class="mt-2 text-sm">
-				{data.billing.credits.toLocaleString()} planning credits per month{data.billing.active
-					? ' · Active'
-					: ''}
+			<p class="mt-2 text-sm text-ink/70">
+				{#if data.billing.active}
+					Premium is on: {data.billing.credits.toLocaleString()} planning credits a month instead of
+					{data.billing.freeCredits.toLocaleString()}.
+				{:else}
+					{data.billing.credits.toLocaleString()} planning credits a month instead of
+					{data.billing.freeCredits.toLocaleString()}, for {data.billing.price}. Cancel any time.
+				{/if}
 			</p>
-			{#if page.url.searchParams.get('billing') === 'complete' && !data.billing.active}
-				<p class="mt-2 text-sm" role="status">
-					Waiting for Stripe to confirm your subscription. Refresh in a moment.
-				</p>
+			{#if billingNotice}
+				<p class="mt-3 text-sm text-ink/80" role="status">{billingNotice}</p>
+			{/if}
+			{#if billingError}
+				<p class="mt-3 text-sm text-red-700" role="alert">{billingError}</p>
 			{/if}
 			<div class="mt-4 flex flex-wrap gap-3">
-				{#if data.billing.checkout && !data.billing.active}
+				{#if data.billing.checkout && !data.billing.subscribed}
 					<form method="POST" action="/api/stripe/session">
 						<input type="hidden" name="operation" value="checkout" />
 						<button class="h-11 rounded-full bg-ink px-6 font-semibold text-cream">Subscribe</button
@@ -92,15 +107,12 @@
 				{#if data.billing.manage}
 					<form method="POST" action="/api/stripe/session">
 						<input type="hidden" name="operation" value="portal" />
-						<button class="h-11 rounded-full border border-ink/15 px-6 font-semibold"
+						<button class="h-11 rounded-full px-6 font-semibold ring-1 ring-ink/20 hover:bg-moss"
 							>Manage billing</button
 						>
 					</form>
 				{/if}
 			</div>
-			{#if billingMessage}
-				<p class="mt-3 text-sm text-red-700" role="alert">{billingMessage}</p>
-			{/if}
 		</section>
 	{/if}
 
@@ -340,6 +352,11 @@
 			Removes your account, taste profile, every trip and scrapbook page, your photos, your shared
 			quotes and your usage history. This can’t be undone.
 		</p>
+		{#if data.billing.subscribed}
+			<p class="mt-2 text-sm text-red-900/80">
+				Your Premium subscription ends at once, with no refund for the rest of the period.
+			</p>
+		{/if}
 		<form
 			method="POST"
 			action="?/delete"
