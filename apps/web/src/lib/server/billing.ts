@@ -67,7 +67,9 @@ async function stripe<T>(
 		method,
 		body: fields ? new URLSearchParams(fields) : undefined,
 		headers,
-		redirect: 'error',
+		// The API never redirects; a 3xx comes back as !ok and fails below. Workers reject redirect: 'error'
+		// (a TypeError before the request is sent), so it can't be used here even though Node accepts it.
+		redirect: 'manual',
 		signal: AbortSignal.timeout(8000)
 	});
 	if (!response.ok) {
