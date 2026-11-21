@@ -1,14 +1,16 @@
 /**
  * Account-level operations for settings: profile edits, password change, usage summary and full deletion.
- * Deletion removes everything the person created: photos in storage, trips and stops, taste, usage, their
- * reflections (shared quotes included, also the copies planned into other people's trips), the app's
- * users row, and finally the better-auth user (sessions and accounts cascade from it).
+ * Deletion ends Premium billing (the Stripe customer is deleted), then removes everything the person created:
+ * photos in storage, trips and stops, taste, usage, their reflections (shared quotes included, also the copies
+ * planned into other people's trips), the app's users row, and finally the better-auth user (sessions and
+ * accounts cascade from it).
  */
 import { auth } from './auth';
 import { sql } from './db';
 import { deletePhotos } from '#storage';
 import { MICROS_PER_CREDIT } from './pricing';
 import { monthlyCredits } from './usage';
+import { closeBilling } from './billing';
 
 export async function updateAccount(userId: string, data: { name: string; homeCity: string }) {
 	const ctx = await auth.$context;
@@ -38,7 +40,7 @@ export interface UsageSummary {
 	resetsOn: string;
 }
 
-export async function usageSummary(userId: string): Promise<UsageSummary> {
+export async function usageSummary(userId: string, premium: boolean): Promise<UsageSummary> {
 	const [services, days] = await Promise.all([
 		sql<{ service: string; calls: number; micros: string }[]>`
 			SELECT service, count(*)::int AS calls, sum(cost_micros)::text AS micros
@@ -55,7 +57,7 @@ export async function usageSummary(userId: string): Promise<UsageSummary> {
 	next.setUTCMonth(next.getUTCMonth() + 1, 1);
 	return {
 		creditsUsed: total / MICROS_PER_CREDIT,
-		creditsLimit: monthlyCredits(),
+		creditsLimit: monthlyCredits(premium),
 		costUsd: total / 1e6,
 		byService: services.map((s) => ({
 			service: s.service,
@@ -75,10 +77,15 @@ export async function creditsThisMonth(userId: string): Promise<number> {
 	return Number(row?.micros ?? 0) / MICROS_PER_CREDIT;
 }
 
-/** Everything, irreversibly. Storage first: if it fails, nothing in the database is gone yet and a retry works. */
-export async function deleteAccount(userId: string): Promise<{ photos: number }> {
-	const photos = await deletePhotos(userId);
-	await sql.begin(async (tx) => {
+/**
+ * Everything, irreversibly. Outside services first, inside the transaction: if Stripe or storage fails, nothing in the
+ * database is gone yet and a retry works (both steps can run twice). Null when billing could not be ended, in which
+ * case nothing was deleted.
+ */
+export async function deleteAccount(userId: string): Promise<{ photos: number } | null> {
+	return sql.begin(async (tx) => {
+		if (!(await closeBilling(tx, userId))) return null;
+		const photos = await deletePhotos(userId);
 		const quotes = await tx<{ id: string }[]>`
 			DELETE FROM reflections WHERE author_id = ${userId} RETURNING id::text`;
 		// Planning copies matched quotes into each stop (trip_stops.data.voices); remove theirs from everyone's trips.
@@ -102,6 +109,6 @@ export async function deleteAccount(userId: string): Promise<{ photos: number }>
 			         WHERE identifier = ${u.email} OR value = ${userId}
 			            OR CASE WHEN pg_input_is_valid(value, 'jsonb') THEN lower(value::jsonb->>'email') END = lower(${u.email})`;
 		await tx`DELETE FROM users WHERE id = ${userId}`;
+		return { photos };
 	});
-	return { photos };
 }

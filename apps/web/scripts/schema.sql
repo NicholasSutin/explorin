@@ -6,6 +6,17 @@ CREATE TABLE IF NOT EXISTS users (
   created_at timestamptz DEFAULT now()
 );
 
+-- Explorin Premium (ADR-0011): the Stripe customer, the last Checkout started (reused while still open) and the
+-- status the webhook last read from Stripe. Deleting the account deletes the Stripe customer first (account.ts).
+CREATE TABLE IF NOT EXISTS premium_billing (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  stripe_customer_id text UNIQUE NOT NULL,
+  checkout_session_id text,
+  subscription_status text
+);
+-- Databases that ran the branch's first draft of this table (checkout_url, checkout_expires_at; both now unused).
+ALTER TABLE premium_billing ADD COLUMN IF NOT EXISTS checkout_session_id text;
+
 CREATE TABLE IF NOT EXISTS places (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   google_place_id text UNIQUE,

@@ -49,7 +49,8 @@ const session: Handle = async ({ event, resolve }) => {
 const guard: Handle = async ({ event, resolve }) => {
 	const { pathname, search } = event.url;
 	const { user } = event.locals;
-	if (pathname.startsWith('/api/auth/')) return resolve(event);
+	if (pathname.startsWith('/api/auth/') || pathname === '/api/stripe/webhook')
+		return resolve(event);
 	const isApi = pathname.startsWith('/api/');
 
 	if (!user) {

@@ -4,13 +4,21 @@ import { AUDIENCES, INTERESTS, LEARNED_CHARS } from '#lib/taste';
 import { forgetLearned, getTaste, saveAboutYou, setFlipAnimations } from '#lib/server/taste';
 import { changePassword, deleteAccount, updateAccount, usageSummary } from '#lib/server/account';
 import { hasPassword } from '#lib/server/auth';
+import { checkoutConfigured, premiumStatus, refreshPremium } from '#lib/server/billing';
+import { monthlyCredits } from '#lib/server/usage';
+import { premiumPriceLabel } from '#lib/premium';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = locals.user!;
+	// Back from Checkout or the billing portal: show the outcome now instead of waiting for the webhook.
+	const back = url.searchParams.get('billing');
+	if (back === 'complete' || back === 'updated')
+		await refreshPremium(user.id).catch((e) => console.error('[Stripe refresh]', e));
+	const billing = await premiumStatus(user.id);
 	const [taste, usage, password] = await Promise.all([
 		getTaste(user.id),
-		usageSummary(user.id),
+		usageSummary(user.id, billing.active),
 		hasPassword(user.id)
 	]);
 	return {
@@ -28,7 +36,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 			learned: taste?.learned ?? [],
 			flip: taste?.flipAnimations ?? true
 		},
-		usage
+		usage,
+		billing: {
+			...billing,
+			checkout: checkoutConfigured(),
+			credits: monthlyCredits(true),
+			freeCredits: monthlyCredits(false),
+			price: premiumPriceLabel
+		}
 	};
 };
 
@@ -113,7 +128,13 @@ export const actions: Actions = {
 				.toUpperCase() !== 'DELETE'
 		)
 			return fail(400, { section: 'delete', message: 'Type DELETE to confirm.' });
-		await deleteAccount(locals.uid);
+		const deleted = await deleteAccount(locals.uid);
+		if (!deleted)
+			return fail(503, {
+				section: 'delete',
+				message:
+					'We couldn’t reach Stripe to end your Premium subscription, so nothing was deleted. Try again in a few minutes.'
+			});
 		for (const name of ['__Secure-explorin.session_token', 'explorin.session_token'])
 			cookies.delete(name, { path: '/' });
 		redirect(303, '/welcome?deleted=1');
