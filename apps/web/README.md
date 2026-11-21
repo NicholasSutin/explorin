@@ -2,7 +2,7 @@
 
 Sign up, tell Explorin what you like (a few words and a quick tier list), plan a day of real places, walk it on a living map, then keep it in a scrapbook you can share. How it fits together: [docs/system-design.md](../../docs/system-design.md). Behaviour, limits and costs: [MVP.md](MVP.md).
 
-**Gemini** narrows the tier list, picks places from the web pages Nimble finds, and drafts the scrapbook entry. **Nimble** searches the web. **Google Places** verifies places (coordinates, photos, reviews on demand); the **Maps JavaScript API** draws the trip map and **Static Maps** the scrapbook stamp. **NYC Open Data** supplies happenings. Postgres + pgvector (Tiger Cloud, through Hyperdrive on Workers) stores accounts, taste, trips, reflections and usage; photos go to R2.
+**Gemini** narrows the tier list, picks places from the web pages Nimble finds, and suggests a title and tags for each scrapbook page (the words on the page are always the person's own). **Nimble** searches the web. **Google Places** verifies places (coordinates, photos, reviews on demand); the **Maps JavaScript API** draws the trip map and **Static Maps** the scrapbook stamp. **NYC Open Data** supplies happenings. Postgres + pgvector (Tiger Cloud, through Hyperdrive on Workers) stores accounts, taste, trips, reflections and usage; photos go to R2.
 
 ## Setup
 

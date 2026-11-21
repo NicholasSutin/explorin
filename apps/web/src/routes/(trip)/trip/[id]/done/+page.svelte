@@ -1,8 +1,9 @@
 <script lang="ts">
 	/**
 	 * End of the day, two short steps. 1: a note (typed or spoken), up to four photos, the highlight stop.
-	 * 2: AI drafts a title and story and suggests six "best for" tags; keep up to three, tweak, save to scrapbook.
-	 * It may also suggest a phrase or two the note reveals about their taste ("Explorin can remember"), kept only if tapped.
+	 * 2: their note, word for word, is the page text (they can trim it to fit); AI only suggests a title, six "best for"
+	 * tags (keep up to three) and which line of the note to share. It may also suggest a phrase or two the note reveals
+	 * about their taste ("Explorin can remember"), kept only if tapped. The AI never writes the person's words.
 	 */
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -15,6 +16,7 @@
 	import PhotoPicker from '#lib/components/PhotoPicker.svelte';
 	import { api, uploadPhotos } from '#lib/client';
 	import { BEST_FOR_MAX, type KeepsakeDraft } from '#lib/keepsake';
+	import { noteFit } from '#lib/scrapbook/layout';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -38,6 +40,7 @@
 	let story = $state('');
 	let share = $state(true);
 	let learned = $state<string[]>([]);
+	const fit = $derived(noteFit(story));
 
 	type Recognition = {
 		lang: string;
@@ -103,7 +106,7 @@
 				timeoutMs: 30000
 			});
 			title = draft.title;
-			story = draft.story;
+			story = note.trim();
 			picked = [];
 			learned = [];
 			step = 2;
@@ -228,7 +231,7 @@
 		<div in:fly={{ x: 30 }}>
 			<p class="mt-6 flex items-center gap-1.5 text-sm font-medium text-orange">
 				<Sparkles size={15} aria-hidden="true" />{draft.aiGenerated
-					? 'Drafted from your note'
+					? 'Title and tags suggested from your note'
 					: 'From your note'}
 			</p>
 			<h1 class="mt-1 font-serif text-4xl leading-tight font-semibold">Who’s this day best for?</h1>
@@ -268,16 +271,21 @@
 				<label
 					for="story"
 					class="mt-5 block text-xs font-semibold tracking-wide text-ink/55 uppercase"
-					>The story</label
+					>Your words</label
 				>
 				<textarea
 					id="story"
 					bind:value={story}
 					use:autosize
-					maxlength="900"
+					maxlength="1200"
 					rows="3"
+					aria-describedby="story-fit"
 					class="mt-1 w-full resize-none bg-transparent text-ink/85 outline-none"></textarea>
-				<p class="text-xs text-ink/45">This goes on your page, in your handwriting.</p>
+				<p id="story-fit" class="text-xs {fit.fits ? 'text-ink/45' : 'text-amber-700'}">
+					{#if fit.fits}Exactly as you wrote it, in your handwriting on the page.
+					{:else}About {fit.over} characters more than your page holds. Trim it here, or the page ends
+						with “…”.{/if}
+				</p>
 				{#if draft.emotions.length}
 					<div class="mt-3 flex flex-wrap gap-1.5">
 						{#each draft.emotions as e (e)}<span class="rounded-full bg-moss px-2.5 py-1 text-xs"
@@ -293,7 +301,9 @@
 					<span class="text-sm">
 						<span class="font-medium">Help people like you</span>
 						<span class="mt-0.5 block text-ink/60"
-							>Share one line, with your first name: <em>“{draft.quote}”</em></span
+							>Share this line from your note, word for word, with your first name: <em
+								>“{draft.quote}”</em
+							></span
 						>
 					</span>
 				</label>

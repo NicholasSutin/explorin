@@ -7,7 +7,7 @@ import type { RequestHandler } from './$types';
 
 const Body = z.object({ note: z.string().trim().max(1200) });
 
-/** POST /api/trip/<id>/draft {note}: title, story, emotions, quote and six "best for" suggestions. */
+/** POST /api/trip/<id>/draft {note}: a suggested title, emotions and six "best for" tags; the note's own line to share. */
 export const POST: RequestHandler = async ({ request, params, locals }) => {
 	const { note } = await parseBody(request, Body, 'Keep the note under 1200 characters.');
 	const trip = await getTrip(locals.uid, params.id);
