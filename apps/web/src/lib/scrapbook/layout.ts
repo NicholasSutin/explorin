@@ -39,8 +39,8 @@ export interface Sticker {
 	h: number;
 	rot: number;
 	text: string;
-	fill: string;
-	ink: string;
+	/** Which of the page's three sticker colours (style.ts `pagePalette().stickers`). */
+	tone: number;
 }
 
 export interface PageModel {
@@ -211,12 +211,6 @@ export function wrap(
 	return lines;
 }
 
-const STICKERS = [
-	{ fill: '#d96738', ink: '#ffffff' },
-	{ fill: '#285c47', ink: '#f8f6ef' },
-	{ fill: '#e9dcb5', ink: '#203d32' }
-];
-
 export function shortDate(iso: string | null) {
 	return (iso ? new Date(iso) : new Date())
 		.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -384,7 +378,7 @@ export function layoutPage(trip: Trip, format: Format, pageNumber?: number): Pag
 			h,
 			rot: jitter(5),
 			text: label,
-			...STICKERS[i % 3]
+			tone: i % 3
 		});
 		sx += w + size * 1.1;
 	});

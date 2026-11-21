@@ -12,7 +12,8 @@
 	/**
 	 * A book of 3D leaves that turn around the spine. Wide screens show spreads (a leaf's front on the right, the
 	 * previous leaf's back on the left); phones show one page and turn it away to the left. Swipe, arrow keys or
-	 * the buttons turn pages; `flip` off (or reduced motion) swaps pages without the animation.
+	 * the buttons turn pages; `flip` off (or reduced motion) swaps pages without the animation. While the book is
+	 * being decorated, tapping a page reports it (`onpick`) and the `selected` pages are outlined.
 	 */
 	import { onMount, tick, type Snippet } from 'svelte';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
@@ -21,13 +22,25 @@
 	let {
 		pages,
 		page = $bindable(0),
+		visible = $bindable([0]),
 		flip = true,
+		endpaper = '#f4eedc',
+		edge = '#e9e1c9',
+		selected = [],
+		onpick,
 		render
 	}: {
 		pages: BookPage[];
 		/** Index of the page to show (the right-hand one in a spread). */
 		page?: number;
+		/** Indexes of the pages in view, left to right (read-only). */
+		visible?: number[];
 		flip?: boolean;
+		/** Colour of blank pages, and of the page stack under the open book. */
+		endpaper?: string;
+		edge?: string;
+		selected?: number[];
+		onpick?: (index: number) => void;
 		render: Snippet<[BookPage, number]>;
 	} = $props();
 
@@ -75,6 +88,12 @@
 	);
 	const ph = $derived(pw * (4 / 3));
 
+	$effect(() => {
+		const shown = wide ? [2 * turned - 1, 2 * turned] : [turned];
+		const next = shown.filter((i) => i >= 0 && i < list.length);
+		if (next.join() !== visible.join()) visible = next;
+	});
+
 	function go(nextTurned: number) {
 		const target = Math.max(0, Math.min(leaves.length - 1, nextTurned));
 		if (target === turned) return;
@@ -105,18 +124,25 @@
 
 	let startX = 0;
 	let startY = 0;
+	let moved = false;
 	function down(e: PointerEvent) {
 		startX = e.clientX;
 		startY = e.clientY;
+		moved = false;
 	}
 	function up(e: PointerEvent) {
 		const dx = e.clientX - startX;
+		moved = Math.hypot(dx, e.clientY - startY) > 10;
 		if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - startY)) dx < 0 ? next() : prev();
 	}
 	function key(e: KeyboardEvent) {
 		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 		if (e.key === 'ArrowRight') next();
 		else if (e.key === 'ArrowLeft') prev();
+	}
+	/** A tap (not a swipe) on a page in view picks it. */
+	function pick(index: number) {
+		if (onpick && !moved && index >= 0 && list[index]?.kind !== 'blank') onpick(index);
 	}
 	const z = (i: number) => (animating.includes(i) ? 500 + i : i < turned ? i : leaves.length - i);
 </script>
@@ -143,12 +169,12 @@
 		{#if wide}
 			<!-- page edges under the spread -->
 			{#if turned > 0}<div
-					class="absolute inset-y-1 left-0 w-1/2 rounded-l-md bg-[#e9e1c9] shadow-[0_18px_40px_-16px_rgba(32,61,50,0.55)]"
-					style="transform: translateX(-4px)"
+					class="absolute inset-y-1 left-0 w-1/2 rounded-l-md shadow-[0_18px_40px_-16px_rgba(32,61,50,0.55)]"
+					style="transform: translateX(-4px); background: {edge}"
 				></div>{/if}
 			<div
-				class="absolute inset-y-1 right-0 w-1/2 rounded-r-md bg-[#e9e1c9] shadow-[0_18px_40px_-16px_rgba(32,61,50,0.55)]"
-				style="transform: translateX(4px)"
+				class="absolute inset-y-1 right-0 w-1/2 rounded-r-md shadow-[0_18px_40px_-16px_rgba(32,61,50,0.55)]"
+				style="transform: translateX(4px); background: {edge}"
 			></div>
 		{/if}
 		{#each leaves as leaf, i (leaf.fi)}
@@ -163,13 +189,24 @@
 				aria-hidden={!(i === turned || (wide && i === turned - 1))}
 				inert={!(i === turned || (wide && i === turned - 1))}
 			>
-				<div class="face front">
+				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+				<div
+					class="face front"
+					class:selected={selected.includes(leaf.fi)}
+					onclick={() => pick(leaf.fi)}
+				>
 					{@render render(leaf.front, leaf.fi)}
 					<span class="shade"></span>
 				</div>
-				<div class="face back">
+				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+				<div
+					class="face back"
+					class:selected={leaf.back !== null && selected.includes(leaf.bi)}
+					onclick={() => pick(leaf.bi)}
+				>
 					{#if leaf.back}{@render render(leaf.back, leaf.bi)}{:else}<div
-							class="h-full w-full bg-[#f4eedc]"
+							class="h-full w-full"
+							style="background: {endpaper}"
 						></div>{/if}
 					<span class="shade"></span>
 				</div>
@@ -249,5 +286,14 @@
 	}
 	.leaf.animated .shade {
 		transition: opacity 0.75s;
+	}
+	/* The page being decorated. */
+	.face.selected::after {
+		content: '';
+		pointer-events: none;
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		box-shadow: inset 0 0 0 3px var(--color-orange);
 	}
 </style>

@@ -13,9 +13,14 @@
 	import type { Trip } from '#lib/adventure';
 	import { layoutPage, type Format } from '#lib/scrapbook/layout';
 	import { renderPng } from '#lib/scrapbook/export';
+	import { DEFAULT_PAGE, type PageStyle } from '#lib/scrapbook/style';
 	import Page from './Page.svelte';
 
-	let { trip, open = $bindable(false) }: { trip: Trip; open?: boolean } = $props();
+	let {
+		trip,
+		style = DEFAULT_PAGE,
+		open = $bindable(false)
+	}: { trip: Trip; style?: PageStyle; open?: boolean } = $props();
 
 	const FORMATS: { id: Format; label: string; hint: string }[] = [
 		{ id: 'story', label: 'Story', hint: '9:16' },
@@ -208,8 +213,8 @@
 		style="position:fixed; left:-20000px; top:0; width:10px; height:10px; overflow:hidden"
 	>
 		{#key format}
-			<div><Page {trip} {format} part="base" /></div>
-			<div><Page {trip} {format} part="overlay" /></div>
+			<div><Page {trip} {style} {format} part="base" /></div>
+			<div><Page {trip} {style} {format} part="overlay" /></div>
 		{/key}
 	</div>
 {/if}

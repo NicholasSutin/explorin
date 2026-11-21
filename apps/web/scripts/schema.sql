@@ -150,9 +150,13 @@ CREATE TABLE IF NOT EXISTS trips (
   highlight_stop_id uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   started_at timestamptz,
-  finished_at timestamptz
+  finished_at timestamptz,
+  page_style jsonb NOT NULL DEFAULT '{}'
 );
 CREATE INDEX IF NOT EXISTS trips_user_idx ON trips(user_id, created_at DESC);
+-- The day's scrapbook page look (paper, pattern, accent, washi tape, frames; src/lib/scrapbook/style.ts). Empty
+-- means the book's look for pages (scrapbooks.page_default), then the defaults.
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS page_style jsonb NOT NULL DEFAULT '{}';
 
 -- A stop on a trip. `data` is Explorin's own copy (AI title, reason, tags, category) plus the Google place id.
 -- Google's terms allow storing place ids indefinitely and coordinates for up to 30 days, so `lat/lng` carry
@@ -174,6 +178,15 @@ CREATE TABLE IF NOT EXISTS trip_stops (
   visited_lng double precision
 );
 CREATE INDEX IF NOT EXISTS trip_stops_trip_idx ON trip_stops(trip_id, position);
+
+-- A person's scrapbook as a book: the cover (cloth, pattern, band, title, endpapers) and the look new pages get.
+-- No row means the defaults. Values are validated by src/lib/scrapbook/style.ts before they are stored.
+CREATE TABLE IF NOT EXISTS scrapbooks (
+  user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  cover jsonb NOT NULL DEFAULT '{}',
+  page_default jsonb NOT NULL DEFAULT '{}',
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 
 -- The reflection a finished trip's note became: one per trip (finishing again updates it), gone with the trip.
 -- Declared here rather than in `reflections` above because it references trips.
